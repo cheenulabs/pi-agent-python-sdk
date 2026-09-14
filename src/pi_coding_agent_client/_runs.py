@@ -9,7 +9,14 @@ from types import TracebackType
 from typing import TYPE_CHECKING, Any, Self
 
 from ._events import EventSubscription
-from .errors import PiBusyError, PiProtocolError, PiRunError, PiRunStartTimeout, PiTimeoutError
+from .errors import (
+    PiBusyError,
+    PiCommandError,
+    PiProtocolError,
+    PiRunError,
+    PiRunStartTimeout,
+    PiTimeoutError,
+)
 from .types import Event, ImageContent, RunResult, UsageSummary
 
 if TYPE_CHECKING:
@@ -86,6 +93,7 @@ class RunStream:
         self._messages: list[dict[str, Any]] = []
         self._submitted = False
         self._finishing = False
+        self._closed = False
         self._iterating = False
         self._draining = False
         self._iteration_done = False
@@ -93,7 +101,7 @@ class RunStream:
 
     async def __aenter__(self) -> Self:
         self._client._check_loop()
-        if self._task is not None:
+        if self._task is not None or self._closed:
             raise RuntimeError("Run streams are single-use")
         if self._client.busy:
             raise PiBusyError("Another run owns this Pi conversation")
@@ -127,6 +135,7 @@ class RunStream:
 
     async def aclose(self) -> None:
         """Finish cancellation cleanup before releasing the owned conversation."""
+        self._closed = True
         if self._task is not None and not self._task.done():
             self._task.cancel()
         if self._task is not None:
@@ -215,8 +224,15 @@ class RunStream:
                 failure = PiTimeoutError(
                     "Pi run deadline elapsed", command="prompt", uncertain=self._submitted
                 )
-            if self._submitted and not self._settled.is_set():
-                if isinstance(failure, PiRunStartTimeout):
+            accepted = self._accepted.done() and not self._accepted.cancelled()
+            if (
+                self._submitted
+                and not isinstance(failure, PiCommandError)
+                and (not self._settled.is_set() or not accepted)
+            ):
+                # abort() cannot cancel an extension's pending input/UI preflight.
+                # Keep delayed work from escaping a failed owned operation.
+                if not accepted or not self._started.is_set():
                     await self._client.aclose()
                 else:
                     await self._cleanup()

@@ -153,6 +153,7 @@ class AsyncPiClient:
         self._transport: Transport | None = None
         self._subscriptions: set[EventSubscription] = set()
         self._ui_tasks: set[asyncio.Task[None]] = set()
+        self._ui_bytes = 0
         self._ui_error: PiUIHandlerError | None = None
         self._owner: RunStream | None = None
         self._session = SessionInfo()
@@ -246,10 +247,11 @@ class AsyncPiClient:
         self._closed = True
         if self._transport is not None:
             await self._transport.aclose()
-        for task in tuple(self._ui_tasks):
+        tasks = tuple(task for task in self._ui_tasks if task is not asyncio.current_task())
+        for task in tasks:
             task.cancel()
-        if self._ui_tasks:
-            await asyncio.gather(*self._ui_tasks, return_exceptions=True)
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     def events(self) -> EventSubscription:
         """Subscribe on context entry to future events, including extension UI/errors."""
@@ -269,16 +271,43 @@ class AsyncPiClient:
         if self._owner is not None:
             self._owner._on_event(event, size)
         if event.type == "session_info_changed":
+            if "name" in raw and not isinstance(raw["name"], str):
+                raise PiProtocolError("session_info_changed requires a string name when present")
             self._session = SessionInfo(
                 self._session.session_id, self._session.session_file, raw.get("name")
             )
         if event.type == "extension_ui_request":
+            if not isinstance(raw.get("method"), str) or not isinstance(raw.get("id"), str):
+                raise PiProtocolError("Extension UI requests require string id and method")
+            if self._ui_handler is None and raw["method"] not in _DIALOGS:
+                return
+            if (
+                len(self._ui_tasks) >= self.limits.event_queue_size
+                or self._ui_bytes + size > self.limits.event_queue_bytes
+            ):
+                assert self._transport is not None
+                self._transport._fail(
+                    PiUIHandlerError(
+                        "Outstanding extension UI requests exceeded buffer limits; Pi is closed"
+                    )
+                )
+                return
             task = asyncio.create_task(self._handle_ui(raw), name="pi-extension-ui")
             self._ui_tasks.add(task)
-            task.add_done_callback(self._ui_tasks.discard)
+            self._ui_bytes += size
+            task.add_done_callback(lambda done: self._ui_finished(done, size))
+
+    def _ui_finished(self, task: asyncio.Task[None], size: int) -> None:
+        self._ui_tasks.discard(task)
+        self._ui_bytes -= size
+        if not task.cancelled():
+            task.exception()
 
     def _on_failure(self, error: Exception) -> None:
         self._session = SessionInfo()
+        for task in tuple(self._ui_tasks):
+            if task is not asyncio.current_task():
+                task.cancel()
         for subscription in tuple(self._subscriptions):
             subscription._finish(error)
         if self._owner is not None:
@@ -286,7 +315,7 @@ class AsyncPiClient:
 
     async def _handle_ui(self, raw: dict[str, Any]) -> None:
         method, request_id = raw.get("method"), raw.get("id")
-        dialog = method in _DIALOGS
+        dialog = isinstance(method, str) and method in _DIALOGS
         try:
             if not isinstance(method, str) or not isinstance(request_id, str):
                 raise PiProtocolError("Malformed extension UI request")

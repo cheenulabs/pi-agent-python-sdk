@@ -10,6 +10,7 @@ from pi_coding_agent_client.client import AsyncPiClient
 from pi_coding_agent_client.errors import (
     PiBusyError,
     PiCommandError,
+    PiProcessError,
     PiRunError,
     PiRunStartTimeout,
     PiSubscriptionOverflow,
@@ -115,7 +116,7 @@ async def test_stream_exit_aborts_and_releases_ownership(client):
     assert (await client.run("normal")).text == "answer"
 
 
-async def test_task_cancellation_finishes_cleanup(client):
+async def test_task_cancellation_before_acceptance_closes_process(client):
     async with client.events() as events:
         task = asyncio.create_task(client.run("paused"))
         while (await anext(events)).type != "agent_start":
@@ -124,7 +125,7 @@ async def test_task_cancellation_finishes_cleanup(client):
         with pytest.raises(asyncio.CancelledError):
             await task
     assert not client.busy
-    assert not (await client.get_state())["isStreaming"]
+    assert not client.running
 
 
 async def test_overall_run_timeout_cleans_up(client):
@@ -194,3 +195,76 @@ async def test_session_argument_conflicts():
         AsyncPiClient(no_session=True, session="saved.jsonl")
     with pytest.raises(ValueError):
         AsyncPiClient(session="saved.jsonl", continue_session=True)
+
+
+async def test_async_ui_callback_can_close_client_without_cancelling_itself():
+    finished = asyncio.Event()
+
+    async def close_from_handler(request):
+        await pi.aclose()
+        finished.set()
+
+    async with AsyncPiClient(
+        executable=[sys.executable, str(FAKE)], ui_handler=close_from_handler
+    ) as pi:
+        with pytest.raises(PiProcessError):
+            await pi.prompt("ui")
+        async with asyncio.timeout(2):
+            await finished.wait()
+        assert not pi.running
+
+
+async def test_slow_ui_callbacks_have_bounded_outstanding_work():
+    gate = asyncio.Event()
+
+    async def slow_handler(request):
+        await gate.wait()
+
+    async with AsyncPiClient(
+        executable=[sys.executable, str(FAKE)],
+        ui_handler=slow_handler,
+        limits=Limits(event_queue_size=2),
+    ) as pi:
+        with pytest.raises(PiUIHandlerError):
+            await pi.request(
+                "emit",
+                records=[
+                    {
+                        "type": "extension_ui_request",
+                        "id": str(index),
+                        "method": "notify",
+                        "message": "synthetic",
+                    }
+                    for index in range(300)
+                ],
+            )
+        assert len(pi._ui_tasks) <= 2
+        assert not pi.running
+
+
+async def test_closed_unentered_stream_never_claims_conversation(client):
+    stream = client.stream("normal")
+    await stream.aclose()
+    with pytest.raises(RuntimeError):
+        async with stream:
+            pass
+    assert not client.busy
+    assert (await client.run("normal")).text == "answer"
+
+
+async def test_preflight_timeout_closes_pi_and_cancels_ui_handler():
+    cancelled = asyncio.Event()
+    gate = asyncio.Event()
+
+    async def delayed_ui(request):
+        try:
+            await gate.wait()
+            return True
+        finally:
+            cancelled.set()
+
+    async with AsyncPiClient(executable=[sys.executable, str(FAKE)], ui_handler=delayed_ui) as pi:
+        with pytest.raises(PiTimeoutError):
+            await pi.run("ui", timeout=0.1)
+        assert not pi.running and not pi.busy
+        assert cancelled.is_set()
