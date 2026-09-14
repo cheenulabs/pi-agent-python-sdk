@@ -1,0 +1,17 @@
+{
+  "minimumVersion": "0.85.1",
+  "testedVersion": "0.85.1",
+  "upstreamCommit": "d981de1229ef899957bbe968bc8dcda02a21f477",
+  "sourceSha256": {
+    "packages/coding-agent/src/modes/rpc/rpc-types.ts": "34057257456fd5f935587a0e9650fb5777738674e491a68fd037425703c45e26",
+    "packages/coding-agent/src/modes/rpc/rpc-mode.ts": "088f2c89f6c16189d74f92a7dd2a361778fc3d3a235c689c4b03ee54bf64622e",
+    "packages/coding-agent/src/modes/rpc/rpc-client.ts": "6d1a586cfa38fd3be62d21feacfe9e700f6e88d4fc842adcc345130acd0d57ff",
+    "packages/coding-agent/src/modes/json-event.ts": "87f6fa86cd73b817470062f5ab0a99c790d0c0e222e25979b96bfcd157e119bf",
+    "packages/coding-agent/src/core/agent-session.ts": "23e4acac844638fb0ae60047130f8e1050e4c729c1b8e80d37e359ac9c0eef9a",
+    "packages/coding-agent/src/core/session-manager.ts": "57bc70a751567b96c057535766240ae52d9b76d9013ea78049d74dc3b654e915",
+    "packages/coding-agent/src/core/messages.ts": "9cdcea8915dbf1bc29c4b086b3f03d0510cd7fb8b3437a2c7b539c58211ca330",
+    "packages/agent/src/types.ts": "640b6703badd73303f9c3c7e903a1269793493499d23e379894cbcb22338a4db",
+    "packages/ai/src/types.ts": "ae0427bfba137623df3a27c545ab405d4a3ad4163ec94c9fec5d4e10eb36759c",
+    "packages/coding-agent/CHANGELOG.md": "6816d95d45858b54627d02681339e9b9fe6345bc0a58bddea50586cc2e3c3cca"
+  }
+}
