@@ -309,3 +309,56 @@ async def test_protocol_failure_still_drains_a_flooding_child() -> None:
         await client.request("echo")
     await asyncio.wait_for(client.aclose(), 3)
     assert client._process is not None and client._process.returncode is not None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("response_size", [None, 0, 500_000])
+async def test_child_exit_is_terminal_even_when_descendant_inherits_pipes(
+    tmp_path: Path, response_size: int | None
+) -> None:
+    release = tmp_path / "release"
+    finished = tmp_path / "finished"
+    descendant = (
+        "import pathlib, sys, time; "
+        "release, finished = map(pathlib.Path, sys.argv[1:]); "
+        "deadline = time.monotonic() + 10\n"
+        "while not release.exists() and time.monotonic() < deadline: time.sleep(0.01)\n"
+        "finished.touch()"
+    )
+    parent = (
+        "import json, subprocess, sys; request = json.loads(sys.stdin.buffer.readline()); "
+        "subprocess.Popen([sys.executable, '-c', sys.argv[1], *sys.argv[2:]], "
+        "stdin=subprocess.DEVNULL); "
+    )
+    if response_size is not None:
+        parent += (
+            "sys.stdout.write(json.dumps({'type': 'response', 'id': request['id'], "
+            f"'command': request['type'], 'success': True, 'data': 'x' * {response_size}}})); "
+            "sys.stdout.flush()"
+        )
+    client = Transport(
+        limits=Limits(cleanup_timeout=0.1), on_event=lambda _: None, on_failure=lambda _: None
+    )
+    await client.start([sys.executable, "-c", parent, descendant, str(release), str(finished)])
+    try:
+        if response_size is None:
+            with pytest.raises(PiProcessError) as caught:
+                await client.request("echo", timeout=0.5)
+            assert caught.value.returncode == 0
+        else:
+            result = await client.request("echo", timeout=0.5)
+            assert result["data"] == "x" * response_size
+        await asyncio.wait_for(client.aclose(), 0.5)
+        assert not finished.exists(), "Closing the client must not wait for its descendant"
+        assert client._process is not None
+        assert client._process.returncode == 0
+        process_transport = client._process._transport
+        assert process_transport.is_closing()
+        assert all(process_transport.get_pipe_transport(fd).is_closing() for fd in (0, 1, 2))
+    finally:
+        release.touch()
+        await client.aclose()
+        # The descendant writes this only after release, proving we did not kill it.
+        async with asyncio.timeout(5):
+            while not finished.exists():  # noqa: ASYNC110 - child filesystem coordination
+                await asyncio.sleep(0.01)

@@ -12,6 +12,21 @@ from .errors import PiCommandError, PiProcessError, PiProtocolError, PiTimeoutEr
 from .types import Limits
 
 
+async def _wait_for_exit(process: asyncio.subprocess.Process) -> None:
+    """Observe child exit without waiting for inherited pipes to reach EOF."""
+    while process.returncode is None:  # noqa: ASYNC110 - asyncio exposes no pipe-independent exit event
+        await asyncio.sleep(0.01)
+
+
+def _close_process_pipes(process: asyncio.subprocess.Process) -> None:
+    """Release this process's pipe handles after the owned child has exited."""
+    assert process.returncode is not None
+    # StreamReader has no public close(). Isolate the asyncio implementation
+    # seam needed when a descendant retains its own copies of the pipes. The
+    # owned child has exited, so close() cannot signal it or any descendants.
+    process._transport.close()  # type: ignore[attr-defined]
+
+
 @dataclass
 class _Pending:
     command: str
@@ -38,9 +53,11 @@ class Transport:
         self._write_lock = asyncio.Lock()
         self._reader: asyncio.Task[None] | None = None
         self._stderr_reader: asyncio.Task[None] | None = None
+        self._exit_monitor: asyncio.Task[None] | None = None
         self._closing: asyncio.Task[None] | None = None
         self._failure: Exception | None = None
         self._stderr = bytearray()
+        self._stdout_buffer = bytearray()
 
     @property
     def running(self) -> bool:
@@ -89,6 +106,7 @@ class Transport:
             raise self._failure
         self._reader = asyncio.create_task(self._read_stdout(), name="pi-stdout")
         self._stderr_reader = asyncio.create_task(self._read_stderr(), name="pi-stderr")
+        self._exit_monitor = asyncio.create_task(self._monitor_exit(), name="pi-exit")
 
     async def request(
         self,
@@ -110,7 +128,10 @@ class Transport:
         try:
             await self._write({"type": command, "id": request_id, **(fields or {})})
             try:
-                return await asyncio.wait_for(asyncio.shield(future), timeout)
+                # Keep cancellation on this task: wait_for can lose cancellation
+                # when its separate waiter completes at the same time on Python 3.11.
+                async with asyncio.timeout(timeout):
+                    return await asyncio.shield(future)
             except TimeoutError as exc:
                 raise PiTimeoutError(
                     "Pi response timed out; the operation may still be running",
@@ -170,7 +191,7 @@ class Transport:
 
     async def _read_stdout(self) -> None:
         assert self._process is not None and self._process.stdout is not None
-        buffer = bytearray()
+        buffer = self._stdout_buffer
         try:
             while chunk := await self._process.stdout.read(65536):
                 buffer.extend(chunk)
@@ -184,12 +205,29 @@ class Transport:
                     raise PiProtocolError("Pi JSON record exceeds max_record_bytes")
             if buffer:
                 self._record(bytes(buffer))
+                buffer.clear()
             # EOF itself is terminal even if an extension left the process alive.
             self._fail(PiProcessError("Pi stdout closed", returncode=self._process.returncode))
         except asyncio.CancelledError:
             raise
         except Exception as exc:
             self._fail(exc)
+
+    async def _monitor_exit(self) -> None:
+        assert self._process is not None
+        await _wait_for_exit(self._process)
+        # Let already-ready stdout callbacks run before declaring requests lost.
+        # A descendant may retain the pipe, so EOF cannot be our exit signal.
+        await asyncio.sleep(0)
+        if self._failure is None:
+            try:
+                if self._stdout_buffer:
+                    self._record(bytes(self._stdout_buffer))
+                    self._stdout_buffer.clear()
+            except Exception as exc:
+                self._fail(exc)
+                return
+            self._fail(PiProcessError("Pi subprocess exited", returncode=self._process.returncode))
 
     def _record(self, data: bytes) -> None:
         if data.endswith(b"\r"):
@@ -285,7 +323,7 @@ class Transport:
                 if process.stdin is not None:
                     process.stdin.close()
                 try:
-                    await asyncio.wait_for(process.wait(), self._limits.cleanup_timeout)
+                    await asyncio.wait_for(_wait_for_exit(process), self._limits.cleanup_timeout)
                 except TimeoutError:
                     if process.returncode is None:
                         try:
@@ -293,17 +331,23 @@ class Transport:
                         except ProcessLookupError:
                             pass
                     try:
-                        await asyncio.wait_for(process.wait(), self._limits.cleanup_timeout)
+                        await asyncio.wait_for(
+                            _wait_for_exit(process), self._limits.cleanup_timeout
+                        )
                     except TimeoutError:
                         if process.returncode is None:
                             try:
                                 process.kill()
                             except ProcessLookupError:
                                 pass
-                        await process.wait()
+                        await _wait_for_exit(process)
+                _close_process_pipes(process)
+                await process.wait()
         finally:
             tasks = [
-                task for task in (self._reader, self._stderr_reader, discard) if task is not None
+                task
+                for task in (self._reader, self._stderr_reader, self._exit_monitor, discard)
+                if task is not None
             ]
             for task in tasks:
                 if not task.done():

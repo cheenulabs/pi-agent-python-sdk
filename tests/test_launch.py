@@ -34,6 +34,33 @@ def test_extension_options_and_explicit_defaults_are_allowed():
     )
 
 
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--use-theme", "--help"],
+        ["--tui-mode", "--mode", "--custom", "json"],
+    ],
+)
+def test_conditionally_consumed_values_cannot_hide_reserved_flags(args):
+    with pytest.raises(ValueError):
+        validate_extra_args(args)
+
+
+async def test_flooding_version_command_closes_without_waiting_for_full_pipe():
+    import asyncio
+
+    async with asyncio.timeout(2):
+        with pytest.raises(PiVersionError):
+            await check_version(
+                [sys.executable, "-c", "import os; os.write(1, b'x' * 2000000)"],
+                cwd=None,
+                env=os.environ,
+                timeout=0.2,
+                strict=False,
+                allow_unknown=False,
+            )
+
+
 def test_explicit_command_argv():
     assert executable_argv([sys.executable, "fixture.py"], os.environ)[1:] == ["fixture.py"]
 

@@ -9,6 +9,7 @@ import shutil
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
+from ._transport import _close_process_pipes, _wait_for_exit
 from .errors import PiProcessError, PiVersionError
 
 MINIMUM_PI_VERSION = "0.85.1"
@@ -91,6 +92,8 @@ def validate_extra_args(args: Sequence[str]) -> None:
         if name in _VALUES:
             if "=" in arg or index + 1 == len(args):
                 raise ValueError(f"Pi option {name} requires a separate value")
+            if name in {"--use-theme", "--tui-mode"} and args[index + 1].startswith("-"):
+                raise ValueError(f"Pi option {name} requires a value before another option")
             index += 2
         elif name in _FLAGS:
             if "=" in arg:
@@ -187,9 +190,14 @@ async def check_version(
     except OSError as exc:
         raise PiProcessError("Could not launch Pi for version checking") from exc
     finally:
-        if process is not None and process.returncode is None:
-            try:
-                process.kill()
-            except ProcessLookupError:
-                pass
+        if process is not None:
+            if process.returncode is None:
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    pass
+                # Process.wait() may depend on full or inherited pipes closing.
+                # Wait for the owned child's exit first, then release those pipes.
+                await _wait_for_exit(process)
+            _close_process_pipes(process)
             await process.wait()
