@@ -134,6 +134,7 @@ class PiClient:
         self._thread_done = threading.Event()
         self._thread: threading.Thread | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._loop_error: BaseException | None = None
         self._closing = False
         self._closed = False
 
@@ -170,8 +171,18 @@ class PiClient:
             raise RuntimeError("Blocking PiClient calls are not allowed from UI callbacks")
 
     def _loop_main(self) -> None:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        loop: asyncio.AbstractEventLoop | None = None
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        except BaseException as exc:
+            self._loop_error = exc
+            if loop is not None:
+                loop.close()
+            # The starting thread must wake even when no loop could be created.
+            self._ready.set()
+            self._thread_done.set()
+            return
         self._loop = loop
         self._ready.set()
         try:
@@ -207,7 +218,12 @@ class PiClient:
         call = _Call(factory)
         with self._lock:
             loop = self._loop
-            if loop is None or self._closed or (self._closing and not closing):
+            if (
+                loop is None
+                or self._thread_done.is_set()
+                or self._closed
+                or (self._closing and not closing)
+            ):
                 raise PiProcessError("Pi is not running; use the client context or start() first")
             loop.call_soon_threadsafe(call.start)
         try:
@@ -230,12 +246,18 @@ class PiClient:
         with self._lock:
             if self._thread is not None or self._closed or self._closing:
                 raise PiProcessError("Clients are single-use; create a new client to restart Pi")
-            self._thread = threading.Thread(
-                target=self._loop_main, name="pi-client-loop", daemon=True
-            )
-            self._thread.start()
+            thread = threading.Thread(target=self._loop_main, name="pi-client-loop", daemon=True)
+            try:
+                thread.start()
+            except BaseException:
+                self._closed = True
+                self._closed_event.set()
+                raise
+            self._thread = thread
         try:
             self._ready.wait()
+            if self._loop_error is not None:
+                raise PiProcessError("Could not initialize the Pi event loop") from self._loop_error
             self._call(self._client.start)
         except BaseException:
             self.close()
@@ -258,10 +280,11 @@ class PiClient:
                 self._ready.wait()
                 try:
                     # Interrupting shutdown must not cancel process reaping.
-                    self._call(self._client.aclose, closing=True, cancel_on_interrupt=False)
+                    if self._loop is not None and not self._thread_done.is_set():
+                        self._call(self._client.aclose, closing=True, cancel_on_interrupt=False)
                 finally:
-                    assert self._loop is not None
-                    self._loop.call_soon_threadsafe(self._loop.stop)
+                    if self._loop is not None and not self._loop.is_closed():
+                        self._loop.call_soon_threadsafe(self._loop.stop)
                     interrupted = False
                     while not self._thread_done.is_set():
                         try:
@@ -275,6 +298,17 @@ class PiClient:
             with self._lock:
                 self._closed = True
                 self._closed_event.set()
+
+    def _close_context(self, close: Callable[[], Coroutine[Any, Any, None]]) -> None:
+        """Close a nested context, or join client shutdown already doing its cleanup."""
+        try:
+            self._call(close, cancel_on_interrupt=False)
+        except PiProcessError:
+            with self._lock:
+                shutting_down = self._closing or self._closed
+            if not shutting_down:
+                raise
+            self.close()
 
     def __enter__(self) -> Self:
         self.start()
@@ -524,8 +558,8 @@ class SyncEventSubscription:
 
     def close(self) -> None:
         self._closed = True
-        if self._subscription is not None and not self._client._closed:
-            self._client._call(self._subscription.aclose)
+        if self._subscription is not None:
+            self._client._close_context(self._subscription.aclose)
 
 
 class SyncRunStream:
@@ -573,13 +607,25 @@ class SyncRunStream:
         self.close()
 
     def __iter__(self) -> Self:
-        async def begin_iteration() -> None:
-            if self._stream is None:
-                raise RuntimeError("Enter the stream context before iterating")
-            self._stream.__aiter__()
-
-        self._client._call(begin_iteration)
+        # Iterator wrappers may call iter() repeatedly before requesting an item.
+        # The async next/result methods enforce actual competing consumption.
         return self
+
+    def _call_owned(self, operation: Callable[[], Coroutine[Any, Any, T]]) -> T:
+        async def invoke() -> T:
+            try:
+                return await operation()
+            except asyncio.CancelledError:
+                if self._stream is not None:
+                    await self._stream.aclose()
+                raise
+
+        try:
+            return self._client._call(invoke)
+        except KeyboardInterrupt:
+            # Cancellation before invoke() starts cannot run its exception handler.
+            self.close()
+            raise
 
     def __next__(self) -> Event:
         async def next_event() -> Event:
@@ -588,7 +634,7 @@ class SyncRunStream:
             return await self._stream.__anext__()
 
         try:
-            return self._client._call(next_event)
+            return self._call_owned(next_event)
         except StopAsyncIteration:
             raise StopIteration from None
 
@@ -598,9 +644,9 @@ class SyncRunStream:
                 raise RuntimeError("Enter the stream context before requesting its result")
             return await self._stream.result()
 
-        return self._client._call(result)
+        return self._call_owned(result)
 
     def close(self) -> None:
         self._closed = True
-        if self._stream is not None and not self._client._closed:
-            self._client._call(self._stream.aclose)
+        if self._stream is not None:
+            self._client._close_context(self._stream.aclose)

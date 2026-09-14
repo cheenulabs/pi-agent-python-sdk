@@ -353,3 +353,127 @@ def test_explicit_methods_preserve_async_signatures_and_forward_all_arguments(mo
             called_name, called_args, called_kwargs, thread = seen[-1]
             assert (called_name, called_args, called_kwargs) == (name, tuple(args), kwargs)
             assert thread is pi._thread
+
+
+@pytest.mark.parametrize("failure_point", ["new_event_loop", "set_event_loop"])
+def test_loop_initialization_failure_wakes_start_and_close(monkeypatch, failure_point):
+    def fail(*args):
+        raise OSError("synthetic loop initialization failure")
+
+    pi = client()
+    monkeypatch.setattr(asyncio, failure_point, fail)
+    with pytest.raises(PiProcessError, match="initialize") as caught:
+        pi.start()
+    assert isinstance(caught.value.__cause__, OSError)
+    assert pi._ready.is_set() and pi._thread_done.is_set()
+    assert not pi._thread.is_alive()
+    pi.close()
+    pi.close()
+
+
+def test_thread_start_failure_leaves_client_safe_to_close(monkeypatch):
+    def fail(thread):
+        raise RuntimeError("synthetic thread creation failure")
+
+    pi = client()
+    monkeypatch.setattr(threading.Thread, "start", fail)
+    with pytest.raises(RuntimeError, match="thread creation"):
+        pi.start()
+    pi.close()
+    pi.close()
+    assert pi._thread is None
+    assert pi._closed_event.is_set()
+
+
+def test_stream_iterator_can_be_wrapped_and_repeated():
+    with client() as pi:
+        with pi.stream("iterable") as stream:
+            iterator = iter(stream)
+            assert iter(iterator) is iterator
+            assert [event.type for event in list(iterator)][-1] == "agent_settled"
+            assert list(iterator) == []
+            assert stream.result().text == "iterable"
+
+
+@pytest.mark.parametrize("operation", ["next", "result"])
+@pytest.mark.parametrize("during_operation", [False, True])
+def test_stream_interrupt_finishes_owned_run_before_caller_catches(
+    monkeypatch, operation, during_operation
+):
+    with client() as pi:
+        with pi.stream("hold") as stream:
+            if operation == "next":
+                assert next(stream).type == "agent_start"
+            entered = threading.Event()
+            method = "__anext__" if operation == "next" else "result"
+            original_operation = getattr(stream._stream, method)
+
+            async def observed_operation():
+                entered.set()
+                return await original_operation()
+
+            monkeypatch.setattr(stream._stream, method, observed_operation)
+            original_result = concurrent.futures.Future.result
+            interrupted = False
+
+            def interrupt_once(future, timeout=None):
+                nonlocal interrupted
+                if not interrupted:
+                    interrupted = True
+                    if during_operation:
+                        assert entered.wait(3)
+                    raise KeyboardInterrupt
+                return original_result(future, timeout)
+
+            with monkeypatch.context() as patch:
+                patch.setattr(concurrent.futures.Future, "result", interrupt_once)
+                with pytest.raises(KeyboardInterrupt):
+                    next(stream) if operation == "next" else stream.result()
+            # The with block is deliberately still open: the interrupt itself cleans up.
+            assert not pi.busy
+            assert not pi.get_state()["isStreaming"]
+            assert pi.run("after interrupt").text == "after interrupt"
+
+
+@pytest.mark.parametrize("context_kind", ["events", "stream"])
+def test_context_exit_joins_concurrent_client_close_without_masking_body_error(
+    monkeypatch, context_kind
+):
+    pi = client()
+    pi.start()
+    context = pi.events() if context_kind == "events" else pi.stream("hold")
+    entered_close = threading.Event()
+    entered_context_exit = threading.Event()
+    release = asyncio.Event()
+    original_close = pi._client.aclose
+    original_context_close = pi._close_context
+
+    async def delayed_close():
+        entered_close.set()
+        await release.wait()
+        await original_close()
+
+    def observed_context_close(close):
+        entered_context_exit.set()
+        return original_context_close(close)
+
+    monkeypatch.setattr(pi._client, "aclose", delayed_close)
+    monkeypatch.setattr(pi, "_close_context", observed_context_close)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+
+        def body():
+            with context:
+                executor.submit(pi.close)
+                assert entered_close.wait(3)
+                raise ValueError("synthetic context body failure")
+
+        exiting = executor.submit(body)
+        try:
+            assert entered_context_exit.wait(3)
+        finally:
+            pi._loop.call_soon_threadsafe(release.set)
+        with pytest.raises(ValueError, match="context body failure"):
+            exiting.result(timeout=3)
+    assert not pi._thread.is_alive()
+    context.close()
+    pi.close()

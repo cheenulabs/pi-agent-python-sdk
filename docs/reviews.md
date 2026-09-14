@@ -57,3 +57,23 @@ After corrections, 29 async behavior tests, 17 sync facade tests, and 16 real-Pi
 lifecycle tests passed together. The separate 12-test real-Pi command suite
 covers every one of the 33 commands. Ruff and strict mypy pass. These checks do
 not constitute remote CI or a GitHub merge.
+
+## Synchronous facade
+
+Both reviews compared `ba9b049...ec6427e`.
+
+**Standards review:** two medium-priority issues. Event-loop allocation failure
+could leave startup waiting forever, and repeated `iter()` calls rejected
+normal Python iterator use. Startup now signals both readiness and completion
+on failure; stream iterators return themselves idempotently.
+
+**Plan coverage review:** one high-priority and one medium-priority issue.
+Ctrl-C during a stream read/result could leave its owned run active after the
+caller caught the interrupt. Context cleanup could also raise while another
+thread was closing the client. Interrupted owned stream operations now await
+run cleanup, and contexts coordinate with enclosing shutdown.
+
+Regression validation: 27 sync tests and 29 async behavior tests pass together.
+Tests cover interrupts before/during stream operations, loop/thread startup
+failure, repeated iteration, and both context kinds during concurrent close.
+Ruff and strict mypy pass.
