@@ -17,6 +17,7 @@ from .errors import (
     PiUIHandlerError,
     PiVersionError,
 )
+from .sync import PiClient
 from .types import Event, ImageContent, Limits, RunResult, SessionInfo, UsageSummary
 
 __all__ = [
@@ -26,6 +27,7 @@ __all__ = [
     "Limits",
     "PiBusyError",
     "PiCommandError",
+    "PiClient",
     "PiError",
     "PiProcessError",
     "PiProtocolError",
