@@ -160,6 +160,10 @@ class AsyncPiClient:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._closed = False
         self._starting = False
+        self._startup_task: asyncio.Task[Any] | None = None
+        self._startup_done = asyncio.Event()
+        self._close_task: asyncio.Task[None] | None = None
+        self._close_initiator: asyncio.Task[Any] | None = None
         self.pi_version: str | None = None
         self.compatibility: str = "unchecked"
 
@@ -203,6 +207,8 @@ class AsyncPiClient:
             raise PiProcessError("Clients are single-use; create a new client to restart Pi")
         self._loop = asyncio.get_running_loop()
         self._starting = True
+        self._startup_task = asyncio.current_task()
+        self._startup_done.clear()
         child_env = dict(os.environ) if self._inherit_env else {}
         for name, value in self._env_overrides.items():
             if value is None:
@@ -233,25 +239,42 @@ class AsyncPiClient:
                 )
                 self._update_session(self._data(response))
         except TimeoutError as exc:
-            await self.aclose()
+            if not self._closed:
+                await self.aclose()
             raise PiTimeoutError("Pi startup timed out", uncertain=False) from exc
         except BaseException:
-            await self.aclose()
+            if not self._closed:
+                await self.aclose()
             raise
         finally:
             self._starting = False
+            self._startup_task = None
+            self._startup_done.set()
 
     async def aclose(self) -> None:
         """Wake all operations and reap the child; repeated calls are safe."""
         self._check_loop()
-        self._closed = True
+        if self._close_task is None:
+            self._closed = True
+            self._close_initiator = asyncio.current_task()
+            self._close_task = asyncio.create_task(self._finish_close(), name="pi-client-close")
+        await asyncio.shield(self._close_task)
+
+    async def _finish_close(self) -> None:
+        startup = self._startup_task
+        if startup is not None and startup is not self._close_initiator and not startup.done():
+            startup.cancel()
+            # start() may be part of a larger application task whose finally
+            # also closes us. Wait for startup cleanup, not that whole task.
+            await self._startup_done.wait()
         if self._transport is not None:
             await self._transport.aclose()
-        tasks = tuple(task for task in self._ui_tasks if task is not asyncio.current_task())
+        tasks = tuple(task for task in self._ui_tasks if task is not self._close_initiator)
         for task in tasks:
             task.cancel()
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+        self._close_initiator = None
 
     def events(self) -> EventSubscription:
         """Subscribe on context entry to future events, including extension UI/errors."""
@@ -306,7 +329,7 @@ class AsyncPiClient:
     def _on_failure(self, error: Exception) -> None:
         self._session = SessionInfo()
         for task in tuple(self._ui_tasks):
-            if task is not asyncio.current_task():
+            if task is not asyncio.current_task() and task is not self._close_initiator:
                 task.cancel()
         for subscription in tuple(self._subscriptions):
             subscription._finish(error)
@@ -529,11 +552,13 @@ class AsyncPiClient:
         await self._request("abort", timeout=timeout)
 
     async def clear_queue(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> QueueState:
+        """Clear queued input and return the removed steering and follow-up text."""
         return cast(QueueState, await self._object("clear_queue", timeout=timeout))
 
     async def new_session(
         self, *, parent_session: str | None = None, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> SessionChangeResult:
+        """Start a new session; inspect cancelled for an extension veto."""
         return cast(
             SessionChangeResult,
             await self._object(
@@ -550,6 +575,7 @@ class AsyncPiClient:
     async def set_model(
         self, provider: str, model_id: str, *, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> Model:
+        """Select a provider/model and return its full metadata."""
         return cast(
             Model,
             await self._object(
@@ -558,22 +584,26 @@ class AsyncPiClient:
         )
 
     async def cycle_model(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> ModelCycleResult | None:
+        """Cycle models and return model, thinking level, and scope, or None."""
         response = await self._request("cycle_model", timeout=timeout)
         return (
             None if response.get("data") is None else cast(ModelCycleResult, self._data(response))
         )
 
     async def get_available_models(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> list[Model]:
+        """List the models Pi makes available with their provider metadata."""
         return await self._list("get_available_models", "models", timeout=timeout)
 
     async def set_thinking_level(
         self, level: ThinkingLevel, *, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> None:
+        """Request a thinking level for the current model."""
         await self._request("set_thinking_level", {"level": level}, timeout=timeout)
 
     async def cycle_thinking_level(
         self, *, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> ThinkingLevel | None:
+        """Cycle the current thinking level, or return None when unavailable."""
         response = await self._request("cycle_thinking_level", timeout=timeout)
         if response.get("data") is None:
             return None
@@ -585,21 +615,25 @@ class AsyncPiClient:
     async def get_available_thinking_levels(
         self, *, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> list[ThinkingLevel]:
+        """List thinking levels available for the current model."""
         return await self._list("get_available_thinking_levels", "levels", timeout=timeout)
 
     async def set_steering_mode(
         self, mode: QueueMode, *, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> None:
+        """Choose all queued steering messages or one at a time."""
         await self._request("set_steering_mode", {"mode": mode}, timeout=timeout)
 
     async def set_follow_up_mode(
         self, mode: QueueMode, *, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> None:
+        """Choose all queued follow-up messages or one at a time."""
         await self._request("set_follow_up_mode", {"mode": mode}, timeout=timeout)
 
     async def compact(
         self, *, custom_instructions: str | None = None, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> CompactionResult:
+        """Compact the conversation and return Pi's summary and token information."""
         return cast(
             CompactionResult,
             await self._object(
@@ -614,12 +648,15 @@ class AsyncPiClient:
     async def set_auto_compaction(
         self, enabled: bool, *, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> None:
+        """Enable or disable Pi's automatic context compaction."""
         await self._request("set_auto_compaction", {"enabled": enabled}, timeout=timeout)
 
     async def set_auto_retry(self, enabled: bool, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
+        """Enable or disable Pi's automatic retry policy."""
         await self._request("set_auto_retry", {"enabled": enabled}, timeout=timeout)
 
     async def abort_retry(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
+        """Abort Pi's active retry sequence."""
         await self._request("abort_retry", timeout=timeout)
 
     async def bash(
@@ -647,14 +684,17 @@ class AsyncPiClient:
         )
 
     async def abort_bash(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
+        """Abort Pi's active bash execution."""
         await self._request("abort_bash", timeout=timeout)
 
     async def get_session_stats(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> SessionStats:
+        """Return Pi's current session message counts, token totals, and cost."""
         return cast(SessionStats, await self._object("get_session_stats", timeout=timeout))
 
     async def export_html(
         self, *, output_path: str | None = None, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> str:
+        """Export the current session and return the path written by Pi."""
         data = await self._object(
             "export_html",
             {"outputPath": output_path} if output_path is not None else {},
@@ -667,23 +707,28 @@ class AsyncPiClient:
     async def switch_session(
         self, session_path: str, *, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> SessionChangeResult:
+        """Switch to a session path; inspect cancelled for an extension veto."""
         return cast(
             SessionChangeResult,
             await self._object("switch_session", {"sessionPath": session_path}, timeout=timeout),
         )
 
     async def fork(self, entry_id: str, *, timeout: Timeout = DEFAULT_TIMEOUT) -> ForkResult:
+        """Fork at an eligible entry; a veto can omit the returned editable text."""
         return cast(ForkResult, await self._object("fork", {"entryId": entry_id}, timeout=timeout))
 
     async def clone(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> SessionChangeResult:
+        """Clone the current session; inspect cancelled for an extension veto."""
         return cast(SessionChangeResult, await self._object("clone", timeout=timeout))
 
     async def get_fork_messages(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> list[ForkMessage]:
+        """List eligible message entry IDs and text for choosing a fork point."""
         return await self._list("get_fork_messages", "messages", timeout=timeout)
 
     async def get_entries(
         self, *, since: str | None = None, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> EntriesResult:
+        """Return saved entries after an optional entry ID and the current leaf ID."""
         return cast(
             EntriesResult,
             await self._object(
@@ -692,21 +737,26 @@ class AsyncPiClient:
         )
 
     async def get_tree(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> TreeResult:
+        """Return the recursive session tree and nullable selected leaf ID."""
         return cast(TreeResult, await self._object("get_tree", timeout=timeout))
 
     async def get_last_assistant_text(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> str | None:
+        """Query session history for usable assistant text, or None when absent."""
         value = (await self._object("get_last_assistant_text", timeout=timeout)).get("text")
         if value is not None and not isinstance(value, str):
             raise PiProtocolError("get_last_assistant_text returned invalid text")
         return value
 
     async def set_session_name(self, name: str, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
+        """Set the session name and refresh cached identity from Pi."""
         await self._request("set_session_name", {"name": name}, timeout=timeout)
 
     async def get_messages(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> list[AgentMessage]:
+        """Return Pi's current conversation messages."""
         return await self._list("get_messages", "messages", timeout=timeout)
 
     async def get_commands(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> list[SlashCommand]:
+        """List extension, prompt-template, and skill commands with source information."""
         return await self._list("get_commands", "commands", timeout=timeout)
 
     def stream(

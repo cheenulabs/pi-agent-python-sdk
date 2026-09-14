@@ -268,3 +268,86 @@ async def test_preflight_timeout_closes_pi_and_cancels_ui_handler():
             await pi.run("ui", timeout=0.1)
         assert not pi.running and not pi.busy
         assert cancelled.is_set()
+
+
+async def test_close_during_version_check_waits_for_owned_probe_cleanup(monkeypatch):
+    import pi_coding_agent_client.client as module
+
+    entered = asyncio.Event()
+    cleaned = asyncio.Event()
+
+    async def gated_version(*args, **kwargs):
+        entered.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cleaned.set()
+
+    monkeypatch.setattr(module, "check_version", gated_version)
+    pi = AsyncPiClient(executable=sys.executable)
+    task = asyncio.create_task(pi.start())
+    await entered.wait()
+    await pi.aclose()
+    assert cleaned.is_set() and task.done() and not pi.running
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+
+async def test_subscription_bytes_bound_independent_of_record_count():
+    async with AsyncPiClient(
+        executable=[sys.executable, str(FAKE)],
+        limits=Limits(event_queue_bytes=100),
+    ) as pi:
+        async with pi.events() as events:
+            await pi.request("emit", records=[{"type": "future", "payload": "x" * 200}])
+            with pytest.raises(PiSubscriptionOverflow):
+                await anext(events)
+        assert pi.running
+
+
+async def test_ui_callback_can_close_during_readiness():
+    finished = asyncio.Event()
+
+    async def close_during_startup(request):
+        await pi.aclose()
+        finished.set()
+
+    pi = AsyncPiClient(
+        executable=[sys.executable, str(FAKE)],
+        extra_args=["--startup-ui"],
+        ui_handler=close_during_startup,
+    )
+    task = asyncio.create_task(pi.start())
+    async with asyncio.timeout(2):
+        await finished.wait()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    await pi.aclose()
+    assert not pi.running
+
+
+async def test_startup_close_does_not_wait_for_callers_enclosing_finally():
+    callback_finished = asyncio.Event()
+
+    async def close_from_startup(request):
+        await pi.aclose()
+        callback_finished.set()
+
+    pi = AsyncPiClient(
+        executable=[sys.executable, str(FAKE)],
+        extra_args=["--startup-ui"],
+        ui_handler=close_from_startup,
+    )
+
+    async def application():
+        try:
+            await pi.start()
+        finally:
+            await pi.aclose()
+
+    task = asyncio.create_task(application())
+    async with asyncio.timeout(2):
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        await callback_finished.wait()
+    assert not pi.running

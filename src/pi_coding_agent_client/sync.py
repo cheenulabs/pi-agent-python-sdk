@@ -350,6 +350,7 @@ class PiClient:
         images: list[ImageContent] | None = None,
         timeout: Timeout = DEFAULT_TIMEOUT,
     ) -> None:
+        """Queue input for Pi's next steering opportunity; acknowledgement is not consumption."""
         self._call(lambda: self._client.steer(message, images=images, timeout=timeout))
 
     def follow_up(
@@ -359,68 +360,85 @@ class PiClient:
         images: list[ImageContent] | None = None,
         timeout: Timeout = DEFAULT_TIMEOUT,
     ) -> None:
+        """Queue input after the current response; acknowledgement is not consumption."""
         self._call(lambda: self._client.follow_up(message, images=images, timeout=timeout))
 
     def abort(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
+        """Abort current work using Pi semantics, without implicitly clearing queued input."""
         self._call(lambda: self._client.abort(timeout=timeout))
 
     def clear_queue(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> QueueState:
+        """Clear queued input and return the removed steering and follow-up text."""
         return self._call(lambda: self._client.clear_queue(timeout=timeout))
 
     def new_session(
         self, *, parent_session: str | None = None, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> SessionChangeResult:
+        """Start a new session; inspect cancelled for an extension veto."""
         return self._call(
             lambda: self._client.new_session(parent_session=parent_session, timeout=timeout)
         )
 
     def get_state(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> SessionState:
+        """Read authoritative Pi state and refresh the cached session identity."""
         return self._call(lambda: self._client.get_state(timeout=timeout))
 
     def set_model(
         self, provider: str, model_id: str, *, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> Model:
+        """Select a provider/model and return its full metadata."""
         return self._call(lambda: self._client.set_model(provider, model_id, timeout=timeout))
 
     def cycle_model(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> ModelCycleResult | None:
+        """Cycle models and return model, thinking level, and scope, or None."""
         return self._call(lambda: self._client.cycle_model(timeout=timeout))
 
     def get_available_models(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> list[Model]:
+        """List the models Pi makes available with their provider metadata."""
         return self._call(lambda: self._client.get_available_models(timeout=timeout))
 
     def set_thinking_level(
         self, level: ThinkingLevel, *, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> None:
+        """Request a thinking level for the current model."""
         self._call(lambda: self._client.set_thinking_level(level, timeout=timeout))
 
     def cycle_thinking_level(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> ThinkingLevel | None:
+        """Cycle the current thinking level, or return None when unavailable."""
         return self._call(lambda: self._client.cycle_thinking_level(timeout=timeout))
 
     def get_available_thinking_levels(
         self, *, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> list[ThinkingLevel]:
+        """List thinking levels available for the current model."""
         return self._call(lambda: self._client.get_available_thinking_levels(timeout=timeout))
 
     def set_steering_mode(self, mode: QueueMode, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
+        """Choose all queued steering messages or one at a time."""
         self._call(lambda: self._client.set_steering_mode(mode, timeout=timeout))
 
     def set_follow_up_mode(self, mode: QueueMode, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
+        """Choose all queued follow-up messages or one at a time."""
         self._call(lambda: self._client.set_follow_up_mode(mode, timeout=timeout))
 
     def compact(
         self, *, custom_instructions: str | None = None, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> CompactionResult:
+        """Compact the conversation and return Pi's summary and token information."""
         return self._call(
             lambda: self._client.compact(custom_instructions=custom_instructions, timeout=timeout)
         )
 
     def set_auto_compaction(self, enabled: bool, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
+        """Enable or disable Pi's automatic context compaction."""
         self._call(lambda: self._client.set_auto_compaction(enabled, timeout=timeout))
 
     def set_auto_retry(self, enabled: bool, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
+        """Enable or disable Pi's automatic retry policy."""
         self._call(lambda: self._client.set_auto_retry(enabled, timeout=timeout))
 
     def abort_retry(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
+        """Abort Pi's active retry sequence."""
         self._call(lambda: self._client.abort_retry(timeout=timeout))
 
     def bash(
@@ -430,6 +448,7 @@ class PiClient:
         exclude_from_context: bool | None = None,
         timeout: Timeout = DEFAULT_TIMEOUT,
     ) -> BashResult:
+        """Run Pi's bash command; events() exposes output deltas while it executes."""
         return self._call(
             lambda: self._client.bash(
                 command, exclude_from_context=exclude_from_context, timeout=timeout
@@ -437,14 +456,17 @@ class PiClient:
         )
 
     def abort_bash(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
+        """Abort Pi's active bash execution."""
         self._call(lambda: self._client.abort_bash(timeout=timeout))
 
     def get_session_stats(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> SessionStats:
+        """Return Pi's current session message counts, token totals, and cost."""
         return self._call(lambda: self._client.get_session_stats(timeout=timeout))
 
     def export_html(
         self, *, output_path: str | None = None, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> str:
+        """Export the current session and return the path written by Pi."""
         return self._call(
             lambda: self._client.export_html(output_path=output_path, timeout=timeout)
         )
@@ -452,35 +474,45 @@ class PiClient:
     def switch_session(
         self, session_path: str, *, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> SessionChangeResult:
+        """Switch to a session path; inspect cancelled for an extension veto."""
         return self._call(lambda: self._client.switch_session(session_path, timeout=timeout))
 
     def fork(self, entry_id: str, *, timeout: Timeout = DEFAULT_TIMEOUT) -> ForkResult:
+        """Fork at an eligible entry; a veto can omit the returned editable text."""
         return self._call(lambda: self._client.fork(entry_id, timeout=timeout))
 
     def clone(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> SessionChangeResult:
+        """Clone the current session; inspect cancelled for an extension veto."""
         return self._call(lambda: self._client.clone(timeout=timeout))
 
     def get_fork_messages(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> list[ForkMessage]:
+        """List eligible message entry IDs and text for choosing a fork point."""
         return self._call(lambda: self._client.get_fork_messages(timeout=timeout))
 
     def get_entries(
         self, *, since: str | None = None, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> EntriesResult:
+        """Return saved entries after an optional entry ID and the current leaf ID."""
         return self._call(lambda: self._client.get_entries(since=since, timeout=timeout))
 
     def get_tree(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> TreeResult:
+        """Return the recursive session tree and nullable selected leaf ID."""
         return self._call(lambda: self._client.get_tree(timeout=timeout))
 
     def get_last_assistant_text(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> str | None:
+        """Query session history for usable assistant text, or None when absent."""
         return self._call(lambda: self._client.get_last_assistant_text(timeout=timeout))
 
     def set_session_name(self, name: str, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
+        """Set the session name and refresh cached identity from Pi."""
         self._call(lambda: self._client.set_session_name(name, timeout=timeout))
 
     def get_messages(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> list[AgentMessage]:
+        """Return Pi's current conversation messages."""
         return self._call(lambda: self._client.get_messages(timeout=timeout))
 
     def get_commands(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> list[SlashCommand]:
+        """List extension, prompt-template, and skill commands with source information."""
         return self._call(lambda: self._client.get_commands(timeout=timeout))
 
     def events(self) -> SyncEventSubscription:

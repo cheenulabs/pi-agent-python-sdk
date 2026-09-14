@@ -48,10 +48,24 @@ def main():
         return
     active = False
     ui_prompt = None
+    startup_ui = "--startup-ui" in sys.argv
     for line in sys.stdin:
         request = json.loads(line)
         command = request["type"]
         if command == "get_state":
+            if startup_ui:
+                startup_ui = False
+                ui_prompt = request
+                emit(
+                    {
+                        "type": "extension_ui_request",
+                        "id": "startup",
+                        "method": "confirm",
+                        "title": "Fixture",
+                        "message": "Start?",
+                    }
+                )
+                continue
             reply(
                 request,
                 {

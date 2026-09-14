@@ -14,6 +14,19 @@ upstream = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(upstream)
 
 
+def test_source_inventory_includes_imported_payload_definitions():
+    assert {
+        "packages/coding-agent/src/core/bash-executor.ts",
+        "packages/coding-agent/src/core/source-info.ts",
+        "packages/coding-agent/src/core/compaction/compaction.ts",
+        "packages/coding-agent/src/core/compaction/index.ts",
+        "packages/coding-agent/src/core/extensions/types.ts",
+        "packages/coding-agent/package.json",
+        "packages/coding-agent/src/modes/rpc/jsonl.ts",
+        "packages/agent/src/agent-loop.ts",
+    }.issubset(upstream.FILES)
+
+
 @pytest.fixture
 def baseline(tmp_path, monkeypatch):
     monkeypatch.setattr(upstream, "ROOT", tmp_path)

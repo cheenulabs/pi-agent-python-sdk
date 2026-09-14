@@ -31,6 +31,9 @@ jobs:
         run: npm install --prefix tests/pi --no-save --package-lock=false --ignore-scripts --no-audit --no-fund "@earendil-works/pi-coding-agent@$PI_VERSION"
       - name: Run integration independently of the recorded pin
         run: uv run --no-sync pytest tests/integration
+        env:
+          PI_CLIENT_REQUIRE_INTEGRATION: '1'
+          PI_CLIENT_EXPECTED_PI_VERSION: ${{ steps.latest.outputs.version }}
       - name: Review source drift
         if: always() && steps.latest.outcome == 'success'
         env:

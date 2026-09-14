@@ -77,3 +77,36 @@ Regression validation: 27 sync tests and 29 async behavior tests pass together.
 Tests cover interrupts before/during stream operations, loop/thread startup
 failure, repeated iteration, and both context kinds during concurrent close.
 Ruff and strict mypy pass.
+
+## Public package and compatibility automation
+
+Both reviews compared `89bf2c5...0856b0a`.
+
+**Standards review:** the fingerprint list omitted imported RPC payload
+definitions, and successful pytest exit did not prove that offline integration
+had actually run when prerequisites were missing.
+
+**Plan coverage review:** reproduced the missing-runtime case as 29 skipped
+tests with exit code zero. It also identified omitted framing/agent-loop
+sources in the source-change report. These were medium-priority gate gaps.
+
+The source inventory now includes those definitions, framing, agent-loop,
+runtime, CLI and package metadata. CI requires Node and the real runtime,
+checks its exact selected version, and fails instead of skipping when missing.
+Focused tests cover missing/wrong runtimes, version/source drift, explicit
+baseline recording, and agreement with the offline compatibility constants.
+
+Archive inspection found an unanchored README pattern including a test README
+in the source distribution. Explicit file selection corrected it; rebuilt
+archives and installed-wheel sync/async smoke checks pass.
+
+Final lifecycle review also caught an async startup-close issue: waiting for
+the caller's entire task could deadlock with its enclosing finally block.
+Shutdown now waits for startup cleanup completion, independently of the user
+task. Dedicated regressions cover close during version probing, startup UI
+callbacks, caller finally blocks, and subscription byte limits.
+
+Final verification is recorded in [validation.md](validation.md). The public
+docs include all command methods, behavioral guides, nine checked examples,
+and concise public method docstrings. Remote PRs, CI, and publication remain
+unverified while access is unavailable.

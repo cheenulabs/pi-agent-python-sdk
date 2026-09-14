@@ -1,7 +1,9 @@
 # Pi Coding Agent Python Client — Revised Plan
 
-Status: discovery completed on 2026-09-15; implementation in progress.
+Status: local implementation and reviews completed on 2026-09-15; remote PRs,
+platform CI, and release setup remain blocked on external access.
 Evidence: [Discovery findings](docs/discovery.md).
+Current evidence and remaining gates: [validation](docs/validation.md).
 
 Build a small public Python interface to an existing Pi installation.
 One async core serves `AsyncPiClient` and the blocking `PiClient`.
@@ -86,10 +88,12 @@ with PiClient(cwd="./project") as pi:
 import asyncio
 from pi_coding_agent_client import AsyncPiClient
 
+
 async def main():
     async with AsyncPiClient(cwd="./project") as pi:
         result = await pi.run("Explain this project.")
         print(result.text)
+
 
 asyncio.run(main())
 ```
@@ -100,6 +104,7 @@ asyncio.run(main())
 import asyncio
 from pi_coding_agent_client import AsyncPiClient
 
+
 async def main():
     async with AsyncPiClient(cwd="./project") as pi:
         async with pi.stream("Explain this project.") as stream:
@@ -107,6 +112,7 @@ async def main():
                 if event.text_delta is not None:
                     print(event.text_delta, end="", flush=True)
             result = await stream.result()
+
 
 asyncio.run(main())
 ```
@@ -176,6 +182,9 @@ src/pi_coding_agent_client/
     __init__.py       # Public exports
     client.py         # Async methods, subscriptions, run ownership/results
     _transport.py     # Subprocess, framing, response routing, shutdown
+    _launch.py        # CLI validation and offline version checking
+    _events.py        # Bounded event subscriptions
+    _runs.py          # Owned settlement and cancellation
     sync.py           # Blocking facade over the async client
     types.py          # Wire types and small public dataclasses
     errors.py         # Public exceptions

@@ -285,7 +285,7 @@ async def test_context_overflow_compaction_recovery(pi_client: AsyncPiClient) ->
 
 
 async def test_abort_bash_after_real_output(pi_client: AsyncPiClient) -> None:
-    command = 'node -e "console.log(\'fixture-bash-ready\'); setInterval(() => {}, 1000)"'
+    command = "node -e \"console.log('fixture-bash-ready'); setInterval(() => {}, 1000)\""
     async with pi_client.events() as events:
         task = asyncio.create_task(pi_client.bash(command, exclude_from_context=True, timeout=10))
         try:
