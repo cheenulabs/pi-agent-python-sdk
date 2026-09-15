@@ -15,6 +15,8 @@ not yet achieved. Owner-controlled setup and package publication remain.
 | Ruff check and format | Passed |
 | Strict mypy | Package, examples, and example-smoke script passed |
 | Upstream source comparison | All recorded fingerprints and offline version constants match npm Pi 0.85.1 and commit d981de1229ef899957bbe968bc8dcda02a21f477 |
+| Latest-Pi workflow on main | Run 34919463989 passed against resolved latest 0.85.1: 30 offline integration tests and source comparison passed; one opt-in live test skipped |
+| Dependabot update jobs | All three initial jobs completed successfully; dependency update workflows are active |
 | Actionlint 1.7.12 | All three workflow files passed |
 | Wheel and source archive | Built successfully; Twine metadata checks passed; no test/npm runtime included |
 | Installed wheel outside checkout | Fresh environment, no runtime dependencies, isolated Python import; sync and async runs passed |
@@ -34,6 +36,14 @@ No live provider, existing user configuration, or production service was used.
 Remote evidence: [CI run 34918942592](https://github.com/cheenulabs/pi-coding-agent-python-client/actions/runs/34918942592).
 It also passed runnable example smoke checks, quality/build/distribution
 inspection, upstream source verification, and the aggregate `required` gate.
+The final implementation PR head passed
+[CI run 34919253348](https://github.com/cheenulabs/pi-coding-agent-python-client/actions/runs/34919253348)
+before merging. Maintenance execution is recorded in
+[latest-Pi run 34919463989](https://github.com/cheenulabs/pi-coding-agent-python-client/actions/runs/34919463989)
+and the successful Dependabot runs
+[34919457565](https://github.com/cheenulabs/pi-coding-agent-python-client/actions/runs/34919457565),
+[34919457548](https://github.com/cheenulabs/pi-coding-agent-python-client/actions/runs/34919457548), and
+[34919457501](https://github.com/cheenulabs/pi-coding-agent-python-client/actions/runs/34919457501).
 
 ## Plan-to-evidence audit
 
@@ -55,9 +65,9 @@ inspection, upstream source verification, and the aggregate `required` gate.
 | Three test layers | Fake executable suites, real faux-provider integration, opt-in test_live.py | First two executed; live test implemented but deliberately not run |
 | Python/OS CI and package gates | ci.yml; local matrix; GitHub run 34918942592; Actionlint | All six platform jobs, quality/distribution, protocol and aggregate gates passed |
 | Public docs, comments and runnable examples | README, API/usage/error/compatibility guides, public docstrings, scripts/check_examples.py | Nine examples executed; ordinary Markdown guides retained |
-| Dependency updates and latest stable Pi | dependabot.yml, latest-pi.yml, check_upstream.py, compatibility.json | Local configuration and current baseline verified; scheduled execution and repository settings pending |
+| Dependency updates and latest stable Pi | dependabot.yml, latest-pi.yml, check_upstream.py, compatibility.json; remote runs above | Latest-Pi manual run and initial Dependabot jobs passed; daily/weekly workflows are active |
 | Source drift review blocks unnoticed changes | Fingerprint inventory, diff report, maintenance regression tests, CI protocol gate | Explicit recording required; behavior tests do not automatically bless new versions |
-| Review milestones and cleanup | [reviews.md](reviews.md), [implementation.md](implementation.md), GitHub PR states | Reviews recorded on PRs #1–#4; first three merged; PR #4 platform matrix passed |
+| Review milestones and cleanup | [reviews.md](reviews.md), [implementation.md](implementation.md), GitHub PR states | Implementation PRs #1–#4 reviewed and merged; unpublished rehearsal candidate reviewed in PR #5 |
 | TestPyPI rehearsal and reviewed 0.1.0 release | publish.yml, [releasing.md](releasing.md), built archives | Not executed; Trusted Publishers and environments need external setup |
 
 ## External gates still required
@@ -74,9 +84,8 @@ that does not reserve the name or establish publisher ownership.
 Required next evidence:
 
 1. Public repository visibility and owner-configured branch/environment protections.
-2. All milestone PRs merged, as tracked in [implementation.md](implementation.md).
-3. Successful CI on the release commit; required checks and Dependabot settings
-   configured, and the latest-Pi workflow executed from the default branch.
+2. Rehearsal candidate merged with successful CI, as tracked in [implementation.md](implementation.md).
+3. Successful CI on the final release commit and owner-configured required checks.
 4. PyPI/TestPyPI project ownership and Trusted Publishers, approved environments,
    a successful rehearsal, then the reviewed release and clean index install.
 

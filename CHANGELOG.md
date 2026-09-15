@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.1.0rc1 — TestPyPI rehearsal candidate (unpublished)
+
+This candidate prepares the first TestPyPI publishing rehearsal. It has not
+been uploaded to TestPyPI or PyPI; publication requires the reviewed workflow
+and release environment setup described in [the release guide](docs/releasing.md).
 
 - Add `AsyncPiClient` and `PiClient` with explicit methods for all 33 Pi 0.85.1 RPC commands.
 - Add typed wire payloads, future-only event subscriptions, extension dialogs,
