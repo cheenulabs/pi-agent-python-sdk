@@ -1,0 +1,46 @@
+name: Latest Pi compatibility
+on:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  latest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - run: uv sync --locked --group dev --python 3.14
+      - id: latest
+        name: Resolve exact latest stable version
+        shell: bash
+        run: |
+          version=$(npm view @earendil-works/pi-coding-agent@latest version)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Install resolved runtime
+        env:
+          PI_VERSION: ${{ steps.latest.outputs.version }}
+        run: npm install --prefix tests/pi --no-save --package-lock=false --ignore-scripts --no-audit --no-fund "@earendil-works/pi-coding-agent@$PI_VERSION"
+      - name: Run integration independently of the recorded pin
+        run: uv run --no-sync pytest tests/integration
+        env:
+          PI_CLIENT_REQUIRE_INTEGRATION: '1'
+          PI_CLIENT_EXPECTED_PI_VERSION: ${{ steps.latest.outputs.version }}
+      - name: Review source drift
+        if: always() && steps.latest.outcome == 'success'
+        env:
+          PI_VERSION: ${{ steps.latest.outputs.version }}
+        run: uv run --no-sync python scripts/check_upstream.py --version "$PI_VERSION"
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: latest-pi-report
+          path: upstream-report.md

@@ -39,7 +39,8 @@ async def test_state_models_thinking_and_configuration(pi_client: AsyncPiClient)
     assert state["sessionId"] == pi_client.session.session_id
     models = await pi_client.get_available_models()
     assert {m["id"] for m in models if m["provider"] == "python-fixture"} == {
-        "fixture", "fixture-other"
+        "fixture",
+        "fixture-other",
     }
     selected = await pi_client.set_model("python-fixture", "fixture-other")
     assert selected["id"] == "fixture-other"
@@ -178,9 +179,7 @@ async def test_persistence_across_owned_processes(
 
 
 @pytest.mark.parametrize("method", ["select", "confirm", "input", "editor"])
-async def test_dialog_replies(
-    pi_client_factory: Callable[..., AsyncPiClient], method: str
-) -> None:
+async def test_dialog_replies(pi_client_factory: Callable[..., AsyncPiClient], method: str) -> None:
     seen: list[ExtensionUIRequest] = []
 
     async def handler(request: ExtensionUIRequest) -> str | bool | None:

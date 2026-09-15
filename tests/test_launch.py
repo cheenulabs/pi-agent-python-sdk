@@ -96,3 +96,38 @@ async def test_unsupported_version(version, strict):
             strict=strict,
             allow_unknown=False,
         )
+
+
+def test_windows_npm_shim_resolves_without_a_shell(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from pi_coding_agent_client import _launch
+
+    shim = tmp_path / "pi.cmd"
+    shim.touch()
+    cli = tmp_path / "node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js"
+    cli.parent.mkdir(parents=True)
+    cli.touch()
+    node = tmp_path / "node.exe"
+    node.touch()
+    monkeypatch.setattr(
+        _launch, "os", SimpleNamespace(name="nt", PathLike=os.PathLike, fspath=os.fspath)
+    )
+    monkeypatch.setattr(_launch.shutil, "which", lambda name, **kwargs: str(shim))
+    assert executable_argv("pi", {}) == [str(node), str(cli)]
+
+
+def test_unrecognized_windows_shim_has_actionable_error(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from pi_coding_agent_client import _launch
+    from pi_coding_agent_client.errors import PiProcessError
+
+    monkeypatch.setattr(
+        _launch, "os", SimpleNamespace(name="nt", PathLike=os.PathLike, fspath=os.fspath)
+    )
+    monkeypatch.setattr(
+        _launch.shutil, "which", lambda name, **kwargs: str(tmp_path / "custom.cmd")
+    )
+    with pytest.raises(PiProcessError, match="executable="):
+        executable_argv("custom.cmd", {})

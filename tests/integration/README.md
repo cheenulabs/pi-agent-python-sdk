@@ -64,9 +64,14 @@ callback and fresh replacement context to do this safely.
 ```python
 import json
 
-await pi.prompt('/fixture-script ' + json.dumps([
-    {"thinking": "synthetic reasoning", "text": "Hello fixture"},
-]))
+await pi.prompt(
+    "/fixture-script "
+    + json.dumps(
+        [
+            {"thinking": "synthetic reasoning", "text": "Hello fixture"},
+        ]
+    )
+)
 result = await pi.run("synthetic user input")
 assert result.text == "Hello fixture"
 ```

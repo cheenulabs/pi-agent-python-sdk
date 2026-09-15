@@ -1,7 +1,9 @@
 # Implementation reviews
 
 Reviews compare an explicit milestone with the plan and CONTRIBUTING.md.
-These are local engineering reviews, not GitHub approvals or remote merges.
+These are engineering reviews, not independent GitHub approvals. The first
+three reviews are now recorded on their merged PRs; remote status is tracked
+in [implementation.md](implementation.md).
 
 ## Foundation
 
@@ -30,7 +32,9 @@ waits for owned-run cleanup instead of silently continuing the run.
 Validation after corrections: 104 foundation tests and 25 public async-client
 tests pass. Ruff passes for the reviewed foundation and async files.
 
-Remote PR creation is still pending access to the configured repository.
+[PR #1](https://github.com/cheenulabs/pi-coding-agent-python-client/pull/1)
+was merged after repeating validation at `50e8238`: 104 tests, Ruff lint,
+package/test formatting, and strict mypy passed.
 
 ## Async commands and owned runs
 
@@ -56,7 +60,9 @@ the child closed and its handler was cancelled before the gate was released.
 After corrections, 29 async behavior tests, 17 sync facade tests, and 16 real-Pi
 lifecycle tests passed together. The separate 12-test real-Pi command suite
 covers every one of the 33 commands. Ruff and strict mypy pass. These checks do
-not constitute remote CI or a GitHub merge.
+not constitute remote CI. [PR #2](https://github.com/cheenulabs/pi-coding-agent-python-client/pull/2)
+was subsequently merged after exact-commit validation at `ba9b049`: 161 tests
+with no skips, Ruff lint, package formatting, and strict mypy passed.
 
 ## Synchronous facade
 
@@ -77,3 +83,57 @@ Regression validation: 27 sync tests and 29 async behavior tests pass together.
 Tests cover interrupts before/during stream operations, loop/thread startup
 failure, repeated iteration, and both context kinds during concurrent close.
 Ruff and strict mypy pass.
+
+[PR #3](https://github.com/cheenulabs/pi-coding-agent-python-client/pull/3)
+was merged after exact-commit validation at `89bf2c5`: 188 tests with no skips,
+Ruff lint, package formatting, and strict mypy passed. All three milestone
+reruns used isolated worktrees on Linux with Python 3.14.2; the async/sync
+milestones used real Pi 0.85.1. Earlier doc/test whitespace deviations are
+corrected in the final package branch.
+
+## Public package and compatibility automation
+
+Both reviews compared `89bf2c5...0856b0a`.
+
+**Standards review:** the fingerprint list omitted imported RPC payload
+definitions, and successful pytest exit did not prove that offline integration
+had actually run when prerequisites were missing.
+
+**Plan coverage review:** reproduced the missing-runtime case as 29 skipped
+tests with exit code zero. It also identified omitted framing/agent-loop
+sources in the source-change report. These were medium-priority gate gaps.
+
+The source inventory now includes those definitions, framing, agent-loop,
+runtime, CLI and package metadata. CI requires Node and the real runtime,
+checks its exact selected version, and fails instead of skipping when missing.
+Focused tests cover missing/wrong runtimes, version/source drift, explicit
+baseline recording, and agreement with the offline compatibility constants.
+
+Archive inspection found an unanchored README pattern including a test README
+in the source distribution. Explicit file selection corrected it; rebuilt
+archives and installed-wheel sync/async smoke checks pass.
+
+Final lifecycle review also caught an async startup-close issue: waiting for
+the caller's entire task could deadlock with its enclosing finally block.
+Shutdown now waits for startup cleanup completion, independently of the user
+task. Dedicated regressions cover close during version probing, startup UI
+callbacks, caller finally blocks, and subscription byte limits.
+
+Final verification is recorded in [validation.md](validation.md). The public
+docs include all command methods, behavioral guides, nine checked examples,
+and concise public method docstrings. Fresh independent Standards and Spec
+reviews of `89bf2c5...de6f612` found no unresolved blocking findings. Actual
+platform CI and publication are separate gates; static workflow review does
+not prove that they passed.
+
+The first GitHub run passed Linux and macOS. Windows passed 204 tests but
+failed the protocol inventory assertion before reaching it: the test read
+the UTF-8 discovery document using the default Windows code page. Commit
+`359c757` specifies UTF-8 explicitly without weakening the assertion.
+Independent Standards and Spec reviews found no issue with this correction
+or the concrete owner setup instructions added to the release guide.
+
+[Run 34918942592](https://github.com/cheenulabs/pi-coding-agent-python-client/actions/runs/34918942592)
+then passed all six platform jobs, quality/distribution checks, upstream source
+verification, and the aggregate `required` gate. Engineering reviews are
+recorded on [PR #4](https://github.com/cheenulabs/pi-coding-agent-python-client/pull/4).

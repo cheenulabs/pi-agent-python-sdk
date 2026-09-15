@@ -127,7 +127,7 @@ def _table_rows(discovery: str, heading: str) -> set[str]:
 
 
 def test_wire_unions_cover_the_discovered_protocol() -> None:
-    discovery = (Path(__file__).parents[1] / "docs" / "discovery.md").read_text()
+    discovery = (Path(__file__).parents[1] / "docs" / "discovery.md").read_text(encoding="utf-8")
     commands = _table_rows(discovery, "## Complete command coverage")
     events = _table_rows(discovery, "## Complete output event surface")
     nested = _table_rows(discovery, "### Nested assistant events")

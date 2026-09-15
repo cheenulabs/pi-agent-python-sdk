@@ -9,3 +9,4 @@ dist/
 node_modules/
 .coverage
 htmlcov/
+upstream-report.md
