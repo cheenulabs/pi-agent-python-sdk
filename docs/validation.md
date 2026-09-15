@@ -52,21 +52,22 @@ No live provider, existing user configuration, or production service was used.
 | Public docs, comments and runnable examples | README, API/usage/error/compatibility guides, public docstrings, scripts/check_examples.py | Nine examples executed; ordinary Markdown guides retained |
 | Dependency updates and latest stable Pi | dependabot.yml, latest-pi.yml, check_upstream.py, compatibility.json | Local configuration and current baseline verified; scheduled execution and repository settings pending |
 | Source drift review blocks unnoticed changes | Fingerprint inventory, diff report, maintenance regression tests, CI protocol gate | Explicit recording required; behavior tests do not automatically bless new versions |
-| Review milestones and cleanup | [reviews.md](reviews.md), stacked branch history | Engineering reviews/fixes complete locally; remote PR review/merge still pending |
+| Review milestones and cleanup | [reviews.md](reviews.md), [implementation.md](implementation.md), GitHub PR states | First three PRs reviewed and merged; final public-package PR pending workflow upload authorization |
 | TestPyPI rehearsal and reviewed 0.1.0 release | publish.yml, [releasing.md](releasing.md), built archives | Not executed; Trusted Publishers and environments need external setup |
 
 ## External gates still required
 
 The configured repository is
-`https://github.com/cheenulabs/pi-coding-agent-python-client`. Git and GitHub API
-access returned **404**; the available GitHub login is `has-c`, with no second
-configured account. No push, remote PR creation, merge, environment setup, or
-package publication succeeded or has been claimed.
+`https://github.com/cheenulabs/pi-coding-agent-python-client`. Access was restored
+on 2026-09-15 for `has-c`, with push permission but no repository administration
+permission. PRs #1–#3 are reviewed and merged. The final branch push was rejected
+because this CLI authorization lacks the `workflow` scope. No remote CI,
+environment setup, or package publication has succeeded or been claimed.
 
 Required next evidence:
 
-1. Correct repository location or restored write access.
-2. Actual PRs and merges for the stacked branches in [implementation.md](implementation.md).
+1. CLI `workflow` authorization to push the final package branch.
+2. Review and merge the final public-package PR in [implementation.md](implementation.md).
 3. Successful remote CI, including macOS and Windows, on the release commit;
    required checks and Dependabot settings configured.
 4. PyPI/TestPyPI project ownership and Trusted Publishers, approved environments,

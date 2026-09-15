@@ -1,7 +1,9 @@
 # Implementation reviews
 
 Reviews compare an explicit milestone with the plan and CONTRIBUTING.md.
-These are local engineering reviews, not GitHub approvals or remote merges.
+These are engineering reviews, not independent GitHub approvals. The first
+three reviews are now recorded on their merged PRs; remote status is tracked
+in [implementation.md](implementation.md).
 
 ## Foundation
 
@@ -30,7 +32,9 @@ waits for owned-run cleanup instead of silently continuing the run.
 Validation after corrections: 104 foundation tests and 25 public async-client
 tests pass. Ruff passes for the reviewed foundation and async files.
 
-Remote PR creation is still pending access to the configured repository.
+[PR #1](https://github.com/cheenulabs/pi-coding-agent-python-client/pull/1)
+was merged after repeating validation at `50e8238`: 104 tests, Ruff lint,
+package/test formatting, and strict mypy passed.
 
 ## Async commands and owned runs
 
@@ -56,7 +60,9 @@ the child closed and its handler was cancelled before the gate was released.
 After corrections, 29 async behavior tests, 17 sync facade tests, and 16 real-Pi
 lifecycle tests passed together. The separate 12-test real-Pi command suite
 covers every one of the 33 commands. Ruff and strict mypy pass. These checks do
-not constitute remote CI or a GitHub merge.
+not constitute remote CI. [PR #2](https://github.com/cheenulabs/pi-coding-agent-python-client/pull/2)
+was subsequently merged after exact-commit validation at `ba9b049`: 161 tests
+with no skips, Ruff lint, package formatting, and strict mypy passed.
 
 ## Synchronous facade
 
@@ -77,6 +83,13 @@ Regression validation: 27 sync tests and 29 async behavior tests pass together.
 Tests cover interrupts before/during stream operations, loop/thread startup
 failure, repeated iteration, and both context kinds during concurrent close.
 Ruff and strict mypy pass.
+
+[PR #3](https://github.com/cheenulabs/pi-coding-agent-python-client/pull/3)
+was merged after exact-commit validation at `89bf2c5`: 188 tests with no skips,
+Ruff lint, package formatting, and strict mypy passed. All three milestone
+reruns used isolated worktrees on Linux with Python 3.14.2; the async/sync
+milestones used real Pi 0.85.1. Earlier doc/test whitespace deviations are
+corrected in the final package branch.
 
 ## Public package and compatibility automation
 
@@ -108,5 +121,7 @@ callbacks, caller finally blocks, and subscription byte limits.
 
 Final verification is recorded in [validation.md](validation.md). The public
 docs include all command methods, behavioral guides, nine checked examples,
-and concise public method docstrings. Remote PRs, CI, and publication remain
-unverified while access is unavailable.
+and concise public method docstrings. Fresh independent Standards and Spec
+reviews of `89bf2c5...de6f612` found no unresolved blocking findings. Actual
+platform CI and publication remain required; static workflow review does not
+prove that they passed.

@@ -6,29 +6,32 @@ integration. This record distinguishes local completion from remote merges.
 
 | Stage | Status | Evidence |
 |---|---|---|
-| Foundation: package, types, errors, subprocess | Implemented and reviewed locally | `feat/foundation`, `50e8238` |
-| Full command and extension UI coverage | Implemented and reviewed locally | `feat/async-client`, `ba9b049`; all 33 commands exercised against Pi |
-| Owned runs and streams | Implemented and reviewed locally | `ba9b049`; fake-process and offline real-Pi lifecycle tests |
-| Synchronous facade | Implemented and reviewed locally | `feat/sync-client`, `89bf2c5`; 27 sync regression tests |
+| Foundation: package, types, errors, subprocess | Reviewed and merged | [PR #1](https://github.com/cheenulabs/pi-coding-agent-python-client/pull/1), `50e8238`; 104 exact-commit tests |
+| Full command and extension UI coverage | Reviewed and merged | [PR #2](https://github.com/cheenulabs/pi-coding-agent-python-client/pull/2), `ba9b049`; all 33 commands exercised against Pi |
+| Owned runs and streams | Reviewed and merged | PR #2; 161 exact-commit tests including offline real-Pi lifecycle checks |
+| Synchronous facade | Reviewed and merged | [PR #3](https://github.com/cheenulabs/pi-coding-agent-python-client/pull/3), `89bf2c5`; 188 exact-commit tests |
 | Integration, public docs, packaging, CI | Local validation passed; remote CI pending | `feat/public-package`; 205 tests on each of Python 3.11–3.14, nine example smokes, archive checks |
 | Upstream maintenance and release setup | Local workflows written; external setup pending | Dependabot, latest-Pi checks, source drift report, Trusted Publishing workflow |
 
-Remote PR work is pending repository access: the configured public GitHub
-repository returned 404 at implementation startup. Local work continues.
+Repository access was restored on 2026-09-15. The documentation baseline and
+first three implementation milestones are pushed and merged. GitHub rejected
+the final branch's workflow files because the current CLI authorization lacks
+the `workflow` scope; that refresh is pending.
 
 See [review findings and corrections](reviews.md) for the standards and plan
-coverage reviews. No remote pull request or merge has been claimed. GitHub
-CI on macOS/Windows, required-check settings, TestPyPI rehearsal, Trusted
+coverage reviews. Each merged PR contains its engineering review and exact-head
+validation. These author-recorded reviews are not independent GitHub approvals.
+GitHub CI on macOS/Windows, required-check settings, TestPyPI rehearsal, Trusted
 Publisher setup, release publication, and final installed-index verification
 remain outstanding until the relevant external access exists.
 
 The [validation audit](validation.md) maps the complete plan to current
 evidence and explicitly separates external gates from completed local work.
 
-## PR sequence once repository access is restored
+## PR sequence
 
-The local branches are stacked and have not been pushed. Bootstrap the empty
-remote with local main (`33a668e`), then open, review and merge these in order:
+The branches are stacked. The remote was bootstrapped with the documentation
+baseline (`33a668e`); milestones 1–3 were reviewed and merged in order:
 
 1. `feat/foundation`: typed wire surface, exceptions, CLI/version validation,
    owned transport and failure handling.
@@ -39,7 +42,8 @@ remote with local main (`33a668e`), then open, review and merge these in order:
 4. `feat/public-package`: public documentation/examples, packaging validation,
    CI, Dependabot, compatibility automation, and final review corrections.
 
-Use merge commits to preserve the stacked ancestry, or deliberately restack
-later branches after squashing. Record the existing engineering reviews on the
-actual PRs, wait for required checks, then merge. No remote PR/merge identifiers
-exist yet. Final first-release work follows [releasing.md](releasing.md).
+Merge commits preserve the stacked ancestry. The merged commits are
+`df0f9e5` (foundation), `67d944f` (async), and `36a8ad5` (sync). No workflow was
+present in those milestones; their checks ran in isolated local worktrees.
+The final package PR must pass its actual GitHub platform matrix before merge.
+Final first-release work follows [releasing.md](releasing.md).
