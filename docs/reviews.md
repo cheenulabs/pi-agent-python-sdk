@@ -31,3 +31,29 @@ Validation after corrections: 104 foundation tests and 25 public async-client
 tests pass. Ruff passes for the reviewed foundation and async files.
 
 Remote PR creation is still pending access to the configured repository.
+
+## Async commands and owned runs
+
+Standards reviewed `50e8238...564535f`; plan coverage reviewed
+`50e8238...8c3b4a4`, including offline real-Pi tests.
+
+**Standards review:** two high-priority issues. Closing from an async UI
+callback cancelled and gathered the callback itself. UI callbacks could also
+accumulate without a bound even when event subscriptions were bounded.
+
+Corrections exclude the current callback from close, and bound outstanding UI
+work by the same record/byte limits as subscriptions. Overflow closes the
+client with a dedicated handler error. Regression tests exercise both cases.
+A closed, unentered stream also now fails before claiming the conversation.
+
+**Plan coverage review:** one high-priority cancellation issue. Successful
+abort/clear-queue responses did not prove that pending extension preflight had
+stopped. A gated real-Pi confirmation resumed the original command after the
+owned call had timed out. Cancellation before acknowledgement or an observed
+start now closes Pi. The reviewer revalidated this with a delayed input hook;
+the child closed and its handler was cancelled before the gate was released.
+
+After corrections, 29 async behavior tests, 17 sync facade tests, and 16 real-Pi
+lifecycle tests passed together. The separate 12-test real-Pi command suite
+covers every one of the 33 commands. Ruff and strict mypy pass. These checks do
+not constitute remote CI or a GitHub merge.
