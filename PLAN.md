@@ -1,7 +1,7 @@
 # Pi Coding Agent Python Client — Revised Plan
 
-Status: local implementation and reviews completed on 2026-09-15; remote PRs,
-platform CI, and release setup remain blocked on external access.
+Status: implementation and reviews completed on 2026-09-15; Linux, macOS, and
+Windows CI passed. Public visibility and owner-controlled release setup remain.
 Evidence: [Discovery findings](docs/discovery.md).
 Current evidence and remaining gates: [validation](docs/validation.md).
 

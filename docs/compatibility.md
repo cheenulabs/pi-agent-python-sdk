@@ -13,7 +13,7 @@ targets.
 | Pi | Minimum and recorded tested protocol version: **0.85.1** |
 | Node.js | Pi 0.85.1 requires **22.19.0 or newer** |
 | Python runtime dependencies | None beyond the standard library |
-| Platforms | Linux has local validation; macOS and Windows require their platform CI runs before being claimed verified |
+| Platforms | GitHub CI passed on Linux with Python 3.11–3.14; macOS and Windows with Python 3.14 |
 
 Python's open-ended `>=3.11` metadata does not assert that every future Python
 version has passed tests. Similarly, successfully launching an untested Pi
@@ -110,6 +110,12 @@ Local validation on 2026-09-15 passed **205 tests on each of Python 3.11,
 3.12, 3.13, and 3.14** with Pi 0.85.1. Nine runnable examples also passed
 against the isolated faux provider. See [validation](validation.md) for the
 commands, evidence, and external gates still outstanding.
+
+[GitHub CI run 34918942592](https://github.com/cheenulabs/pi-coding-agent-python-client/actions/runs/34918942592)
+also passed all six platform jobs at commit `359c757`: 205 tests per job,
+including real Pi integration. The Linux 3.14 job exercised the nine examples;
+the quality and upstream protocol gates passed as well. These checks use the
+offline faux provider, not a live model service.
 
 The intended compatibility gates cover every command mapping, wire omissions,
 extension UI, session persistence, retries and compaction, streaming settlement,

@@ -6,21 +6,46 @@ before calling the first release finished.
 
 ## One-time repository and index setup
 
-- Restore access to `cheenulabs/pi-coding-agent-python-client` and push the
-  reviewed milestone branches. Create, review, and merge each PR in order.
-- Enable the CI workflow and require its `required` check on main. Confirm all
-  supported Python and operating-system jobs actually pass.
+The repository belongs to the personal GitHub account `cheenulabs`. Its owner
+must configure visibility, branch protection, and environments; collaborator
+push access does not grant those settings. The authenticated package-index
+account holder must register the publishers separately on each index.
+
+- In repository Settings → General → Danger Zone, make
+  `cheenulabs/pi-coding-agent-python-client` public. Review and merge the
+  remaining milestone PRs in order.
+- After the CI workflow runs, use Settings → Branches to protect `main`.
+  Require the status check named `required` and require branches to be up to
+  date before merging. Confirm all supported Python and operating-system jobs
+  actually pass. An additional human PR approval is optional; the required
+  status check is the automated gate.
 - Confirm the distribution name `pi-coding-agent-client` is available on
   PyPI and TestPyPI. The chosen import is `pi_coding_agent_client`; the license
   is MIT. Recheck public metadata URLs before release.
-- Create `testpypi` and `pypi` GitHub environments with deployment approval
-  rules. Configure each index's Trusted Publisher for owner `cheenulabs`,
-  repository `pi-coding-agent-python-client`, workflow `publish.yml`, and the
-  matching environment. PyPI and TestPyPI are separate accounts/configurations.
-  A pending publisher can create the initial project. No long-lived upload
-  token belongs in the repository or ordinary PR jobs.
+- In Settings → Environments, create `testpypi` and `pypi`, each with
+  `cheenulabs` as a required reviewer. Allow self-review if that same account
+  will both dispatch and approve a deployment. Any deployment branch/tag
+  restrictions must allow `main` for the TestPyPI rehearsal and release tags
+  such as `v0.1.0` for both environments.
+- Register a pending publisher in the intended owner's separate
+  [TestPyPI account](https://test.pypi.org/manage/account/publishing/) and
+  [PyPI account](https://pypi.org/manage/account/publishing/), using these fields:
+
+  | Field | TestPyPI | PyPI |
+  |---|---|---|
+  | Project name | `pi-coding-agent-client` | `pi-coding-agent-client` |
+  | GitHub owner | `cheenulabs` | `cheenulabs` |
+  | Repository | `pi-coding-agent-python-client` | `pi-coding-agent-python-client` |
+  | Workflow filename | `publish.yml` | `publish.yml` |
+  | Environment | `testpypi` | `pypi` |
+
+  A pending publisher creates the initial project on a successful upload; it
+  does not reserve the name. No long-lived upload token belongs in the
+  repository or ordinary PR jobs.
 
 These external settings cannot be established by committing YAML alone.
+After setup, the selected reviewer must approve the actual deployment jobs
+when GitHub presents them.
 
 ## Rehearsal and release
 
@@ -63,4 +88,8 @@ do not accidentally inspect an older build. Built wheels and sdists include
 only the package and distribution metadata, not npm runtimes or test fixtures.
 
 References: [Trusted Publishers](https://docs.pypi.org/trusted-publishers/adding-a-publisher/),
+[pending publishers](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/),
+[personal repository permissions](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/repository-access-and-collaboration/permission-levels-for-a-personal-account-repository),
+[branch protection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/managing-a-branch-protection-rule),
+[environments](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments),
 [packaging release workflow](https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/).

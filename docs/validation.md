@@ -1,14 +1,15 @@
 # Implementation validation and remaining gates
 
 Audited on **2026-09-15** against the actual implementation and Pi **0.85.1**.
-This is evidence of local readiness, not a claim that the full public-release
-goal has been achieved. Remote work remains incomplete.
+Implementation and platform CI are verified; the full public-release goal is
+not yet achieved. Owner-controlled setup and package publication remain.
 
 ## Executed checks
 
 | Check | Observed result |
 |---|---|
 | Linux Python 3.11, 3.12, 3.13, 3.14 full suite | 205 passed on each; one live-model test explicitly deselected |
+| GitHub platform matrix at `359c757` | All six jobs passed: 205 tests per Linux Python 3.11–3.14, macOS Python 3.14, and Windows Python 3.14 job |
 | Real Pi test prerequisites | Required mode enabled; exact runtime version 0.85.1 checked |
 | Nine runnable example entry points | Passed with isolated real Pi and a faux provider; owned processes reaped and sync threads joined |
 | Ruff check and format | Passed |
@@ -30,6 +31,10 @@ PI_CLIENT_REQUIRE_INTEGRATION=1 PI_CLIENT_EXPECTED_PI_VERSION=0.85.1 \
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for the remaining reproducible checks.
 No live provider, existing user configuration, or production service was used.
 
+Remote evidence: [CI run 34918942592](https://github.com/cheenulabs/pi-coding-agent-python-client/actions/runs/34918942592).
+It also passed runnable example smoke checks, quality/build/distribution
+inspection, upstream source verification, and the aggregate `required` gate.
+
 ## Plan-to-evidence audit
 
 | Plan requirement | Authoritative local evidence | Status / limit |
@@ -48,11 +53,11 @@ No live provider, existing user configuration, or production service was used.
 | Cancellation and interruption | Async task/context/timeout cases; sync Ctrl-C read/result/run tests | Cleanup retains ownership; uncertain preflight closes Pi |
 | Sync facade parity and thread lifecycle | test_sync.py; real sync tool/retry/stream/queue tests and examples | Explicit methods, persistent loop, startup failures, concurrent close and iterator behavior verified |
 | Three test layers | Fake executable suites, real faux-provider integration, opt-in test_live.py | First two executed; live test implemented but deliberately not run |
-| Python/OS CI and package gates | ci.yml; local four-Python matrix; Actionlint | Linux verified locally; GitHub, macOS and Windows execution pending |
+| Python/OS CI and package gates | ci.yml; local matrix; GitHub run 34918942592; Actionlint | All six platform jobs, quality/distribution, protocol and aggregate gates passed |
 | Public docs, comments and runnable examples | README, API/usage/error/compatibility guides, public docstrings, scripts/check_examples.py | Nine examples executed; ordinary Markdown guides retained |
 | Dependency updates and latest stable Pi | dependabot.yml, latest-pi.yml, check_upstream.py, compatibility.json | Local configuration and current baseline verified; scheduled execution and repository settings pending |
 | Source drift review blocks unnoticed changes | Fingerprint inventory, diff report, maintenance regression tests, CI protocol gate | Explicit recording required; behavior tests do not automatically bless new versions |
-| Review milestones and cleanup | [reviews.md](reviews.md), [implementation.md](implementation.md), GitHub PR states | First three PRs reviewed and merged; final public-package PR pending workflow upload authorization |
+| Review milestones and cleanup | [reviews.md](reviews.md), [implementation.md](implementation.md), GitHub PR states | Reviews recorded on PRs #1–#4; first three merged; PR #4 platform matrix passed |
 | TestPyPI rehearsal and reviewed 0.1.0 release | publish.yml, [releasing.md](releasing.md), built archives | Not executed; Trusted Publishers and environments need external setup |
 
 ## External gates still required
@@ -60,16 +65,18 @@ No live provider, existing user configuration, or production service was used.
 The configured repository is
 `https://github.com/cheenulabs/pi-coding-agent-python-client`. Access was restored
 on 2026-09-15 for `has-c`, with push permission but no repository administration
-permission. PRs #1–#3 are reviewed and merged. The final branch push was rejected
-because this CLI authorization lacks the `workflow` scope. No remote CI,
-environment setup, or package publication has succeeded or been claimed.
+permission. Workflow authorization is now available, and PR #4 is pushed with
+successful platform CI. The repository remains private until its owner changes
+visibility. No environment setup or package publication has succeeded or been
+claimed. Both package-index project endpoints still returned 404 when checked;
+that does not reserve the name or establish publisher ownership.
 
 Required next evidence:
 
-1. CLI `workflow` authorization to push the final package branch.
-2. Review and merge the final public-package PR in [implementation.md](implementation.md).
-3. Successful remote CI, including macOS and Windows, on the release commit;
-   required checks and Dependabot settings configured.
+1. Public repository visibility and owner-configured branch/environment protections.
+2. All milestone PRs merged, as tracked in [implementation.md](implementation.md).
+3. Successful CI on the release commit; required checks and Dependabot settings
+   configured, and the latest-Pi workflow executed from the default branch.
 4. PyPI/TestPyPI project ownership and Trusted Publishers, approved environments,
    a successful rehearsal, then the reviewed release and clean index install.
 

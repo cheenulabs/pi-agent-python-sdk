@@ -9,8 +9,8 @@ The library owns a `pi --mode rpc` subprocess. It has no third-party Python
 runtime dependencies and does nothing on import.
 
 **Development preview: not yet published to PyPI.** The initial protocol baseline
-is Pi **0.85.1**. Python **3.11+** is required. Linux has local validation;
-macOS and Windows are test targets awaiting platform verification. See
+is Pi **0.85.1**. Python **3.11+** is required. CI passed on Linux with Python
+3.11–3.14 and on macOS and Windows with Python 3.14. See
 [compatibility][compatibility] for the exact policy.
 
 ## Install from source

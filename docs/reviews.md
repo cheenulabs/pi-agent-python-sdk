@@ -123,5 +123,17 @@ Final verification is recorded in [validation.md](validation.md). The public
 docs include all command methods, behavioral guides, nine checked examples,
 and concise public method docstrings. Fresh independent Standards and Spec
 reviews of `89bf2c5...de6f612` found no unresolved blocking findings. Actual
-platform CI and publication remain required; static workflow review does not
-prove that they passed.
+platform CI and publication are separate gates; static workflow review does
+not prove that they passed.
+
+The first GitHub run passed Linux and macOS. Windows passed 204 tests but
+failed the protocol inventory assertion before reaching it: the test read
+the UTF-8 discovery document using the default Windows code page. Commit
+`359c757` specifies UTF-8 explicitly without weakening the assertion.
+Independent Standards and Spec reviews found no issue with this correction
+or the concrete owner setup instructions added to the release guide.
+
+[Run 34918942592](https://github.com/cheenulabs/pi-coding-agent-python-client/actions/runs/34918942592)
+then passed all six platform jobs, quality/distribution checks, upstream source
+verification, and the aggregate `required` gate. Engineering reviews are
+recorded on [PR #4](https://github.com/cheenulabs/pi-coding-agent-python-client/pull/4).

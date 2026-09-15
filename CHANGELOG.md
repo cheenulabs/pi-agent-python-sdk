@@ -14,5 +14,6 @@
 - Add Python/platform CI, Dependabot, daily latest-Pi checks, reviewed source
   fingerprints, distribution inspection, and Trusted Publishing workflows.
 
-The first public release is pending repository access, remote CI, and package
-index configuration. No package-index publication is implied by this entry.
+The first public release is pending public repository visibility, owner-controlled
+release settings, and package-index configuration. No package-index publication
+is implied by this entry.
