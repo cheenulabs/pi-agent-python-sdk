@@ -137,6 +137,7 @@ class PiClient:
         self._loop_error: BaseException | None = None
         self._closing = False
         self._closed = False
+        self._started = False
 
     @property
     def limits(self) -> Limits:
@@ -240,24 +241,36 @@ class PiClient:
                     continue
             raise
 
-    def start(self) -> None:
-        """Start the persistent loop and wait for Pi's version and readiness checks."""
+    def _ensure_loop(self) -> None:
         self._check_caller()
         with self._lock:
-            if self._thread is not None or self._closed or self._closing:
+            if self._closed or self._closing:
+                raise PiProcessError("Client is closed")
+            if self._thread is None:
+                thread = threading.Thread(
+                    target=self._loop_main, name="pi-client-loop", daemon=True
+                )
+                try:
+                    thread.start()
+                except BaseException:
+                    self._closed = True
+                    self._closed_event.set()
+                    raise
+                self._thread = thread
+        self._ready.wait()
+        if self._loop_error is not None:
+            self.close()
+            raise PiProcessError("Could not initialize the Pi event loop") from self._loop_error
+
+    def start(self) -> None:
+        """Launch Pi and wait for readiness, reusing any pre-start observer loop."""
+        self._check_caller()
+        with self._lock:
+            if self._started or self._closed or self._closing:
                 raise PiProcessError("Clients are single-use; create a new client to restart Pi")
-            thread = threading.Thread(target=self._loop_main, name="pi-client-loop", daemon=True)
-            try:
-                thread.start()
-            except BaseException:
-                self._closed = True
-                self._closed_event.set()
-                raise
-            self._thread = thread
+            self._started = True
         try:
-            self._ready.wait()
-            if self._loop_error is not None:
-                raise PiProcessError("Could not initialize the Pi event loop") from self._loop_error
+            self._ensure_loop()
             self._call(self._client.start)
         except BaseException:
             self.close()
@@ -563,6 +576,7 @@ class SyncEventSubscription:
             self._subscription = self._client._client.events()
             await self._subscription.__aenter__()
 
+        self._client._ensure_loop()
         self._client._call(enter)
         return self
 
@@ -584,6 +598,15 @@ class SyncEventSubscription:
             return await self._subscription.__anext__()
 
         try:
+            if self._subscription is None:
+                raise RuntimeError("Enter the event subscription context before iterating")
+            with self._client._lock:
+                stopped = self._client._closed or self._client._closing
+            if stopped:
+                self._client.close()
+                event = self._subscription._next_nowait()
+                assert event is not None
+                return event
             return self._client._call(next_event)
         except StopAsyncIteration:
             raise StopIteration from None
@@ -592,6 +615,8 @@ class SyncEventSubscription:
         self._closed = True
         if self._subscription is not None:
             self._client._close_context(self._subscription.aclose)
+            if self._client._closed:
+                self._subscription._discard()
 
 
 class SyncRunStream:

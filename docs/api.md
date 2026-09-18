@@ -53,7 +53,7 @@ prompts, and startup attachments. Arguments are passed without a shell.
 | `close()` / async `aclose()` | Wake operations, close stdin, escalate if needed, and reap the owned child; sync also joins its loop thread |
 | `run(message, *, images=None, timeout=None, command_timeout=DEFAULT_TIMEOUT)` | `RunResult` after an observed run settles; final model failure raises `PiRunError` with a partial result |
 | `stream(message, *, images=None, timeout=None, command_timeout=DEFAULT_TIMEOUT)` | Context-managed owned run with an event iterator and `result()` |
-| `events()` | Context-managed future-event subscription; it does not own the conversation |
+| `events()` | Context-managed future-event subscription; enter before `start()` for startup events; it does not own the conversation |
 | `request(command_type, *, timeout=DEFAULT_TIMEOUT, **fields)` | Checked raw response envelope; assigns ID and enforces normal ownership rules |
 
 `start()` is single-use; construct a new client for another process. Repeated

@@ -40,8 +40,8 @@ are separate lifecycle facts. Early exit with an unacknowledged prompt closes Pi
 to prevent delayed extension work from escaping ownership.
 
 Use `prompt()` and `events()` when your application owns event handling or an
-extension handles a command without starting an agent run. Subscribe before
-submitting input to avoid missing early events. Acknowledgement does not mean
+extension handles a command without starting an agent run. Subscriptions may enter before `start()` to include extension startup events.
+Subscribe before submitting input to avoid missing early events. Acknowledgement does not mean
 completion, and `agent_end` alone does not mean the conversation has settled.
 
 After an unowned `prompt()`, `steer()`, or `follow_up()` submission (including raw

@@ -203,9 +203,16 @@ updates contain nine text/thinking/tool-call block variants, not cumulative
 `message`/`partial` snapshots; finalized `message_end.message` is authoritative.
 
 `events()` is a separate context-managed subscription to future events. Enter it
-before submitting work. It includes extension UI, extension errors, and events
+before `start()` to include startup events, or before submitting work. It includes extension UI, extension errors, and events
 from low-level commands, and does not own or cancel a run by itself. See
 [examples/events.py](../examples/events.py) for a concurrent observer.
+
+Pre-start entry on `PiClient` starts its background loop, but launches no process.
+Close the client even if startup is never attempted. Async clients bind to the
+loop of their first subscription, start, or close. Run a consumer task (or a
+separate thread for blocking clients) concurrently with startup if extensions
+produce more events than the bounded queue can hold. Later subscriptions see
+only future events; observing UI requests does not answer them.
 
 Subscriptions have count and byte limits. A slow consumer receives
 `PiSubscriptionOverflow`; response routing and UI replies continue. Overflow in

@@ -160,6 +160,7 @@ class AsyncPiClient:
         self._session = SessionInfo()
         self._loop: asyncio.AbstractEventLoop | None = None
         self._closed = False
+        self._terminal_error: Exception | None = None
         self._starting = False
         self._startup_task: asyncio.Task[Any] | None = None
         self._startup_done = asyncio.Event()
@@ -187,8 +188,11 @@ class AsyncPiClient:
         return self._transport.stderr_tail if self._transport is not None else ""
 
     def _check_loop(self) -> None:
-        if self._loop is not None and asyncio.get_running_loop() is not self._loop:
-            raise RuntimeError("Use the client only from the event loop that started it")
+        loop = asyncio.get_running_loop()
+        if self._loop is None:
+            self._loop = loop
+        elif loop is not self._loop:
+            raise RuntimeError("Use the client only from its owning event loop")
 
     async def __aenter__(self) -> Self:
         await self.start()
@@ -206,7 +210,7 @@ class AsyncPiClient:
         """Check the selected version and wait for a real get_state response."""
         if self._closed or self._starting or self._transport is not None:
             raise PiProcessError("Clients are single-use; create a new client to restart Pi")
-        self._loop = asyncio.get_running_loop()
+        self._check_loop()
         self._starting = True
         self._startup_task = asyncio.current_task()
         self._startup_done.clear()
@@ -240,10 +244,15 @@ class AsyncPiClient:
                 )
                 self._update_session(self._data(response))
         except TimeoutError as exc:
+            error = PiTimeoutError("Pi startup timed out", uncertain=False)
+            self._on_failure(error)
             if not self._closed:
                 await self.aclose()
-            raise PiTimeoutError("Pi startup timed out", uncertain=False) from exc
-        except BaseException:
+            raise error from exc
+        except BaseException as exc:
+            self._on_failure(
+                exc if isinstance(exc, Exception) else PiProcessError("Pi startup was cancelled")
+            )
             if not self._closed:
                 await self.aclose()
             raise
@@ -270,6 +279,7 @@ class AsyncPiClient:
             await self._startup_done.wait()
         if self._transport is not None:
             await self._transport.aclose()
+        self._on_failure(PiProcessError("Client is closed"))
         tasks = tuple(task for task in self._ui_tasks if task is not self._close_initiator)
         for task in tasks:
             task.cancel()
@@ -283,8 +293,10 @@ class AsyncPiClient:
 
     def _register(self, subscription: EventSubscription) -> None:
         self._check_loop()
-        if not self.running:
-            raise PiProcessError("Start Pi before subscribing to events")
+        if self._terminal_error is not None:
+            raise self._terminal_error
+        if self._closed:
+            raise PiProcessError("Client is closed")
         self._subscriptions.add(subscription)
 
     def _on_event(self, raw: dict[str, Any]) -> None:
@@ -330,6 +342,9 @@ class AsyncPiClient:
             task.exception()
 
     def _on_failure(self, error: Exception) -> None:
+        if self._terminal_error is None:
+            self._terminal_error = error
+        error = self._terminal_error
         self._session = SessionInfo()
         for task in tuple(self._ui_tasks):
             if task is not asyncio.current_task() and task is not self._close_initiator:
