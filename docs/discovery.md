@@ -1,7 +1,7 @@
 # Discovery: Pi coding agent Python client
 
-Completed: 2026-09-15. Implementation has not started.
-This document is evidence for the [revised implementation plan](../PLAN.md).
+Protocol snapshot: 2026-09-15, Pi 0.85.1. This document records upstream
+wire behavior, source references, and compatibility considerations.
 
 ## Findings that shape the package
 
@@ -552,10 +552,7 @@ the reference docs still contain some old examples. Do not promise arbitrary
 historical versions or automatically bless new ones.
 [Pinned changelog](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/CHANGELOG.md#L300).
 
-## Open questions and review decisions
-
-Discovery is complete as an inventory and design investigation. These
-implementation/release decisions remain explicit:
+## Design and release considerations
 
 - Review public method/result names, the 30-second expected-start deadline,
   cancellation behavior, and default buffer limits. They are library policy.
@@ -568,10 +565,5 @@ implementation/release decisions remain explicit:
   per-extension heuristics.
 - Package name availability must be rechecked and the owner must choose the
   final license/release settings before publication.
-- Source coverage does not prove full runtime correctness. The planned fake
-  executable/faux-provider suite and opt-in model smoke remain future work.
-
-No client implementation, commits, publication, application migration, or
-live-service changes were performed. The revised plan preserves full stdio
-coverage, both Python interfaces, documentation, release work, Dependabot,
-and continued latest-Pi compatibility checking.
+- Source coverage does not prove full runtime correctness. Validate with
+  fake-process tests, real-Pi offline integration, and opt-in model smoke tests.
