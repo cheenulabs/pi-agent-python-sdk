@@ -8,6 +8,9 @@ tools, extensions, skills, and project configuration.
 The library owns a `pi --mode rpc` subprocess. It has no third-party Python
 runtime dependencies and does nothing on import.
 
+Extensions are caller-owned. See [using your own extensions](docs/usage.md#using-your-own-extensions)
+for loading them through Pi; this package does not bundle or manage extensions.
+
 **Development preview: not yet published to PyPI.** The initial protocol baseline
 is Pi **0.85.1**. Python **3.11+** is required. CI targets Linux with Python
 3.11–3.14 and macOS and Windows with Python 3.14. See

@@ -15,7 +15,6 @@ import contextlib
 import importlib.util
 import inspect
 import io
-import json
 import shutil
 import sys
 import tempfile
@@ -69,7 +68,7 @@ def check_example(path: Path, fixture: ModuleType) -> str:
         sync_clients: list[PiClient] = []
         async_clients: list[AsyncPiClient] = []
         versions: list[str | None] = []
-        script = "/fixture-script " + json.dumps([{"text": ANSWER}] * 6)
+        control = load(ROOT / "tests/integration/control.py", "pi_example_control")
 
         class SyncFixture(PiClient):
             def __init__(self, **kwargs: Any) -> None:
@@ -81,7 +80,7 @@ def check_example(path: Path, fixture: ModuleType) -> str:
             def start(self) -> None:
                 super().start()
                 versions.append(self.pi_version)
-                self.prompt(script)
+                control.set_responses(self, [{"text": ANSWER}] * 6)
 
         class AsyncFixture(AsyncPiClient):
             def __init__(self, **kwargs: Any) -> None:
@@ -91,7 +90,7 @@ def check_example(path: Path, fixture: ModuleType) -> str:
             async def start(self) -> None:
                 await super().start()
                 versions.append(self.pi_version)
-                await self.prompt(script)
+                control.set_responses(self, [{"text": ANSWER}] * 6)
 
         module = load(path, f"pi_checked_example_{path.stem}")
         for name, replacement in (("PiClient", SyncFixture), ("AsyncPiClient", AsyncFixture)):

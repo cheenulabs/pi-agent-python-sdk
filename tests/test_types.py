@@ -7,7 +7,12 @@ from typing import Any, NotRequired, get_args, get_origin, get_type_hints
 import pytest
 
 from pi_coding_agent_client import types
-from pi_coding_agent_client.errors import PiCommandError, PiRunError, PiTimeoutError
+from pi_coding_agent_client.errors import (
+    PiCommandError,
+    PiProtocolError,
+    PiRunError,
+    PiTimeoutError,
+)
 from pi_coding_agent_client.types import Event, Limits, RunResult, SessionInfo, UsageSummary
 
 
@@ -44,10 +49,6 @@ def test_event_preserves_unknown_fields_without_dumping_them() -> None:
             },
             None,
         ),
-        (
-            {"type": "message_update", "assistantMessageEvent": {"type": "text_delta", "delta": 3}},
-            None,
-        ),
         ({"type": "message_update", "assistantMessageEvent": None}, None),
         (
             {"type": "message_end", "assistantMessageEvent": {"type": "text_delta", "delta": "x"}},
@@ -72,6 +73,20 @@ def test_result_and_exceptions_do_not_dump_content() -> None:
     assert error.request_id == "request-1"
     assert "private-error" not in str(error)
     assert "private-error" not in repr(error)
+
+
+@pytest.mark.parametrize("delta", [None, 3, False, {}, []])
+def test_malformed_known_text_delta_is_reported(delta: Any) -> None:
+    with pytest.raises(PiProtocolError, match="text_delta"):
+        _ = Event(
+            {
+                "type": "message_update",
+                "assistantMessageEvent": {
+                    "type": "text_delta",
+                    "delta": delta,
+                },
+            }
+        ).text_delta
 
 
 def test_usage_defaults_are_unknown_and_snapshot_fields_are_frozen() -> None:
@@ -101,7 +116,16 @@ def test_limits_reject_invalid_deadlines(name: str, value: Any) -> None:
 
 
 @pytest.mark.parametrize("value", [0, -1, 1.5, True, None])
-@pytest.mark.parametrize("name", ["max_record_bytes", "event_queue_size", "event_queue_bytes"])
+@pytest.mark.parametrize(
+    "name",
+    [
+        "max_record_bytes",
+        "event_queue_size",
+        "event_queue_bytes",
+        "result_message_count",
+        "result_message_bytes",
+    ],
+)
 def test_limits_require_positive_integer_capacities(name: str, value: Any) -> None:
     with pytest.raises(ValueError, match=name):
         Limits(**{name: value})

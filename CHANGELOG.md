@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Keep the standalone SDK scoped to core RPC with zero runtime dependencies;
+  document loading caller-owned extensions through native Pi arguments.
+- Prevent owned runs from claiming delayed events after low-level submissions.
+- Bound retained run messages independently of event queues.
+- Preserve unknown usage measurements, concatenate final text blocks directly,
+  and measure run latency from submission to settlement.
+- Reject malformed known text deltas while preserving unknown event variants.
+
 ## 0.1.0rc1 — TestPyPI rehearsal candidate (unpublished)
 
 This candidate prepares the first TestPyPI publishing rehearsal. It has not

@@ -52,9 +52,11 @@ offline models, allowing model/thinking command coverage without credentials.
 
 ## Response scripts
 
-Submit `/fixture-script ` followed by a JSON array using `prompt()` and await
-its acceptance before invoking `run()` or `stream()`. This command replaces
-the provider's queued responses. Each step represents one model invocation;
+Use `control.set_responses(client, steps)` to write a synthetic response file
+beside the isolated session file before invoking `run()` or `stream()`. The
+provider consumes and deletes this file before its next invocation. Setup does
+not submit conversation work: a client that has issued a low-level prompt may
+not subsequently start an owned run. Each step represents one model invocation;
 retry and tool continuations consume another step. Exhausting the queue
 produces Pi's explicit faux-provider error instead of making a network call.
 Session replacement recreates extension state, so prepare a new response script
@@ -62,19 +64,17 @@ after switching sessions. The new-session command uses Pi's `withSession`
 callback and fresh replacement context to do this safely.
 
 ```python
-import json
+from .control import set_responses
 
-await pi.prompt(
-    "/fixture-script "
-    + json.dumps(
-        [
-            {"thinking": "synthetic reasoning", "text": "Hello fixture"},
-        ]
-    )
-)
+set_responses(pi, [{"thinking": "synthetic reasoning", "text": "Hello fixture"}])
 result = await pi.run("synthetic user input")
 assert result.text == "Hello fixture"
 ```
+
+The `/fixture-script` command remains for low-level command tests and extension
+internals; it is not a setup bypass for owned runs. `fixture delayed` consumes
+input until `/fixture-release-delayed` starts it, proving an idle state snapshot
+does not establish that earlier input cannot emit later events.
 
 Useful scripts:
 

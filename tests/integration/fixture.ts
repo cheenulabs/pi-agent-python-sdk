@@ -9,6 +9,8 @@ import {
 } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
+import { existsSync, readFileSync, unlinkSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 interface Step {
   text?: string;
@@ -30,12 +32,24 @@ export default function (pi: ExtensionAPI) {
       { id: "fixture-other", name: "Other Offline Fixture", reasoning: true },
     ],
   });
+  let responseFile: string | undefined;
+  pi.on("session_start", (_event, ctx) => {
+    const sessionFile = ctx.sessionManager.getSessionFile();
+    responseFile = sessionFile ? join(dirname(sessionFile), "fixture-responses.json") : undefined;
+  });
   pi.registerProvider("python-fixture", {
     baseUrl: "http://localhost:0",
     apiKey: "synthetic-test-value",
     api: faux.api,
     models: faux.models,
-    streamSimple: faux.streamSimple,
+    streamSimple: (model, context, options) => {
+      if (responseFile && existsSync(responseFile)) {
+        const steps = JSON.parse(readFileSync(responseFile, "utf8")) as Step[];
+        unlinkSync(responseFile);
+        setResponses(steps);
+      }
+      return faux.streamSimple(model, context, options);
+    },
   });
 
   // Explicit gates avoid relying on sleeps to race cancellation or queueing.
@@ -52,10 +66,7 @@ export default function (pi: ExtensionAPI) {
       signal?.addEventListener("abort", done, { once: true });
     });
 
-  pi.registerCommand("fixture-script", {
-    description: "Replace the queued offline assistant responses with a JSON array",
-    handler: async (args) => {
-      const steps = JSON.parse(args) as Step[];
+  function setResponses(steps: Step[]) {
       if (!Array.isArray(steps)) throw new Error("Expected an array of fixture steps");
       faux.setResponses(steps.map((step) => async (_context, options) => {
         if (step.wait) await wait(step.wait, options?.signal);
@@ -73,7 +84,10 @@ export default function (pi: ExtensionAPI) {
           ...(step.error === undefined ? {} : { errorMessage: step.error }),
         });
       }));
-    },
+  }
+  pi.registerCommand("fixture-script", {
+    description: "Replace the queued offline assistant responses with a JSON array",
+    handler: async (args) => { setResponses(JSON.parse(args)); },
   });
   pi.registerCommand("fixture-release", {
     description: "Release a named provider, tool, or compaction gate",
@@ -94,8 +108,22 @@ export default function (pi: ExtensionAPI) {
       return { content: [{ type: "text", text: args.text }], details: { fixture: true } };
     },
   });
+  let delayed = false;
   pi.on("input", (event) => {
+    if (event.text === "fixture delayed") {
+      delayed = true;
+      return { action: "handled" };
+    }
     if (event.text === "fixture handled") return { action: "handled" };
+  });
+  pi.registerCommand("fixture-release-delayed", {
+    description: "Start work previously consumed by the delayed input fixture",
+    handler: async () => {
+      if (delayed) {
+        delayed = false;
+        await pi.sendUserMessage("synthetic delayed input");
+      }
+    },
   });
   pi.registerCommand("fixture-error", {
     description: "Emit a synthetic extension error",
