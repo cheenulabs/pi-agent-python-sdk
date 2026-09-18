@@ -301,6 +301,58 @@ async def test_ui_handler_failure_surfaces_without_deadlocking_prompt():
         assert pi.running
 
 
+@pytest.mark.parametrize("operation", ["prompt", "run", "stream"])
+async def test_ui_failure_preserves_original_exception_chain(operation):
+    original = ValueError("synthetic callback detail")
+    nested = LookupError("synthetic nested cause")
+
+    async def broken(request):
+        raise original from nested
+
+    async with AsyncPiClient(executable=[sys.executable, str(FAKE)], ui_handler=broken) as pi:
+        with pytest.raises(PiUIHandlerError) as caught:
+            if operation == "stream":
+                async with pi.stream("ui") as stream:
+                    await stream.result()
+            else:
+                await getattr(pi, operation)("ui")
+        assert caught.value.__cause__ is original
+        assert original.__cause__ is nested
+        assert not pi.busy
+
+
+@pytest.mark.parametrize("operation", ["run", "stream"])
+@pytest.mark.parametrize("cleanup_fails", [False, True])
+async def test_started_ui_failure_preserves_cause_through_cleanup(operation, cleanup_fails):
+    original = ValueError("synthetic started callback detail")
+
+    async def broken(request):
+        # Round-trip after the prompt ACK so the owner's acceptance wait has
+        # completed before this callback fails. No scheduling sleeps needed.
+        await pi.get_state()
+        raise original
+
+    async with AsyncPiClient(
+        executable=[sys.executable, str(FAKE)],
+        extra_args=["--fail-cleanup"] if cleanup_fails else [],
+        ui_handler=broken,
+    ) as pi:
+        with pytest.raises(PiUIHandlerError) as caught:
+            if operation == "stream":
+                async with pi.stream("ui-started") as stream:
+                    await stream.result()
+            else:
+                await pi.run("ui-started")
+        assert caught.value.__cause__ is original
+        assert not pi.busy
+        if cleanup_fails:
+            assert not pi.running
+        else:
+            assert pi.running
+            assert not (await pi.get_state())["isStreaming"]
+            assert (await pi.run("normal")).text == "answer"
+
+
 async def test_session_argument_conflicts():
     with pytest.raises(ValueError):
         AsyncPiClient(no_session=True, session="saved.jsonl")
