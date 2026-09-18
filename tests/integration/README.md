@@ -108,6 +108,10 @@ operation is waiting: observe tool/compaction start, or the gate notification.
 
 ## Extension scenarios
 
+`fixture timeout before`, `fixture timeout during`, and `fixture timeout input`
+open short-lived dialogs before an agent starts or during its turn. They continue
+normally after cancellation, allowing tests to verify expiry without a model call.
+
 | Input or command | Behavior |
 |---|---|
 | `fixture handled` | Ordinary input consumed by an input handler without starting a run |

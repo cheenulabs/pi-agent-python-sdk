@@ -1,5 +1,7 @@
 """Run the same real-Pi settlement and cancellation behavior through the facade."""
 
+import threading
+
 import pytest
 
 from pi_agent import PiClient, PiRunOwnershipError
@@ -7,6 +9,30 @@ from pi_agent import PiClient, PiRunOwnershipError
 from .control import set_responses
 
 pytestmark = pytest.mark.integration
+
+
+def test_sync_dialog_deadline_does_not_wait_for_blocked_callback(pi_options):
+    release = threading.Event()
+    finished = threading.Event()
+
+    def handler(request):
+        if request["method"] == "confirm":
+            try:
+                release.wait(10)
+                return True
+            finally:
+                finished.set()
+
+    try:
+        with PiClient(**pi_options, ui_handler=handler) as pi:
+            set_responses(pi, [{"text": "answer after expiry"}])
+            assert pi.run("fixture timeout during", timeout=5).text == "answer after expiry"
+            release.set()
+            assert finished.wait(5)
+            set_responses(pi, [{"text": "next answer"}])
+            assert pi.run("ordinary input", timeout=5).text == "next answer"
+    finally:
+        release.set()
 
 
 def test_sync_low_level_input_prevents_owned_runs(pi_options):

@@ -84,6 +84,12 @@ the current run.
 All configured deadlines use seconds. The UI protocol's optional handler timeout
 is supplied by Pi in milliseconds and converted internally.
 
+Expiry of that UI deadline cancels the dialog, following Pi's normal default
+response, and does not itself fail an owned run. It is distinct from a callback
+that raises `TimeoutError` independently, an overall run deadline, or caller
+cancellation. A handler that returns after its deadline cannot supply a late
+answer; synchronous callback threads still have the shutdown limitations below.
+
 | Operation | Omitted deadline | Explicit `None` |
 |---|---|---|
 | Short RPC command response | `Limits.command_timeout`, initially 30 seconds | No response deadline |

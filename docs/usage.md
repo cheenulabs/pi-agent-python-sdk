@@ -299,7 +299,10 @@ With no handler, dialogs are cancelled and display requests remain visible to
 event subscribers. Handler failures attempt a dialog cancellation and surface
 `PiUIHandlerError`. The original exception is available through `__cause__`.
 Pi may provide a dialog timeout in milliseconds; the client applies that deadline
-to the handler and does not send an acknowledgement-waiting RPC for a UI reply.
+to the handler. Ordinary deadline expiry cancels that dialog without failing the
+conversation or event subscribers. Late handler answers are discarded. An
+independently raised callback exception, including `TimeoutError` before the
+deadline, remains a handler failure. UI replies do not wait for an RPC acknowledgement.
 
 Keep handlers short. Do not call blocking `PiClient` methods from a UI callback:
 reentrancy is rejected to prevent deadlock. Async callbacks can use the async
