@@ -212,11 +212,14 @@ def main():
             if request["message"] == "exit":
                 return
             if pending_prompt is not None and request["message"] in {"ack", "reject"}:
+                # Acknowledge the test control before triggering owned-run teardown.
+                reply(request)
                 if request["message"] == "reject":
                     reply(pending_prompt, success=False, error="synthetic late rejection")
                 else:
                     reply(pending_prompt)
                 pending_prompt = None
+                continue
             if active and request["message"] == "release":
                 active = False
                 emit(assistant())

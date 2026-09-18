@@ -227,7 +227,15 @@ Process observers use the same independent count/byte budgets as event queues.
 Overflow raises `PiSubscriptionOverflow` immediately, marks `status.lost=True`
 and `complete=False`, and unregisters only that observer. Process failures instead
 allow buffered output to drain and iteration ends normally; inspect `status.error`
-for the primary failure. Shutdown drains stderr for at most `cleanup_timeout`
+for the primary failure. Shutdown drains both pipes for at most `cleanup_timeout`
 after the child exits before releasing inherited pipe handles. If EOF was not
-observed before forced pipe closure, `stderr_eof=False` and `complete=False`.
+observed before forced pipe closure, the affected EOF flag is false and observers selecting that pipe have
+`complete=False`.
 Observation failure cannot replace the primary command/run failure.
+
+Parsed RPC observation reports valid JSON objects before envelope validation.
+Invalid envelopes are observable and still fail the RPC client. After that first
+failure, cleanup parsing cannot replace its exception or resume RPC routing.
+Raw output continues through bounded cleanup. Observe `.status.error` after the
+iterator ends, including when `start()` failed. No process was successfully
+observed if version checking or spawn failed, so completion remains false.

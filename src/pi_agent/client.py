@@ -17,9 +17,16 @@ from typing import TYPE_CHECKING, Any, Self, cast
 
 from ._events import EventSubscription
 from ._launch import check_version, executable_argv, validate_extra_args
-from ._observation import ObservationStatus, ProcessObservation, ProcessOutput
+from ._observation import ObservationStatus, OutputSource, ProcessObservation, ProcessOutput
 from ._transport import Transport
-from .errors import PiBusyError, PiProcessError, PiProtocolError, PiTimeoutError, PiUIHandlerError
+from .errors import (
+    PiBusyError,
+    PiProcessError,
+    PiProtocolError,
+    PiSubscriptionOverflow,
+    PiTimeoutError,
+    PiUIHandlerError,
+)
 from .types import (
     AcceptanceReceipt,
     AgentMessage,
@@ -166,6 +173,7 @@ class AsyncPiClient:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._closed = False
         self._terminal_error: Exception | None = None
+        self._close_error: Exception | None = None
         self._starting = False
         self._startup_task: asyncio.Task[Any] | None = None
         self._startup_done = asyncio.Event()
@@ -242,7 +250,7 @@ class AsyncPiClient:
                     limits=self.limits,
                     on_event=self._on_event,
                     on_failure=self._on_failure,
-                    on_stderr=self._on_stderr,
+                    on_output=self._on_output,
                     on_output_end=self._on_output_end,
                 )
                 self._process_started_at_ns = time.time_ns()
@@ -277,6 +285,7 @@ class AsyncPiClient:
         """Wake all operations and reap the child; repeated calls are safe."""
         self._check_loop()
         if self._close_task is None:
+            self._close_error = self._terminal_error
             self._closed = True
             self._close_initiator = asyncio.current_task()
             self._close_task = asyncio.create_task(self._finish_close(), name="pi-client-close")
@@ -292,7 +301,7 @@ class AsyncPiClient:
         if self._transport is not None:
             await self._transport.aclose()
         if self._transport is None:
-            self._on_output_end(False, self._terminal_error)
+            self._on_output_end(False, False, True, self._terminal_error)
         self._on_failure(PiProcessError("Client is closed"))
         tasks = tuple(task for task in self._ui_tasks if task is not self._close_initiator)
         for task in tasks:
@@ -313,14 +322,28 @@ class AsyncPiClient:
             raise PiProcessError("Client is closed")
         self._subscriptions.add(subscription)
 
-    def observe(self) -> ProcessObservation:
-        """Observe original stderr bytes; enter before start for lifetime coverage.
+    def observe(
+        self, *, stderr: bool = True, stdout: bool = False, rpc: bool = False
+    ) -> ProcessObservation:
+        """Observe selected process output; enter before start for lifetime coverage.
 
-        Slow consumers raise PiSubscriptionOverflow. Close the client and drain
-        this iterator before checking status.complete and status.error; terminal
-        process failures are reported through status.error after output drains.
+        Raises ValueError if no source is selected. Slow consumers raise
+        PiSubscriptionOverflow. Close the client and drain this iterator before
+        checking status.complete and status.error; terminal process failures are
+        reported through status.error after output drains.
         """
-        return ProcessObservation(self.limits, self._register_observer, self._observations.discard)
+        sources: set[OutputSource] = set()
+        if stderr:
+            sources.add("stderr")
+        if stdout:
+            sources.add("stdout")
+        if rpc:
+            sources.add("rpc")
+        if not sources:
+            raise ValueError("Select at least one observation source")
+        return ProcessObservation(
+            self.limits, self._register_observer, self._observations.discard, frozenset(sources)
+        )
 
     def _register_observer(self, observer: ProcessObservation) -> None:
         self._check_loop()
@@ -332,20 +355,41 @@ class AsyncPiClient:
         )
         self._observations.add(observer)
 
-    def _on_stderr(self, data: bytes) -> None:
-        if self._observations:
-            record = ProcessOutput("stderr", time.time_ns(), data)
-            for observer in tuple(self._observations):
-                observer._put(record, len(data))
+    def _on_output(self, source: OutputSource, data: bytes | dict[str, Any]) -> None:
+        observers = [observer for observer in self._observations if source in observer._sources]
+        if not observers:
+            return
+        receipt = time.time_ns()
+        try:
+            encoded = json.dumps(data) if isinstance(data, dict) else None
+            size = len(encoded.encode("utf-8")) if encoded is not None else len(data)
+            for observer in observers:
+                # Decode separate dictionaries without deepcopy's lower recursion ceiling.
+                value = json.loads(encoded) if encoded is not None else data
+                observer._put(ProcessOutput(source, receipt, value), size)
+        except (ValueError, RecursionError):
+            for observer in observers:
+                observer._finish(PiSubscriptionOverflow("RPC observation could not copy a record"))
 
-    def _on_output_end(self, stderr_eof: bool, error: Exception | None) -> None:
+    def _on_output_end(
+        self, stdout_eof: bool, stderr_eof: bool, rpc_complete: bool, error: Exception | None
+    ) -> None:
         for observer in tuple(self._observations):
+            complete = observer.status.from_start
+            if "stderr" in observer._sources:
+                complete = complete and stderr_eof
+            if observer._sources.intersection({"stdout", "rpc"}):
+                complete = complete and stdout_eof
+            if "rpc" in observer._sources:
+                complete = complete and rpc_complete
             observer._status = replace(
                 observer.status,
                 ended_at_ns=time.time_ns(),
+                stdout_eof=stdout_eof,
                 stderr_eof=stderr_eof,
-                complete=observer.status.from_start and stderr_eof,
-                error=self._terminal_error or error,
+                rpc_complete=rpc_complete,
+                complete=complete,
+                error=self._close_error if self._closed else self._terminal_error or error,
             )
             observer._finish()
 

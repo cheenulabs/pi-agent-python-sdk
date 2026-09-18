@@ -3,7 +3,8 @@
 Import `PiClient` or `AsyncPiClient` from `pi_agent`. Both expose
 the same command arguments and return values. Await command methods on the async
 client; call them directly on the synchronous client. Types named below are
-defined in `pi_agent.types`.
+defined in `pi_agent.types`, except `ProcessOutput` and `ObservationStatus`,
+which are exported directly from `pi_agent`.
 
 Wire values remain ordinary dictionaries, with camelCase keys matching Pi.
 Python method arguments use snake_case. Optional arguments are omitted from the
@@ -53,7 +54,7 @@ prompts, and startup attachments. Arguments are passed without a shell.
 | `close()` / async `aclose()` | Wake operations, close stdin, escalate if needed, and reap the owned child; sync also joins its loop thread |
 | `run(message, *, images=None, timeout=None, command_timeout=DEFAULT_TIMEOUT)` | `RunResult` after an observed run settles; final model failure raises `PiRunError` with a partial result |
 | `stream(message, *, images=None, timeout=None, command_timeout=DEFAULT_TIMEOUT)` | Context-managed owned run with an event iterator and `result()` |
-| `observe()` | Context-managed original stderr bytes; enter before `start()`, drain through close, then inspect `.status` |
+| `observe(*, stderr=True, stdout=False, rpc=False)` | Context-managed selected process output; enter before `start()`, drain through close, then inspect `.status` |
 | `events()` | Context-managed future-event subscription; enter before `start()` for startup events; it does not own the conversation |
 | `request(command_type, *, timeout=DEFAULT_TIMEOUT, **fields)` | Checked raw response envelope; assigns ID and enforces normal ownership rules |
 
@@ -241,21 +242,39 @@ call. See [failure semantics](errors.md) before retrying an uncertain operation.
 ## Process observation
 
 `observe()` returns an async or blocking context and iterator over `ProcessOutput`.
-`source` is `"stderr"`, `data` contains original bytes, and `time_ns` is the SDK's
+`source` is `"stderr"`, `"stdout"`, or `"rpc"`. `data` contains original bytes for
+pipe sources and a separate mutable dictionary for each RPC observer. `time_ns` is the SDK's
 wall-clock receipt time in Unix nanoseconds. Receipt times can reflect system
 clock adjustments; they are not provider execution times. Chunk boundaries are
 unspecified; concatenate bytes before decoding or use an incremental decoder.
 
 `ObservationStatus` exposes `started_at_ns` (RPC spawn attempt), `ended_at_ns`
-(observation end), `from_start`, `stderr_eof`, `complete`, `lost`, and `error`.
+(observation end), `from_start`, `stdout_eof`, `stderr_eof`, `rpc_complete`,
+`complete`, `lost`, and `error`.
 `complete` means a subscription attached before spawn received all selected output
 through natural pipe EOF with no queue loss. It does not promise successful RPC
 execution or that a caller saved every record. `error` preserves the terminal
-process/startup error separately from output delivery. Normal client close also
-records its `PiProcessError`. A failed version/spawn or early unsubscribe is
+process/startup error separately from output delivery. A normal explicit close has
+`error=None`; incomplete pipe drainage is still reported separately. A failed version/spawn or early unsubscribe is
 incomplete. A late subscriber has `from_start=False` and cannot claim full coverage.
 
 After client shutdown, drain queued records before leaving the observer context;
 this works even after a blocking client's loop has stopped. Leaving the context
 unsubscribes and discards unread records, marking loss if records were queued.
 All data fields and errors are omitted from default observation representations.
+
+Select at least one source. Raw stdout includes blank lines, invalid UTF-8, malformed
+JSON and partial trailing bytes. RPC observation includes every parsed JSON object
+within `max_record_bytes`, including invalid envelopes, startup/internal responses,
+command failures, late/duplicate responses and unknown event types. It excludes
+blank lines, invalid JSON and non-object JSON values. Ordinary RPC validation and
+routing are unchanged. Parsed and raw stdout deliberately overlap.
+
+After protocol failure, routing stops and cleanup continues raw delivery and
+best-effort object parsing within the same framing limit. `rpc_complete=False`
+indicates records were too large to parse within that limit; observers selecting
+RPC cannot then claim complete delivery, even when raw-only observers can. A
+protocol failure itself does not mean raw bytes were lost. Other parsing failures
+remain visible in raw output. There is no order guarantee between pipes, and raw
+chunk boundaries do not correspond one-to-one to parsed objects. RPC timestamps
+mark object receipt after framing, not the timestamp of each contributing byte.

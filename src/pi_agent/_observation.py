@@ -5,20 +5,22 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
-from typing import Literal
+from typing import Any, Literal
 
 from ._events import _Subscription
 from .errors import PiSubscriptionOverflow
 from .types import Limits
 
+OutputSource = Literal["stderr", "stdout", "rpc"]
+
 
 @dataclass(frozen=True)
 class ProcessOutput:
-    """Original bytes received from the RPC child (never the version probe)."""
+    """Original bytes or a parsed object from the RPC child, excluding the version probe."""
 
-    source: Literal["stderr"]
+    source: OutputSource
     time_ns: int
-    data: bytes = field(repr=False)
+    data: bytes | dict[str, Any] = field(repr=False)
 
 
 @dataclass(frozen=True)
@@ -31,6 +33,8 @@ class ObservationStatus:
     complete: bool = False
     lost: bool = False
     stderr_eof: bool = False
+    stdout_eof: bool = False
+    rpc_complete: bool = True
     error: Exception | None = field(default=None, repr=False)
 
 
@@ -42,9 +46,11 @@ class ProcessObservation(_Subscription[ProcessOutput]):
         limits: Limits,
         register: Callable[[ProcessObservation], None],
         unregister: Callable[[ProcessObservation], None],
+        sources: frozenset[OutputSource],
     ) -> None:
         super().__init__(limits, lambda: register(self), lambda: unregister(self))
         self._status = ObservationStatus()
+        self._sources = sources
 
     @property
     def status(self) -> ObservationStatus:
