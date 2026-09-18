@@ -221,7 +221,9 @@ async def test_existing_low_level_work_rejected_by_owned_run(client):
 
 async def test_stream_exit_aborts_and_releases_ownership(client):
     async with client.stream("paused"):
-        pass
+        # Entry can precede the prompt response. Establish a response round-trip
+        # before testing reusable cleanup of already-acknowledged work.
+        await client.get_state()
     assert not client.busy
     assert not (await client.get_state())["isStreaming"]
     assert (await client.run("normal")).text == "answer"
@@ -229,7 +231,7 @@ async def test_stream_exit_aborts_and_releases_ownership(client):
 
 async def test_task_cancellation_before_acceptance_closes_process(client):
     async with client.events() as events:
-        task = asyncio.create_task(client.run("paused"))
+        task = asyncio.create_task(client.run("preack-paused"))
         while (await anext(events)).type != "agent_start":
             pass
         task.cancel()

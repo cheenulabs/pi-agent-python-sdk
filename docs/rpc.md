@@ -33,6 +33,12 @@ methods own a conversation until `agent_settled`, handle retries and queued
 continuations, and produce a `RunResult`. Context managers clean up the child
 process and unfinished owned work.
 
+An extension may start and settle a conversation before acknowledging the prompt.
+Stream consumption becomes available on acknowledgement or an observed start;
+successful completion still requires both acknowledgement and settlement. These
+are separate lifecycle facts. Early exit with an unacknowledged prompt closes Pi
+to prevent delayed extension work from escaping ownership.
+
 Use `prompt()` and `events()` when your application owns event handling or an
 extension handles a command without starting an agent run. Subscribe before
 submitting input to avoid missing early events. Acknowledgement does not mean

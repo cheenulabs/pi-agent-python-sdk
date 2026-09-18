@@ -49,6 +49,7 @@ def main():
         return
     active = False
     ui_prompt = None
+    pending_prompt = None
     startup_ui = "--startup-ui" in sys.argv
     for line in sys.stdin:
         request = json.loads(line)
@@ -80,6 +81,16 @@ def main():
             )
         elif command == "prompt":
             message = request["message"]
+            if message in {"preack-paused", "preack-settled"}:
+                pending_prompt = request
+                active = message == "preack-paused"
+                # Coalesce a complete batch before accepting any further commands.
+                records = [{"type": "agent_start"}]
+                if not active:
+                    records.extend([assistant(), {"type": "agent_settled"}])
+                sys.stdout.write("".join(json.dumps(record) + "\n" for record in records))
+                sys.stdout.flush()
+                continue
             if message == "rejected":
                 reply(request, success=False, error="synthetic rejection")
                 continue
@@ -177,6 +188,14 @@ def main():
                 emit({"type": "agent_settled"})
             reply(request)
         elif command == "steer":
+            if request["message"] == "exit":
+                return
+            if pending_prompt is not None and request["message"] in {"ack", "reject"}:
+                if request["message"] == "reject":
+                    reply(pending_prompt, success=False, error="synthetic late rejection")
+                else:
+                    reply(pending_prompt)
+                pending_prompt = None
             if active and request["message"] == "release":
                 active = False
                 emit(assistant())

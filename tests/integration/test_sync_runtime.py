@@ -11,6 +11,26 @@ from .control import set_responses
 pytestmark = pytest.mark.integration
 
 
+@pytest.mark.parametrize("operation", ["run", "stream"])
+@pytest.mark.parametrize("prompt", ["ordinary input", "/fixture-await-run"])
+def test_sync_long_extension_run_before_acknowledgement(pi_options, operation, prompt):
+    pi_options["env"]["PI_FIXTURE_TOKENS_PER_SECOND"] = "1500"
+    with PiClient(**pi_options) as pi:
+        text = "x " * 10000
+        set_responses(pi, [{"text": text}])
+        if operation == "run":
+            result = pi.run(prompt, timeout=30)
+        else:
+            with pi.stream(prompt, timeout=30) as stream:
+                events = list(stream)
+                result = stream.result()
+            assert len(events) > pi.limits.event_queue_size
+            assert "".join(event.text_delta or "" for event in events) == text
+        assert result.text == text
+        set_responses(pi, [{"text": "next answer"}])
+        assert pi.run("ordinary input", timeout=10).text == "next answer"
+
+
 def test_sync_dialog_deadline_does_not_wait_for_blocked_callback(pi_options):
     release = threading.Event()
     finished = threading.Event()
