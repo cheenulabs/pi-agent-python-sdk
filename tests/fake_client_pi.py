@@ -60,6 +60,8 @@ def main():
         request = json.loads(line)
         command = request["type"]
         if command == "get_state":
+            for record in request.get("emit", []):
+                emit(record)
             if "emit_before_failure" in request:
                 for record in request["emit_before_failure"]:
                     emit(record)

@@ -159,3 +159,18 @@ def test_sync_run_does_not_retain_progress():
         executable=FAKE, limits=Limits(event_queue_size=1, event_queue_bytes=1)
     ) as client:
         assert client.run("burst:5000:last", timeout=10).text == "x" * 5000
+
+
+def test_sync_overflowed_stream_discards_batch_and_closes_cleanly():
+    with PiClient(executable=FAKE) as client:
+        with client.stream("paused") as stream:
+            # Prefetch a bounded batch, then stop consuming while more events arrive.
+            client.request("get_state", emit=[{"type": "future"}] * 100)
+            assert next(stream).type == "agent_start"
+            client.request("get_state", emit=[{"type": "future"}] * 1000)
+            with pytest.raises(PiSubscriptionOverflow):
+                next(stream)
+        with pytest.raises(StopIteration):
+            next(stream)
+        assert not client.busy
+        assert client.run("normal").text == "answer"

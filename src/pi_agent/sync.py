@@ -762,9 +762,11 @@ class SyncRunStream:
             return await self._stream._next_batch()
 
         try:
-            if self._stream is not None and isinstance(self._stream._error, PiSubscriptionOverflow):
+            if self._stream is not None and isinstance(
+                self._stream._events._error, PiSubscriptionOverflow
+            ):
                 self._batch.clear()
-                raise self._stream._error
+                raise self._stream._events._error
             if not self._batch:
                 self._batch.extend(self._call_owned(next_events))
             return self._batch.popleft()
