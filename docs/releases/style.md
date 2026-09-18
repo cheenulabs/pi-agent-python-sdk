@@ -28,8 +28,9 @@ The following is our editorial guidance, informed by that comparison.
 - Use the GitHub release title `vX.Y.Z`; let the opening sentence explain the
   release. Describe this package as a community Python SDK for Pi.
 - Lead with three to five capabilities or behavior changes that matter to SDK
-  users. Use a bold capability name, a concrete outcome, and a documentation
-  link where further detail is useful.
+  users. Give substantial highlights their own subheading, a short paragraph,
+  and a separate documentation link. Use blank lines between list items so the
+  rendered release has visible spacing; use a table for runtime requirements.
 - For the first release, explain what callers can build, then show installation
   and one short, runnable example. State the separate Pi installation and
   provider setup requirements. Link to the async and streaming examples.
