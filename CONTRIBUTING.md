@@ -63,3 +63,19 @@ checks. Keep auto-merge off. Publishing requires separate explicit approval.
 [Maintenance](docs/maintenance.md) and
 [releasing](docs/releasing.md) explain the automated compatibility gates and
 external setup required for publication.
+
+## Coding agent instructions
+
+Maintain shared instructions in [AGENTS.md](AGENTS.md). `CLAUDE.md` is a relative
+symlink to it; `GEMINI.md` imports it, and `.github/copilot-instructions.md` asks
+Copilot to read it. Cursor can use `AGENTS.md` directly, so a separate Cursor
+rules file is unnecessary. These entry points carry no separate project policy.
+
+On Windows, check out with symlink support enabled (Developer Mode or the
+necessary privileges and Git's `core.symlinks=true`) to use `CLAUDE.md` as a link.
+If a checkout materializes it as a plain file containing `AGENTS.md`, load the
+canonical file explicitly in the agent instead. Preserve the committed symlink.
+
+Check loaded instructions in a new Claude session with `/context`, or in Gemini
+with `/memory show`. Copilot's pointer requires the agent to read `AGENTS.md`;
+it is not a guarantee that every Copilot feature automatically loads that file.
