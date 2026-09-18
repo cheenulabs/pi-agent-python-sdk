@@ -1,0 +1,27 @@
+{
+  "minimumVersion": "0.85.1",
+  "testedVersion": "0.85.1",
+  "upstreamCommit": "d981de1229ef899957bbe968bc8dcda02a21f477",
+  "sourceSha256": {
+    "packages/coding-agent/src/modes/rpc/rpc-types.ts": "34057257456fd5f935587a0e9650fb5777738674e491a68fd037425703c45e26",
+    "packages/coding-agent/src/modes/rpc/rpc-mode.ts": "088f2c89f6c16189d74f92a7dd2a361778fc3d3a235c689c4b03ee54bf64622e",
+    "packages/coding-agent/src/modes/rpc/rpc-client.ts": "6d1a586cfa38fd3be62d21feacfe9e700f6e88d4fc842adcc345130acd0d57ff",
+    "packages/coding-agent/src/modes/rpc/jsonl.ts": "95723d349fcebad1f1da7ce103d02ba7d5e2c876b7d178d41d8b56beedbd93e0",
+    "packages/coding-agent/src/modes/json-event.ts": "87f6fa86cd73b817470062f5ab0a99c790d0c0e222e25979b96bfcd157e119bf",
+    "packages/coding-agent/src/core/agent-session.ts": "23e4acac844638fb0ae60047130f8e1050e4c729c1b8e80d37e359ac9c0eef9a",
+    "packages/coding-agent/src/core/session-manager.ts": "57bc70a751567b96c057535766240ae52d9b76d9013ea78049d74dc3b654e915",
+    "packages/coding-agent/src/core/messages.ts": "9cdcea8915dbf1bc29c4b086b3f03d0510cd7fb8b3437a2c7b539c58211ca330",
+    "packages/coding-agent/src/core/bash-executor.ts": "c0c3043846e107bbfcb236e28cc0505909bc476b67cd91f386a299ba83d08760",
+    "packages/coding-agent/src/core/source-info.ts": "9736ba7876085249e036fdf5f4d3bba565b5bc11b832e200a0d3ba58743c747b",
+    "packages/coding-agent/src/core/compaction/compaction.ts": "d3f639c21c4b91ebbe9d5716914636c3eb37a19d434e11bd6653fef8050f1357",
+    "packages/coding-agent/src/core/compaction/index.ts": "f82bde781410ae1a638989ff91bde9cc7045341a76bb9757de2ea6beea4c077d",
+    "packages/coding-agent/src/core/extensions/types.ts": "96e20f8038027f0b0172f311b6b9d9ddf42123b2f5b2a018f533af026fd3371e",
+    "packages/coding-agent/src/core/agent-session-runtime.ts": "5b348a4db837a2564367dd93b343c67f3b0c28a2f753ff71adcb48d08b5644e7",
+    "packages/coding-agent/src/cli/args.ts": "f8ba813e8acb43d33b42dff087b05fa3784fc24e6428026d13abe007993bab73",
+    "packages/coding-agent/package.json": "f1738e4b42203e5f22bcb513f13fb2fb224f1e98d1f129ff042f87048665a94c",
+    "packages/agent/src/types.ts": "640b6703badd73303f9c3c7e903a1269793493499d23e379894cbcb22338a4db",
+    "packages/agent/src/agent-loop.ts": "1e16404a231912fbd7643d8317b15ec4cc6245ed8cedc37582a31d430a1cc6ac",
+    "packages/ai/src/types.ts": "ae0427bfba137623df3a27c545ab405d4a3ad4163ec94c9fec5d4e10eb36759c",
+    "packages/coding-agent/CHANGELOG.md": "6816d95d45858b54627d02681339e9b9fe6345bc0a58bddea50586cc2e3c3cca"
+  }
+}
