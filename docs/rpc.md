@@ -16,6 +16,7 @@ to the source used for the **0.85.1** baseline; current upstream may differ.
 | --- | --- |
 | JSONL commands on stdin | Typed command methods or `request()` |
 | Responses correlated by `id` | Checked results; command failures raise `PiCommandError` |
+| Original process output and all parsed objects | Opt-in `observe()`; caller owns storage |
 | Events on stdout | `events()` subscriptions and `stream()` iterators |
 | Wire fields such as `modelId` | `model_id` arguments; returned dictionaries keep wire keys |
 | Prompt acceptance followed by events | `prompt()` acknowledgement; `run()` / `stream()` wait for settlement |
@@ -64,7 +65,8 @@ The Python implementation keeps process I/O separate from conversation behavior:
 | [`client.py`](../src/pi_agent/client.py) | Async lifecycle, typed commands, ownership checks, and extension UI dispatch |
 | [`_transport.py`](../src/pi_agent/_transport.py) | Subprocess pipes, JSONL framing, request correlation, deadlines, and process cleanup |
 | [`_launch.py`](../src/pi_agent/_launch.py) | Executable resolution, version checks, and launch argument validation |
-| [`_events.py`](../src/pi_agent/_events.py) | Bounded event subscriptions |
+| [`_events.py`](../src/pi_agent/_events.py) | Shared bounded subscriptions and event specialization |
+| [`_observation.py`](../src/pi_agent/_observation.py) | Process output records and delivery status |
 | [`_runs.py`](../src/pi_agent/_runs.py) | Run ownership, settlement, result collection, and cancellation |
 | [`_usage.py`](../src/pi_agent/_usage.py) | Usage accumulation from observed assistant messages |
 | [`sync.py`](../src/pi_agent/sync.py) | Synchronous calls through the same async client on one background event loop |

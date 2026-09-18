@@ -13,6 +13,7 @@ async def main() -> None:
 
         async def consume() -> None:
             async for record in output:
+                assert isinstance(record.data, bytes)
                 # Slow destinations should use a caller-owned worker or larger limits.
                 sys.stderr.buffer.write(record.data)
                 sys.stderr.buffer.flush()

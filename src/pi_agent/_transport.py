@@ -8,6 +8,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from ._observation import OutputSource
 from .errors import PiCommandError, PiProcessError, PiProtocolError, PiTimeoutError
 from .types import Limits
 
@@ -42,13 +43,16 @@ class Transport:
         limits: Limits,
         on_event: Callable[[dict[str, Any]], None],
         on_failure: Callable[[Exception], None],
-        on_stderr: Callable[[bytes], None] | None = None,
-        on_output_end: Callable[[bool, Exception | None], None] | None = None,
+        on_output: Callable[[OutputSource, bytes | dict[str, Any]], None] | None = None,
+        on_output_end: Callable[[bool, bool, bool, Exception | None], None] | None = None,
     ) -> None:
         self._limits = limits
         self._on_event = on_event
         self._on_failure = on_failure
-        self._on_stderr = on_stderr
+        self._on_output = on_output
+        self._stdout_eof = False
+        self._rpc_complete = True
+        self._discarding_record = False
         self._on_output_end = on_output_end
         self._stderr_eof = False
         self._process: asyncio.subprocess.Process | None = None
@@ -199,24 +203,53 @@ class Transport:
         buffer = self._stdout_buffer
         try:
             while chunk := await self._process.stdout.read(65536):
-                buffer.extend(chunk)
-                offset = 0
-                while (end := buffer.find(b"\n", offset)) >= 0:
-                    self._record(bytes(buffer[offset:end]))
-                    offset = end + 1
-                if offset:
-                    del buffer[:offset]
-                if len(buffer) > self._limits.max_record_bytes:
-                    raise PiProtocolError("Pi JSON record exceeds max_record_bytes")
+                self._feed_stdout(chunk, route=True)
+            self._stdout_eof = True
             if buffer:
-                self._record(bytes(buffer))
+                data = bytes(buffer)
                 buffer.clear()
+                self._record(data)
             # EOF itself is terminal even if an extension left the process alive.
             self._fail(PiProcessError("Pi stdout closed", returncode=self._process.returncode))
         except asyncio.CancelledError:
             raise
         except Exception as exc:
             self._fail(exc)
+
+    def _feed_stdout(self, chunk: bytes, *, route: bool) -> None:
+        if chunk and self._on_output is not None:
+            self._on_output("stdout", chunk)
+        buffer = self._stdout_buffer
+        buffer.extend(chunk)
+        offset = 0
+        try:
+            while (end := buffer.find(b"\n", offset)) >= 0:
+                data = bytes(buffer[offset:end])
+                offset = end + 1
+                if self._discarding_record:
+                    self._discarding_record = False
+                else:
+                    self._record(data, route=route and self._failure is None)
+        finally:
+            # Remove the failing line too; cleanup must never observe it twice.
+            if offset:
+                del buffer[:offset]
+        if len(buffer) > self._limits.max_record_bytes:
+            self._rpc_complete = False
+            if route:
+                raise PiProtocolError("Pi JSON record exceeds max_record_bytes")
+            self._discarding_record = True
+            buffer.clear()
+
+    async def _drain_stdout(self) -> None:
+        assert self._process is not None and self._process.stdout is not None
+        self._feed_stdout(b"", route=False)
+        while chunk := await self._process.stdout.read(65536):
+            self._feed_stdout(chunk, route=False)
+        self._stdout_eof = True
+        if self._stdout_buffer and not self._discarding_record:
+            self._record(bytes(self._stdout_buffer), route=False)
+        self._stdout_buffer.clear()
 
     async def _monitor_exit(self) -> None:
         assert self._process is not None
@@ -227,24 +260,34 @@ class Transport:
         if self._failure is None:
             try:
                 if self._stdout_buffer:
-                    self._record(bytes(self._stdout_buffer))
+                    data = bytes(self._stdout_buffer)
                     self._stdout_buffer.clear()
+                    self._record(data)
             except Exception as exc:
                 self._fail(exc)
                 return
             self._fail(PiProcessError("Pi subprocess exited", returncode=self._process.returncode))
 
-    def _record(self, data: bytes) -> None:
+    def _record(self, data: bytes, *, route: bool = True) -> None:
         if data.endswith(b"\r"):
             data = data[:-1]
         if len(data) > self._limits.max_record_bytes:
+            self._rpc_complete = False
+            if not route:
+                return
             raise PiProtocolError("Pi JSON record exceeds max_record_bytes")
         if not data:
             return
         try:
             record = json.loads(data.decode("utf-8"), parse_constant=self._invalid_constant)
         except (ValueError, UnicodeError, RecursionError) as exc:
+            if not route:
+                return
             raise PiProtocolError("Pi emitted invalid UTF-8 JSON") from exc
+        if isinstance(record, dict) and self._on_output is not None:
+            self._on_output("rpc", record)
+        if not route:
+            return
         if not isinstance(record, dict) or not isinstance(record.get("type"), str):
             raise PiProtocolError("Pi record requires an object with a string type")
         if record["type"] != "response":
@@ -281,8 +324,8 @@ class Transport:
         assert self._process is not None and self._process.stderr is not None
         try:
             while chunk := await self._process.stderr.read(65536):
-                if self._on_stderr is not None:
-                    self._on_stderr(chunk)
+                if self._on_output is not None:
+                    self._on_output("stderr", chunk)
                 if self._limits.stderr_tail_bytes:
                     self._stderr.extend(chunk)
                     del self._stderr[: -self._limits.stderr_tail_bytes]
@@ -312,6 +355,7 @@ class Transport:
     async def _finish_close(self) -> None:
         discard: asyncio.Task[None] | None = None
         stderr_eof = False
+        stdout_eof = False
         try:
             if self._spawning is not None:
                 try:
@@ -320,13 +364,13 @@ class Transport:
                     return
             process = self._process
             if process is not None:
-                # Once terminal, discard stdout but keep draining it. A full pipe can
-                # prevent asyncio's process.wait() finishing even after the child dies.
+                # Stop routing after failure, while observing bounded shutdown output.
+                # Keep a single stdout reader throughout the handover.
                 if self._reader is not None:
                     self._reader.cancel()
                     await asyncio.gather(self._reader, return_exceptions=True)
                 if process.stdout is not None:
-                    discard = asyncio.create_task(self._discard(process.stdout))
+                    discard = asyncio.create_task(self._drain_stdout())
                 if self._stderr_reader is None:
                     self._stderr_reader = asyncio.create_task(self._read_stderr())
                 if process.stdin is not None:
@@ -352,8 +396,10 @@ class Transport:
                         await _wait_for_exit(process)
                 # Give received shutdown diagnostics a bounded chance to reach EOF.
                 # Descendants may retain the pipe; that is explicitly incomplete.
-                if self._stderr_reader is not None:
-                    await asyncio.wait({self._stderr_reader}, timeout=self._limits.cleanup_timeout)
+                drains = {task for task in (discard, self._stderr_reader) if task is not None}
+                if drains:
+                    await asyncio.wait(drains, timeout=self._limits.cleanup_timeout)
+                stdout_eof = self._stdout_eof
                 stderr_eof = self._stderr_eof
                 _close_process_pipes(process)
                 await process.wait()
@@ -368,9 +414,4 @@ class Transport:
                     task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
             if self._on_output_end is not None:
-                self._on_output_end(stderr_eof, self._failure)
-
-    @staticmethod
-    async def _discard(stream: asyncio.StreamReader) -> None:
-        while await stream.read(65536):
-            pass
+                self._on_output_end(stdout_eof, stderr_eof, self._rpc_complete, self._failure)

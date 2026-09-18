@@ -529,14 +529,17 @@ class PiClient:
         """List extension, prompt-template, and skill commands with source information."""
         return self._call(lambda: self._client.get_commands(timeout=timeout))
 
-    def observe(self) -> SyncProcessObservation:
-        """Observe original stderr bytes; enter before start for lifetime coverage.
+    def observe(
+        self, *, stderr: bool = True, stdout: bool = False, rpc: bool = False
+    ) -> SyncProcessObservation:
+        """Observe selected process output; enter before start for lifetime coverage.
 
-        Slow consumers raise PiSubscriptionOverflow. Close the client and drain
-        this iterator before checking status.complete and status.error; terminal
-        process failures are reported through status.error after output drains.
+        Raises ValueError if no source is selected. Slow consumers raise
+        PiSubscriptionOverflow. Close the client and drain this iterator before
+        checking status.complete and status.error; terminal process failures are
+        reported through status.error after output drains.
         """
-        return SyncProcessObservation(self)
+        return SyncProcessObservation(self, stderr=stderr, stdout=stdout, rpc=rpc)
 
     def events(self) -> SyncEventSubscription:
         """Enter before submitting work, then iterate future events on the calling thread."""
@@ -603,6 +606,8 @@ class _SyncSubscription(Generic[T]):
         return self
 
     def __next__(self) -> T:
+        self._client._check_caller()
+
         async def next_event() -> T:
             if self._subscription is None:
                 raise RuntimeError("Enter the event subscription context before iterating")
@@ -615,10 +620,23 @@ class _SyncSubscription(Generic[T]):
                 stopped = self._client._closed or self._client._closing
             if stopped:
                 self._client.close()
-                event = self._subscription._next_nowait()
-                assert event is not None
-                return event
-            return self._client._call(next_event)
+                with self._client._lock:
+                    event = self._subscription._next_nowait()
+                    assert event is not None
+                    return event
+            try:
+                return self._client._call(next_event)
+            except PiProcessError:
+                # close() can win between the state check and scheduling the call.
+                with self._client._lock:
+                    stopping = self._client._closing or self._client._closed
+                if not stopping:
+                    raise
+                self._client.close()
+                with self._client._lock:
+                    event = self._subscription._next_nowait()
+                    assert event is not None
+                    return event
         except StopAsyncIteration:
             raise StopIteration from None
 
@@ -636,8 +654,9 @@ class SyncEventSubscription(_SyncSubscription[Event]):
 
 
 class SyncProcessObservation(_SyncSubscription[ProcessOutput]):
-    def __init__(self, client: PiClient) -> None:
-        super().__init__(client, client._client.observe)
+    def __init__(self, client: PiClient, *, stderr: bool, stdout: bool, rpc: bool) -> None:
+        subscription = client._client.observe(stderr=stderr, stdout=stdout, rpc=rpc)
+        super().__init__(client, lambda: subscription)
 
     @property
     def status(self) -> ObservationStatus:

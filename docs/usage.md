@@ -378,3 +378,33 @@ parent stderr and collects them in caller-owned memory, providing the two
 TypeScript stderr use cases without implicit retention. Applications choose
 storage limits, redaction and export. Slow file/console operations should run
 outside the event loop; the bounded queue deliberately does not backpressure Pi.
+
+Select `stdout=True, rpc=True` on the same observer to capture raw stdout and all
+parsed RPC objects alongside stderr. `events()` remains the unsolicited event
+interface; process observation also includes internal, failed and late command
+responses. Observed dictionaries are isolated from RPC routing and each other.
+Use state responses to recover initial/subsequent session IDs across several
+prompts or session changes; process observation ends at process cleanup, not run
+settlement.
+
+```python
+from pi_agent import PiClient, ProcessOutput
+
+pi = PiClient()
+records: list[ProcessOutput] = []  # Caller-owned retention, suitable for small runs.
+with pi.observe(stdout=True, rpc=True) as output:
+    try:
+        pi.start()
+        pi.get_state()
+    finally:
+        pi.close()
+    records.extend(output)
+    if not output.status.complete:
+        print("Output is incomplete", output.status.lost)
+```
+
+For long sessions, drain in a concurrent task/thread instead of retaining the
+whole process in memory. Each source preserves reader order. To reconstruct raw
+stdout/stderr, concatenate that source's byte payloads; inspect `rpc` dictionaries
+separately. Applications adapt these records to their own capture schema and
+viewer. The SDK defines no capture file, Base64 convention or export destination.
