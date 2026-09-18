@@ -329,6 +329,12 @@ dialog choices and notifications; it does not attempt to reproduce Pi's TUI.
 
 ## Raw access and diagnostics
 
+An event subscription can drain already-buffered events after a process or
+protocol failure, then raises the original terminal error. Commands fail promptly
+and cleanup does not wait for consumers. Explicitly closing the subscription
+discards unread events; overflow remains an immediate failure. This guarantee
+covers accepted parsed events, not unread pipe bytes or malformed records.
+
 `request(command_type, **fields)` is the escape hatch for new or application-level
 RPC use. It returns a checked response envelope, assigns the request ID, and
 applies the same run-ownership restrictions as named methods. Callers cannot
