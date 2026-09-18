@@ -1,4 +1,4 @@
-# Pi coding agent Python SDK
+# Pi Agent Python SDK
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)][metadata]
 [![MIT license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)][license]
@@ -32,12 +32,12 @@ The SDK uses that configuration when it starts Pi.
 Install the Python package from source:
 
 ```sh
-git clone https://github.com/cheenulabs/pi-coding-agent-python-sdk.git
-cd pi-coding-agent-python-sdk
+git clone https://github.com/cheenulabs/pi-agent-python-sdk.git
+cd pi-agent-python-sdk
 python -m pip install .
 ```
 
-The distribution is named `pi-coding-agent-python-sdk`; import it as
+The distribution is named `pi-agent-python-sdk`; import it as
 `pi_agent`.
 
 ```python
@@ -191,20 +191,20 @@ Maintainers: [protocol discovery][discovery] ·
 
 [MIT][license]
 
-[metadata]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/pyproject.toml
-[license]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/LICENSE
-[compatibility]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/compatibility.md
-[errors]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/errors.md
-[stream-example]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/examples/stream.py
-[constructor-options]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/api.md#constructor-options
-[extensions]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/usage.md#using-your-own-extensions
-[ui-example]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/examples/ui.py
-[rpc]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/rpc.md
-[commands]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/api.md#all-33-rpc-commands
-[usage]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/usage.md
-[api]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/api.md
-[examples]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/tree/main/examples
-[contributing]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/CONTRIBUTING.md
-[discovery]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/discovery.md
-[maintenance]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/maintenance.md
-[releasing]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/releasing.md
+[metadata]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/pyproject.toml
+[license]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/LICENSE
+[compatibility]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/compatibility.md
+[errors]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/errors.md
+[stream-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/stream.py
+[constructor-options]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/api.md#constructor-options
+[extensions]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/usage.md#using-your-own-extensions
+[ui-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/ui.py
+[rpc]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/rpc.md
+[commands]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/api.md#all-33-rpc-commands
+[usage]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/usage.md
+[api]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/api.md
+[examples]: https://github.com/cheenulabs/pi-agent-python-sdk/tree/main/examples
+[contributing]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/CONTRIBUTING.md
+[discovery]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/discovery.md
+[maintenance]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/maintenance.md
+[releasing]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/releasing.md

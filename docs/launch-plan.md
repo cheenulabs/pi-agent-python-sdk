@@ -1,17 +1,13 @@
 # First public release plan
 
-Target: publish `pi-coding-agent-python-sdk==0.1.0`, imported as `pi_agent`, with
+Target: publish `pi-agent-python-sdk==0.1.0`, imported as `pi_agent`, with
 reviewed source, reproducible validation, and verified PyPI installation.
 A checked-in plan or a green build does not establish publication.
 
-**Publication blocked pending package ownership or a new name.** On 2026-09-18,
-the [PyPI project](https://pypi.org/project/pi-coding-agent-python-sdk/) already
-existed and referenced `trotsky1997/pi-coding-agent-python-sdk`, with a different
-Python API. Confirm whether the intended publisher controls that project.
-Otherwise choose an available distribution name and update package metadata,
-the lockfile, distribution checks, workflow URLs, and installation documentation
-before registering publishers. The Python import can remain `pi_agent`.
-The existing PyPI project is not evidence that this repository was published.
+The repository and distribution are named `pi-agent-python-sdk`; Python imports
+remain `pi_agent`. On 2026-09-18, neither PyPI nor TestPyPI listed a project under
+the selected name. Confirm availability during publisher setup; a missing index
+entry does not reserve the name or guarantee registration.
 
 ## Current state
 
@@ -27,13 +23,15 @@ before acting: approvals and merges may advance while launch work proceeds.
 
 ## Reviewable changes
 
-Prepare three focused PRs, in this order:
+Prepare focused PRs in this order:
 
 1. **Launch plan:** this checklist and corrected owner setup guidance.
 2. **Publishing verification:** bind rehearsal dispatches to a reviewed commit,
    require CI for that commit, verify the downloaded TestPyPI wheel before PyPI
    promotion, and verify the final PyPI installation.
-3. **Final release candidate:** a draft PR for `0.1.0` metadata, lockfile,
+3. **Project rename:** align distribution metadata, repository links, publishing
+   configuration, and checks with `pi-agent-python-sdk` before the rehearsal.
+4. **Final release candidate:** a draft PR for `0.1.0` metadata, lockfile,
    changelog, release notes, and documentation links pinned to `v0.1.0`.
    Keep it draft until the `0.1.0rc1` rehearsal succeeds.
 
@@ -58,10 +56,9 @@ and inspect the configuration, but its current credentials cannot change it.
   allow that owner to approve their own dispatched deployment. Disable protection
   bypass where available. Permit only branch `main` and tags `v*` for TestPyPI,
   and tags `v*` for PyPI.
-- [ ] Resolve the package-name conflict above before registering publishers.
-  Register pending publishers only for a new project; for an existing project
-  controlled by the owner, add the publisher in that project's settings.
-  TestPyPI and PyPI are separate accounts/projects. No upload token is needed.
+- [ ] Confirm the selected name remains available and register the pending
+  publishers below in the intended owner's separate TestPyPI and PyPI accounts.
+  No upload token is needed.
 
 For this personal repository, required environment reviewers may require public
 visibility: GitHub Free/Pro/Team provide that protection only for public
@@ -70,7 +67,7 @@ current plan does not support them privately. Do not silently omit reviewers.
 
 | Publisher field | TestPyPI | PyPI |
 | --- | --- | --- |
-| Project | `pi-coding-agent-python-sdk` | `pi-coding-agent-python-sdk` |
+| Project | `pi-agent-python-sdk` | `pi-agent-python-sdk` |
 | GitHub owner | `cheenulabs` | `cheenulabs` |
 | Repository | `pi-agent-python-sdk` | `pi-agent-python-sdk` |
 | Workflow filename | `publish.yml` | `publish.yml` |
@@ -86,8 +83,8 @@ reviewer/ref policies, and account-holder confirmation of both publisher records
 
 ## 2. Land the reviewed implementation and rehearsal workflow
 
-- [ ] Obtain specific PR approvals and finish the stack through the publishing
-  verification PR; leave the final-version PR open.
+- [ ] Obtain specific PR approvals and finish the stack through the project
+  rename PR, including publishing verification; leave the final-version PR open.
 - [ ] Run all CONTRIBUTING.md checks on the resulting `main` commit and wait for
   the complete CI matrix. Record its full SHA and CI URL.
 - [ ] Build `0.1.0rc1`, inspect the wheel/sdist and README metadata, and record

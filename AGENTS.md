@@ -6,7 +6,7 @@ Paths below are relative to the repository root.
 
 ## Scope and implementation
 
-- The distribution is `pi-coding-agent-python-sdk`; Python code imports `pi_agent`.
+- The distribution is `pi-agent-python-sdk`; Python code imports `pi_agent`.
 - Keep the SDK focused on Pi's RPC protocol. Pi owns models, authentication,
   tools, extensions, configuration, and session storage. Preserve Pi's defaults
   unless the caller explicitly overrides them.

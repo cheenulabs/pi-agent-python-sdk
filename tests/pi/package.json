@@ -1,5 +1,5 @@
 {
-  "name": "pi-coding-agent-python-sdk-integration",
+  "name": "pi-agent-python-sdk-integration",
   "private": true,
   "description": "Pinned Pi runtime for credential-free Python integration tests only",
   "devDependencies": {

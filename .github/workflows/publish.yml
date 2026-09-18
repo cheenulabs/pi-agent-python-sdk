@@ -82,7 +82,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: testpypi
-      url: https://test.pypi.org/project/pi-coding-agent-python-sdk/
+      url: https://test.pypi.org/project/pi-agent-python-sdk/
     permissions:
       id-token: write
     steps:
@@ -116,7 +116,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: pypi
-      url: https://pypi.org/project/pi-coding-agent-python-sdk/
+      url: https://pypi.org/project/pi-agent-python-sdk/
     permissions:
       id-token: write
     steps:
