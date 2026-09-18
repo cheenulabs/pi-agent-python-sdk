@@ -1,14 +1,22 @@
-Describe the concrete behavior change and its reason.
+<!--
+PR title: type(scope): concise description
+Use a lowercase type such as feat, fix, docs, refactor, test, or chore,
+and a scope naming the affected component.
+Example: fix(rpc): bound retained run messages
+This template provides guidance; it does not set or enforce the PR title.
+-->
 
-Leave this PR open for the user's review. Merge only after explicit approval,
-using squash; restack dependent PRs before their checks and merges.
+## Overview
 
-Validation performed:
+<!-- Use concise, one-line bullets. -->
+- <!-- Summarize the problem and resulting change. -->
 
-- Tests:
-- Typing/lint/package checks:
-- Documentation or compatibility changes:
+## Files changed and why
 
-For a Pi version update, link the protocol review report and record any new
-commands, events, payload fields, or lifecycle behavior. Do not mark an
-untested platform or runtime version as supported.
+| File(s) | What changed and why |
+| --- | --- |
+| `path/to/file` | Describe the change and its purpose. |
+
+## Validation
+
+- <!-- State each check or command and its result; explain any checks not run. -->

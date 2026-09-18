@@ -16,7 +16,7 @@ push access does not grant those settings. The authenticated package-index
 account holder must register the publishers separately on each index.
 
 - In repository Settings → General → Danger Zone, make
-  `cheenulabs/pi-coding-agent-python-client` public when the user authorizes
+  `cheenulabs/pi-coding-agent-python-sdk` public when the user authorizes
   publication. This is not needed to review the private PRs.
 - After the CI workflow runs, use Settings → Branches to protect `main`.
   Require the status check named `required` and require branches to be up to
@@ -43,7 +43,7 @@ account holder must register the publishers separately on each index.
   |---|---|---|
   | Project name | `pi-coding-agent-client` | `pi-coding-agent-client` |
   | GitHub owner | `cheenulabs` | `cheenulabs` |
-  | Repository | `pi-coding-agent-python-client` | `pi-coding-agent-python-client` |
+  | Repository | `pi-coding-agent-python-sdk` | `pi-coding-agent-python-sdk` |
   | Workflow filename | `publish.yml` | `publish.yml` |
   | Environment | `testpypi` | `pypi` |
 
@@ -54,6 +54,22 @@ account holder must register the publishers separately on each index.
 These external settings cannot be established by committing YAML alone.
 After setup, the selected reviewer must approve the actual deployment jobs
 when GitHub presents them.
+
+## Prepare the public documentation
+
+The development README and package metadata use absolute GitHub URLs pointing
+to `main`. Before publishing a release:
+
+- Merge the approved SDK changes into `main` and validate that release commit.
+- Point README documentation, example, source, and license links, plus the
+  Documentation and Changelog metadata URLs, at the release tag (for example,
+  `blob/v0.1.0/docs/usage.md`). Keep these URLs absolute: PyPI renders the README
+  as a package description and does not resolve paths against this repository.
+- Replace the source clone instructions with the published-package
+  installation command when the package becomes available. Keep source-install
+  instructions tied to the release tag if they remain documented.
+- Inspect the built wheel's README metadata and check links from the TestPyPI
+  project page before publishing the final release.
 
 ## Rehearsal and release
 

@@ -25,10 +25,10 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/cheenulabs/pi-coding-agent-python-client"
-Documentation = "https://github.com/cheenulabs/pi-coding-agent-python-client/tree/main/docs"
-Issues = "https://github.com/cheenulabs/pi-coding-agent-python-client/issues"
-Changelog = "https://github.com/cheenulabs/pi-coding-agent-python-client/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/cheenulabs/pi-coding-agent-python-sdk"
+Documentation = "https://github.com/cheenulabs/pi-coding-agent-python-sdk/tree/main/docs"
+Issues = "https://github.com/cheenulabs/pi-coding-agent-python-sdk/issues"
+Changelog = "https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [

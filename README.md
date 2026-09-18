@@ -1,61 +1,89 @@
-# Pi coding agent Python client
+# Pi coding agent Python SDK
 
-Use [Pi coding agent](https://github.com/earendil-works/pi) from Python, with
-synchronous and asynchronous clients, streamed events, and typed access to its
-RPC commands. Pi remains the runtime: it loads its usual models, authentication,
-tools, extensions, skills, and project configuration.
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)][metadata]
+[![MIT license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)][license]
 
-The library owns a `pi --mode rpc` subprocess. It has no third-party Python
-runtime dependencies and does nothing on import.
+**Run Pi from Python. Stream responses, continue conversations, and control sessions.**
 
-Extensions are caller-owned. See [using your own extensions](docs/usage.md#using-your-own-extensions)
-for loading them through Pi; this package does not bundle or manage extensions.
+A community Python SDK for [Pi coding agent](https://github.com/earendil-works/pi).
+Use synchronous or asynchronous clients with typed access to Pi's RPC commands
+and no third-party Python runtime dependencies. Pi runs as a subprocess and keeps
+its usual models, authentication, tools, extensions, skills, and configuration.
 
-**Development preview: not yet published to PyPI.** The initial protocol baseline
-is Pi **0.85.1**. Python **3.11+** is required. CI targets Linux with Python
-3.11–3.14 and macOS and Windows with Python 3.14. See
-[compatibility][compatibility] for the exact policy.
+> **Development preview.** Not yet published to PyPI. Requires Python **3.11+**
+> and a separate Pi installation. The tested protocol baseline is **Pi 0.85.1**;
+> see [compatibility][compatibility] for version and platform scope.
 
-## Install from source
+[Quick start](#quick-start) · [Streaming](#streaming) · [Async](#async-usage) ·
+[Configuration](#configuration) · [RPC](#rpc-access) · [Documentation](#documentation)
 
-Install Pi separately using Node.js **22.19.0 or newer**:
+## Quick start
+
+Install Pi with Node.js **22.19.0 or newer**:
 
 ```sh
 npm install -g @earendil-works/pi-coding-agent@0.85.1
 pi --version
 ```
 
-Configure Pi normally and make sure it can run with your selected provider.
-The Python package does not install Pi, manage credentials, or download a model.
-Then install this checkout in your Python environment:
+Run `pi` once to configure your provider and model using Pi's normal setup.
+The SDK uses that configuration when it starts Pi.
+
+Install the Python package from source:
 
 ```sh
-git clone https://github.com/cheenulabs/pi-coding-agent-python-client.git
-cd pi-coding-agent-python-client
+git clone https://github.com/cheenulabs/pi-coding-agent-python-sdk.git
+cd pi-coding-agent-python-sdk
 python -m pip install .
 ```
 
-The distribution name is `pi-coding-agent-client`; the import name is
-`pi_coding_agent_client`. A PyPI installation command will be added when a release
-has actually been published.
-
-## Get a result
+The distribution is named `pi-coding-agent-client`; import it as
+`pi_coding_agent_client`.
 
 ```python
 from pi_coding_agent_client import PiClient
 
-
-def main() -> None:
-    with PiClient() as pi:
-        result = pi.run("Explain the current project without changing files.")
-        print(result.text)
-
-
-if __name__ == "__main__":
-    main()
+with PiClient() as pi:
+    result = pi.run("Explain the current project without changing files.")
+    print(result.text)
 ```
 
-Use `AsyncPiClient` inside an async application:
+The context manager starts and closes Pi. `run()` waits for the conversation to
+settle, including retries and queued follow-ups. The result includes finalized
+messages, session identity, elapsed time, and observed assistant usage.
+
+## What you can do
+
+- **Run and stream:** get a final answer or consume text, thinking, and tool events.
+- **Keep a conversation:** send follow-up prompts, resume sessions, fork, or clone.
+- **Control Pi:** select models, adjust thinking, steer work, compact context, and
+  call all 33 RPC commands in the pinned baseline.
+- **Integrate with your application:** use sync or async clients, typed results,
+  raw event dictionaries, and extension UI callbacks.
+
+## Streaming
+
+```python
+from pi_coding_agent_client import PiClient
+
+with PiClient() as pi:
+    with pi.stream("Explain this project's entry points without editing files.") as stream:
+        for event in stream:
+            if event.text_delta is not None:
+                print(event.text_delta, end="", flush=True)
+        result = stream.result()
+    print(f"\nStop reason: {result.stop_reason}")
+```
+
+`event.raw` contains the full Pi event, including fields the SDK does not yet
+recognize. Keep the stream inside its context: leaving early clears queued input
+and aborts the work it owns. See [errors and cancellation][errors] for
+handling timeouts and partial results.
+
+## Async usage
+
+Use `AsyncPiClient` in applications that already run an event loop. Command
+arguments and results match the synchronous client.
 
 ```python
 import asyncio
@@ -73,70 +101,110 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-`run()` waits for `agent_settled`, including Pi's retry and queued-continuation
-behavior. The lower-level `prompt()` waits only for an acknowledgement: an
-extension can handle a prompt without starting an agent run.
+Async streaming uses `async with pi.stream(...)`, `async for event in stream`,
+and `await stream.result()`. See the [complete streaming example][stream-example].
 
-## Stream a response
+## Configuration
+
+Choose the project directory and whether to save the conversation:
 
 ```python
 from pi_coding_agent_client import PiClient
 
-
-def main() -> None:
-    with PiClient() as pi:
-        with pi.stream("Explain this project's entry points without editing files.") as stream:
-            for event in stream:
-                if event.text_delta is not None:
-                    print(event.text_delta, end="", flush=True)
-            result = stream.result()
-        print(f"\nStop reason: {result.stop_reason}")
-
-
-if __name__ == "__main__":
-    main()
+with PiClient(cwd=".", no_session=True) as pi:
+    print(pi.run("Describe this project without changing files.").text)
 ```
 
-Keep the stream inside its context. Leaving early cancels owned work by clearing
-queued input and aborting Pi. Finalized messages, session identity, elapsed time,
-and observed assistant usage are available on `RunResult`.
+Leave `no_session` unset to preserve Pi's normal session persistence. Use
+`provider=` and `model=` to override Pi's configured model, or `session=` to open
+an existing session. See [constructor options][constructor-options]
+for environment overrides, executable paths, and deadlines.
 
-## What is covered
+Extensions are installed and configured through Pi. To load your own extension,
+pass `extra_args=["--extension", "/absolute/path/to/your-extension.ts"]` to either
+client. See [using your own extensions][extensions]
+for details and [extension UI][ui-example] for an interactive example.
 
-- All 33 Pi RPC commands, including model selection, sessions, compaction, bash,
-  steering, follow-ups, and state reads.
-- Synchronous and asynchronous APIs with the same command arguments and results.
-- Bounded event subscriptions, raw event dictionaries, and extension UI handlers.
-- Checked command failures, process cleanup, configurable deadlines, and partial
-  results on a final model error or abortion.
+## RPC access
 
-One client owns one conversation at a time. Use separate clients for independent
-conversations. The library cannot attach to an existing Pi terminal session or
-add capabilities that Pi's RPC protocol does not expose.
+The SDK speaks Pi's existing JSONL protocol over stdin/stdout:
 
-## Documentation and examples
+```text
+Your Python application
+    PiClient / AsyncPiClient
+        pi --mode rpc
+            Models · tools · extensions · sessions
+```
 
-- [Usage][usage]: configuration, sessions, images, concurrency, and UI.
-- [API reference][api]: every command, constructor option, and result type.
-- [Errors and cancellation][errors]: deadlines, cleanup, and recovery.
-- [Compatibility][compatibility]: Python, Pi versions, and platform scope.
-- [Runnable examples][examples]: sync, async, streaming, images, sessions, steering,
-  events, UI, and cancellation. They use your normal Pi installation and may make
-  provider calls when you run them.
-- [Protocol discovery][discovery]: pinned upstream evidence and wire details.
+Choose the interface that fits the work:
 
-For development commands and test setup, see [CONTRIBUTING.md][contributing].
-Maintainers can follow the
-[update process][maintenance] and [release checklist][releasing].
-The package is [MIT licensed][license].
+| You need | Use |
+| --- | --- |
+| A completed conversation result | `run()` |
+| Events while a conversation runs | `stream()` |
+| Prompt acknowledgement and your own event handling | `prompt()` with `events()` |
+| A specific Pi operation | `get_state()`, `set_model()`, `fork()`, and other command methods |
+| A raw command response envelope | `request()` |
 
-[usage]: https://github.com/cheenulabs/pi-coding-agent-python-client/blob/main/docs/usage.md
-[api]: https://github.com/cheenulabs/pi-coding-agent-python-client/blob/main/docs/api.md
-[errors]: https://github.com/cheenulabs/pi-coding-agent-python-client/blob/main/docs/errors.md
-[compatibility]: https://github.com/cheenulabs/pi-coding-agent-python-client/blob/main/docs/compatibility.md
-[examples]: https://github.com/cheenulabs/pi-coding-agent-python-client/tree/main/examples
-[discovery]: https://github.com/cheenulabs/pi-coding-agent-python-client/blob/main/docs/discovery.md
-[contributing]: https://github.com/cheenulabs/pi-coding-agent-python-client/blob/main/CONTRIBUTING.md
-[maintenance]: https://github.com/cheenulabs/pi-coding-agent-python-client/blob/main/docs/maintenance.md
-[releasing]: https://github.com/cheenulabs/pi-coding-agent-python-client/blob/main/docs/releasing.md
-[license]: https://github.com/cheenulabs/pi-coding-agent-python-client/blob/main/LICENSE
+For example, inspect session state without starting a model run:
+
+```python
+from pi_coding_agent_client import PiClient
+
+with PiClient() as pi:
+    state = pi.get_state()
+    print(state["sessionId"])
+```
+
+Python arguments use `snake_case`; wire dictionaries retain Pi's `camelCase`
+fields. `prompt()` acknowledges submission, which may be handled entirely by an
+extension. It does not wait for a completed answer.
+
+One client owns one conversation at a time; create separate clients for
+independent conversations. After a low-level prompt submitted outside an owned
+run, use a fresh client for `run()` or `stream()` so events cannot be attributed
+to the wrong work. The SDK launches a new process and cannot attach to an existing
+Pi terminal session.
+
+See [RPC structure][rpc] for the protocol mapping and module layout, and
+the [command reference][commands] for every method.
+
+## Documentation
+
+| Guide | Contents |
+| --- | --- |
+| [Usage][usage] | Sessions, images, concurrency, events, and extension UI |
+| [API reference][api] | Constructors, commands, types, and results |
+| [Errors and cancellation][errors] | Deadlines, partial results, cleanup, and recovery |
+| [RPC structure][rpc] | How the Python client maps to Pi's protocol |
+| [Compatibility][compatibility] | Runtime versions and platform validation |
+| [Examples][examples] | Runnable sync, async, streaming, sessions, steering, and UI examples |
+
+Examples use your configured Pi and may make provider calls. Development checks
+use an isolated local test provider; see [CONTRIBUTING.md][contributing] for
+setup and validation commands.
+
+Maintainers: [protocol discovery][discovery] ·
+[maintenance][maintenance] · [release checklist][releasing].
+
+## License
+
+[MIT][license]
+
+[metadata]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/pyproject.toml
+[license]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/LICENSE
+[compatibility]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/compatibility.md
+[errors]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/errors.md
+[stream-example]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/examples/stream.py
+[constructor-options]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/api.md#constructor-options
+[extensions]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/usage.md#using-your-own-extensions
+[ui-example]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/examples/ui.py
+[rpc]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/rpc.md
+[commands]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/api.md#all-33-rpc-commands
+[usage]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/usage.md
+[api]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/api.md
+[examples]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/tree/main/examples
+[contributing]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/CONTRIBUTING.md
+[discovery]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/discovery.md
+[maintenance]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/maintenance.md
+[releasing]: https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/docs/releasing.md
