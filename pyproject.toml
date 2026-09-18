@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pi-coding-agent-client"
+version = "0.1.0"
+description = "Typed async and synchronous Python clients for Pi's coding agent RPC runtime"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "cheenulabs"}]
+keywords = ["pi", "coding-agent", "rpc", "asyncio"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Typing :: Typed",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/cheenulabs/pi-coding-agent-python-client"
+Documentation = "https://github.com/cheenulabs/pi-coding-agent-python-client/tree/main/docs"
+Issues = "https://github.com/cheenulabs/pi-coding-agent-python-client/issues"
+Changelog = "https://github.com/cheenulabs/pi-coding-agent-python-client/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+dev = [
+  "build>=1.2.2",
+  "mypy>=1.15",
+  "pytest>=8.3",
+  "pytest-asyncio>=0.25",
+  "ruff>=0.11",
+  "twine>=6.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pi_coding_agent_client"]
+
+[tool.hatch.build.targets.sdist]
+only-include = ["src/pi_coding_agent_client", "pyproject.toml", "README.md", "LICENSE", "CHANGELOG.md"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+markers = [
+  "integration: real local Pi runtime with a synthetic provider",
+  "live: explicit opt-in model-backed smoke tests",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+ignore = ["ASYNC109"] # Public per-operation deadlines are part of the client interface.
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src"]
