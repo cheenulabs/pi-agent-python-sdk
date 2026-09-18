@@ -65,6 +65,10 @@ when GitHub presents them.
 
 ## Prepare the public documentation
 
+Use the tag (for example, `v0.1.0`) as the GitHub release title. Write the body
+in `docs/releases/<version>.md`, following the [release notes style](releases/style.md):
+lead with user-facing highlights and link to the tagged documentation.
+
 Keep the README and package metadata's documentation links pinned to the release
 tag with absolute GitHub URLs. Before publishing a release:
 
