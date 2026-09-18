@@ -400,8 +400,10 @@ def test_stream_iterator_can_be_wrapped_and_repeated():
 def test_stream_interrupt_finishes_owned_run_before_caller_catches(
     monkeypatch, operation, during_operation
 ):
-    with client() as pi:
+    with client() as pi, pi.events() as events:
         with pi.stream("hold") as stream:
+            # Reuse after interruption requires the run to have started.
+            assert next(events).type == "agent_start"
             if operation == "next":
                 assert next(stream).type == "agent_start"
             entered = threading.Event()
