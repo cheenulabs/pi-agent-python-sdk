@@ -1,7 +1,9 @@
 """Observable async client behavior against a deterministic executable."""
 
 import asyncio
+import json
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -11,7 +13,10 @@ from pi_coding_agent_client.errors import (
     PiBusyError,
     PiCommandError,
     PiProcessError,
+    PiProtocolError,
+    PiResultOverflow,
     PiRunError,
+    PiRunOwnershipError,
     PiRunStartTimeout,
     PiSubscriptionOverflow,
     PiTimeoutError,
@@ -20,6 +25,112 @@ from pi_coding_agent_client.errors import (
 from pi_coding_agent_client.types import Limits
 
 FAKE = Path(__file__).with_name("fake_client_pi.py")
+
+
+async def test_elapsed_time_excludes_state_preflight_and_final_refresh():
+    async with AsyncPiClient(executable=[sys.executable, str(FAKE), "--slow-state"]) as pi:
+        before = time.monotonic()
+        result = await pi.run("normal")
+        duration = time.monotonic() - before
+        assert duration - result.elapsed_seconds >= 0.18
+
+
+@pytest.mark.parametrize("raw", [False, True])
+async def test_unowned_submission_permanently_prevents_owned_run(client, raw):
+    if raw:
+        await client.request("prompt", message="handled")
+    else:
+        await client.prompt("handled")
+    assert not (await client.get_state())["isStreaming"]
+    await client.abort()
+    with pytest.raises(PiRunOwnershipError, match="fresh client"):
+        await client.run("must not be submitted")
+    assert client.running  # low-level commands remain usable
+    assert (await client.prompt("handled"))["success"]
+
+
+@pytest.mark.parametrize(
+    "limits", [Limits(result_message_count=2), Limits(result_message_bytes=500)]
+)
+async def test_result_retention_is_bounded_even_with_fast_event_consumer(limits):
+    async with AsyncPiClient(executable=[sys.executable, str(FAKE)], limits=limits) as pi:
+        with pytest.raises(PiResultOverflow):
+            async with pi.stream("messages:20") as stream:
+                async for _ in stream:
+                    pass
+                await stream.result()
+        assert not pi.busy
+        assert (await pi.run("normal")).text == "answer"
+
+
+@pytest.mark.parametrize("count", [-1, 1.5, True, None])
+async def test_invalid_token_counts_are_unknown_without_discarding_other_fields(client, count):
+    result = await client.run("usage:" + json.dumps([{"usage": {"input": count}}]))
+    assert result.usage.input_tokens is None
+    assert result.usage.output_tokens == 3
+
+
+@pytest.mark.parametrize("cost", [-1, True, None, "invalid", 10**400])
+async def test_invalid_cost_is_unknown_without_failing_the_run(client, cost):
+    result = await client.run("usage:" + json.dumps([{"usage": {"cost": {"total": cost}}}]))
+    assert result.usage.cost is None
+    assert result.usage.output_tokens == 3
+    assert result.text == "answer"
+
+
+@pytest.mark.parametrize("reasoning", [0, 4, -1, True, None])
+async def test_reasoning_is_unknown_when_ambiguous_or_invalid(client, reasoning):
+    result = await client.run(
+        "usage:"
+        + json.dumps(
+            [
+                {
+                    "usage": {"reasoning": reasoning},
+                    "content": [
+                        {"type": "thinking", "thinking": "synthetic"},
+                        {"type": "text", "text": "one"},
+                        {"type": "text", "text": "two"},
+                    ],
+                }
+            ]
+        )
+    )
+    assert result.text == "onetwo"
+    assert result.usage.reasoning_tokens is None
+    assert result.usage.output_tokens == 3 and result.usage.total_tokens == 6
+
+
+async def test_missing_measurement_stays_unknown_across_multiple_messages(client):
+    result = await client.run(
+        "usage:"
+        + json.dumps(
+            [
+                {"usage": None},
+                {"usage": {"reasoning": 1}},
+            ]
+        )
+    )
+    assert result.usage is not None
+    assert result.usage.assistant_messages == 2
+    assert result.usage.input_tokens is None and result.usage.reasoning_tokens is None
+
+
+async def test_bad_text_delta_fails_observers_and_keeps_unknown_events(client):
+    async with client.events() as events:
+        await client.request("emit", records=[{"type": "future", "value": 1}])
+        assert (await anext(events)).raw["value"] == 1
+        with pytest.raises(PiProtocolError):
+            await client.request(
+                "emit",
+                records=[
+                    {
+                        "type": "message_update",
+                        "assistantMessageEvent": {"type": "text_delta", "delta": 42},
+                    }
+                ],
+            )
+        with pytest.raises(PiProtocolError):
+            await anext(events)
 
 
 @pytest.fixture

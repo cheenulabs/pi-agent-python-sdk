@@ -15,16 +15,38 @@ from pi_coding_agent_client.errors import (
     PiBusyError,
     PiCommandError,
     PiRunError,
+    PiRunOwnershipError,
     PiRunStartTimeout,
     PiTimeoutError,
 )
 from pi_coding_agent_client.types import Event, Limits
 
+from .control import set_responses
+
 pytestmark = pytest.mark.integration
 
 
 async def script(client: AsyncPiClient, *steps: dict[str, Any]) -> None:
-    await client.prompt("/fixture-script " + json.dumps(steps))
+    set_responses(client, list(steps))
+
+
+async def test_delayed_handled_input_cannot_be_misattributed_to_owned_run(pi_client):
+    set_responses(pi_client, [{"text": "answer to earlier input"}])
+    await pi_client.prompt("fixture delayed")
+    state = await pi_client.get_state()
+    assert not state["isStreaming"] and state["pendingMessageCount"] == 0
+    with pytest.raises(PiRunOwnershipError):
+        await pi_client.run("a different question")
+    async with pi_client.events() as events:
+        await pi_client.prompt("/fixture-release-delayed")
+        observed = []
+        async with asyncio.timeout(10):
+            async for event in events:
+                observed.append(event)
+                if event.type == "agent_settled":
+                    break
+    assert any(event.type == "agent_start" for event in observed)
+    assert "".join(event.text_delta or "" for event in observed) == "answer to earlier input"
 
 
 async def wait_event(events: Any, kind: str) -> Event:

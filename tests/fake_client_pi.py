@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 
 
 def emit(record):
@@ -53,6 +54,8 @@ def main():
         request = json.loads(line)
         command = request["type"]
         if command == "get_state":
+            if "--slow-state" in sys.argv:
+                time.sleep(0.1)
             if startup_ui:
                 startup_ui = False
                 ui_prompt = request
@@ -98,6 +101,26 @@ def main():
             emit({"type": "agent_start"})
             if message == "paused":
                 active = True
+                reply(request)
+                continue
+            if message.startswith("messages:"):
+                reply(request)
+                for index in range(int(message.split(":")[1])):
+                    emit(assistant(str(index)))
+                    time.sleep(0.005)  # consumer drains; aggregate retention still grows
+                emit({"type": "agent_settled"})
+                continue
+            if message.startswith("usage:"):
+                for changes in json.loads(message.removeprefix("usage:")):
+                    event = assistant()
+                    usage_changes = changes.pop("usage", {})
+                    if usage_changes is None:
+                        event["message"]["usage"] = None
+                    else:
+                        event["message"]["usage"].update(usage_changes)
+                    event["message"].update(changes)
+                    emit(event)
+                emit({"type": "agent_settled"})
                 reply(request)
                 continue
             if message != "empty":

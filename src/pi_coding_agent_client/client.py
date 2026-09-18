@@ -156,6 +156,7 @@ class AsyncPiClient:
         self._ui_bytes = 0
         self._ui_error: PiUIHandlerError | None = None
         self._owner: RunStream | None = None
+        self._unowned_submission = False
         self._session = SessionInfo()
         self._loop: asyncio.AbstractEventLoop | None = None
         self._closed = False
@@ -288,6 +289,8 @@ class AsyncPiClient:
 
     def _on_event(self, raw: dict[str, Any]) -> None:
         event = Event(raw)
+        # Validate a recognized text update without restricting future variants.
+        _ = event.text_delta
         size = len(json.dumps(raw, ensure_ascii=False).encode("utf-8"))
         for subscription in tuple(self._subscriptions):
             subscription._put(event, size)
@@ -465,6 +468,10 @@ class AsyncPiClient:
             or deadline <= 0
         ):
             raise ValueError("timeout must be a positive finite number or None")
+        if self._owner is None and command in {"prompt", "steer", "follow_up"}:
+            # Set before awaiting: input handlers can start work long after acknowledgement.
+            # Even rejection/cancellation cannot prove arbitrary extension preflight is idle.
+            self._unowned_submission = True
         try:
             response = await self._transport.request(command, fields, timeout=deadline)
             if self._ui_error is not None:

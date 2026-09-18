@@ -12,6 +12,8 @@ import math
 from dataclasses import dataclass, field, fields
 from typing import Any, Literal, NotRequired, TypeAlias, TypedDict
 
+from .errors import PiProtocolError
+
 JSONValue: TypeAlias = None | bool | int | float | str | list["JSONValue"] | dict[str, "JSONValue"]
 JSONObject: TypeAlias = dict[str, JSONValue]
 RawRecord: TypeAlias = dict[str, Any]
@@ -872,7 +874,9 @@ class Event:
         nested = self.raw.get("assistantMessageEvent")
         if isinstance(nested, dict) and nested.get("type") == "text_delta":
             delta = nested.get("delta")
-            return delta if isinstance(delta, str) else None
+            if not isinstance(delta, str):
+                raise PiProtocolError("text_delta requires a string delta")
+            return delta
         return None
 
 
@@ -893,13 +897,13 @@ class UsageSummary:
     A field remains unknown if any observed assistant omitted that measurement.
     """
 
-    input_tokens: float | None = None
-    output_tokens: float | None = None
-    cache_read_tokens: float | None = None
-    cache_write_tokens: float | None = None
-    cache_write_1h_tokens: float | None = None
-    reasoning_tokens: float | None = None
-    total_tokens: float | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    cache_read_tokens: int | None = None
+    cache_write_tokens: int | None = None
+    cache_write_1h_tokens: int | None = None
+    reasoning_tokens: int | None = None
+    total_tokens: int | None = None
     cost: float | None = None
     assistant_messages: int = 0
 
@@ -932,6 +936,8 @@ class Limits:
     event_queue_size: int = 256
     event_queue_bytes: int = 16 * 1024 * 1024
     stderr_tail_bytes: int = 0
+    result_message_count: int = 4096
+    result_message_bytes: int = 64 * 1024 * 1024
 
     def __post_init__(self) -> None:
         for descriptor in fields(self):

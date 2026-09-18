@@ -9,51 +9,21 @@ from types import TracebackType
 from typing import TYPE_CHECKING, Any, Self
 
 from ._events import EventSubscription
+from ._usage import UsageAccumulator
 from .errors import (
     PiBusyError,
     PiCommandError,
     PiProtocolError,
+    PiResultOverflow,
     PiRunError,
+    PiRunOwnershipError,
     PiRunStartTimeout,
     PiTimeoutError,
 )
-from .types import Event, ImageContent, RunResult, UsageSummary
+from .types import Event, ImageContent, RunResult
 
 if TYPE_CHECKING:
     from .client import AsyncPiClient, Timeout
-
-
-def _observed_usage(messages: list[dict[str, Any]]) -> UsageSummary | None:
-    assistants = [message for message in messages if message.get("role") == "assistant"]
-    if not assistants or not any(isinstance(message.get("usage"), dict) for message in assistants):
-        return None
-
-    def total(key: str, *, cost: bool = False) -> float | None:
-        values = []
-        for message in assistants:
-            usage = message.get("usage")
-            record = usage.get("cost") if cost and isinstance(usage, dict) else usage
-            value = record.get(key) if isinstance(record, dict) else None
-            if (
-                isinstance(value, bool)
-                or not isinstance(value, (int, float))
-                or not math.isfinite(value)
-            ):
-                return None
-            values.append(value)
-        return sum(values)
-
-    return UsageSummary(
-        input_tokens=total("input"),
-        output_tokens=total("output"),
-        cache_read_tokens=total("cacheRead"),
-        cache_write_tokens=total("cacheWrite"),
-        cache_write_1h_tokens=total("cacheWrite1h"),
-        reasoning_tokens=total("reasoning"),
-        total_tokens=total("totalTokens"),
-        cost=total("total", cost=True),
-        assistant_messages=len(assistants),
-    )
 
 
 class RunStream:
@@ -91,6 +61,8 @@ class RunStream:
         self._accepted: asyncio.Future[None] | None = None
         self._error: Exception | None = None
         self._messages: list[dict[str, Any]] = []
+        self._message_bytes = 0
+        self._usage = UsageAccumulator()
         self._submitted = False
         self._finishing = False
         self._closed = False
@@ -98,6 +70,7 @@ class RunStream:
         self._draining = False
         self._iteration_done = False
         self._begin = 0.0
+        self._end = 0.0
 
     async def __aenter__(self) -> Self:
         self._client._check_loop()
@@ -107,10 +80,14 @@ class RunStream:
             raise PiBusyError("Another run owns this Pi conversation")
         if not self._client.running:
             raise RuntimeError("Start Pi before opening a run stream")
+        if self._client._unowned_submission:
+            raise PiRunOwnershipError(
+                "This client submitted low-level conversation work; use a fresh client for "
+                "run()/stream() because delayed session events cannot be attributed safely"
+            )
         self._client._owner = self
         self._accepted = asyncio.get_running_loop().create_future()
         await self._events.__aenter__()
-        self._begin = time.monotonic()
         self._task = asyncio.create_task(self._drive(), name="pi-run")
         self._task.add_done_callback(self._consume_task_exception)
         try:
@@ -156,11 +133,12 @@ class RunStream:
             self._task.cancel()
 
     def _on_event(self, event: Event, size: int) -> None:
-        if not self._submitted or self._settled.is_set():
+        if not self._submitted or self._settled.is_set() or self._error is not None:
             return
         if event.type == "agent_start":
             self._started.set()
         elif event.type == "agent_settled" and self._started.is_set():
+            self._end = time.monotonic()
             self._settled.set()
         elif event.type == "message_end" and self._started.is_set():
             message = event.raw.get("message")
@@ -175,7 +153,15 @@ class RunStream:
                         PiProtocolError("Final assistant message requires content and stopReason")
                     )
                     return
+            if (
+                len(self._messages) >= self._client.limits.result_message_count
+                or self._message_bytes + size > self._client.limits.result_message_bytes
+            ):
+                self._fail(PiResultOverflow("Run exceeded its retained message count/byte limit"))
+                return
+            self._message_bytes += size
             self._messages.append(message)
+            self._usage.add(message)
         error = self._events._put(event, size)
         if error is not None:
             self._fail(error)
@@ -192,6 +178,7 @@ class RunStream:
                 if self._images is not None:
                     fields["images"] = self._images
                 self._submitted = True
+                self._begin = time.monotonic()
                 await self._client._request(
                     "prompt", fields, timeout=self._command_timeout, owner=self
                 )
@@ -287,12 +274,12 @@ class RunStream:
                     raise PiProtocolError("Assistant text blocks require string text")
                 text_parts.append(block["text"])
         return RunResult(
-            text="\n".join(text_parts),
+            text="".join(text_parts),
             messages=list(self._messages),
             stop_reason=last["stopReason"] if last is not None else None,
             session=self._client.session,
-            elapsed_seconds=time.monotonic() - self._begin,
-            usage=_observed_usage(self._messages),
+            elapsed_seconds=max(0.0, self._end - self._begin),
+            usage=self._usage.snapshot(),
         )
 
     def __aiter__(self) -> Self:

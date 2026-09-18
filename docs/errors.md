@@ -17,6 +17,8 @@ All library exceptions derive from `PiError` and are exported from the package.
 | `PiRunStartTimeout` | Accepted prompt produced no observed agent start before its deadline; derives from `PiTimeoutError` and closes Pi |
 | `PiBusyError` | Competing owned run, incompatible command, or simultaneous stream consumption modes |
 | `PiSubscriptionOverflow` | An event consumer exceeded its count or byte budget |
+| `PiResultOverflow` | An owned run exceeded its independent retained-message count or byte limit; owned cleanup runs |
+| `PiRunOwnershipError` | Prior low-level conversation submission prevents owned-run attribution; derives from `PiBusyError`, requires a fresh client |
 | `PiUIHandlerError` | UI handler failure or outstanding-handler budget exceeded; callback failures retain their cause |
 | `PiRunError` | Final assistant stopped with `error` or `aborted`; `.result` contains partial work |
 | `PiVersionError` | Unsupported or unrecognized Pi version under the selected compatibility policy |
@@ -149,6 +151,12 @@ methods from them. Async UI callbacks run on the client loop and may await its
 `aclose()`.
 
 ## Buffer overflow
+
+Finalized run messages have independent `Limits.result_message_count` (4096)
+and `Limits.result_message_bytes` (64 MiB) bounds. Bytes count serialized
+`message_end` records, not Python object heap usage. A fast event consumer cannot
+bypass these bounds. Exceeding either raises `PiResultOverflow` and performs
+owned cancellation/cleanup; it never silently returns a truncated result.
 
 An independent `events()` subscription that falls behind fails explicitly with
 `PiSubscriptionOverflow`; it does not stall Pi's response routing. If the

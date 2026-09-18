@@ -63,6 +63,14 @@ class PiSubscriptionOverflow(PiError):
     """A subscriber exceeded its configured event buffer."""
 
 
+class PiResultOverflow(PiError):
+    """An owned run exceeded its independent retained-result capacity."""
+
+
+class PiRunOwnershipError(PiBusyError):
+    """Prior low-level work prevents reliable attribution of a new owned run."""
+
+
 class PiUIHandlerError(PiError):
     """An extension UI callback failed."""
 

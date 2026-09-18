@@ -196,8 +196,8 @@ objects; frozen fields do not imply a deep immutable copy.
 | `UsageSummary` | Optional `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_write_tokens`, `cache_write_1h_tokens`, `reasoning_tokens`, `total_tokens`, `cost`; `assistant_messages` count |
 | `Event` | `raw`, with `type` and `text_delta` properties |
 
-`RunResult.messages` retains finalized messages for the owned run. Event buffer
-limits do not bound the memory required to retain that result. Usage is observed
+`RunResult.messages` retains finalized messages up to independent count/byte
+limits; overflow fails the run with `PiResultOverflow`. Usage is observed
 assistant usage, not total billing; a missing measurement in any contributing
 assistant message keeps that summary field unknown. Reasoning is not added to
 output tokens a second time.
@@ -217,6 +217,8 @@ capacities are positive integers except `stderr_tail_bytes`, which may be zero.
 | `event_queue_size` | `256` | Records per subscription; also outstanding UI-handler count |
 | `event_queue_bytes` | `16 * 1024 * 1024` | Bytes per subscription; also outstanding UI-handler payload bytes |
 | `stderr_tail_bytes` | `0` | Retained diagnostic stderr tail; zero disables retention |
+| `result_message_count` | `4096` | Finalized messages retained by one owned run |
+| `result_message_bytes` | `64 * 1024 * 1024` | Serialized finalized-message event bytes retained by one owned run |
 
 `bash`, `compact`, `new_session`, `switch_session`, `fork`, `clone`, and
 `export_html` have no default command execution deadline. A numeric `timeout=`
