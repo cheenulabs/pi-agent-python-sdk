@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from pi_coding_agent_client.client import AsyncPiClient
-from pi_coding_agent_client.errors import (
+from pi_agent.client import AsyncPiClient
+from pi_agent.errors import (
     PiBusyError,
     PiCommandError,
     PiProcessError,
@@ -22,7 +22,7 @@ from pi_coding_agent_client.errors import (
     PiTimeoutError,
     PiUIHandlerError,
 )
-from pi_coding_agent_client.types import Limits
+from pi_agent.types import Limits
 
 FAKE = Path(__file__).with_name("fake_client_pi.py")
 
@@ -382,7 +382,7 @@ async def test_preflight_timeout_closes_pi_and_cancels_ui_handler():
 
 
 async def test_close_during_version_check_waits_for_owned_probe_cleanup(monkeypatch):
-    import pi_coding_agent_client.client as module
+    import pi_agent.client as module
 
     entered = asyncio.Event()
     cleaned = asyncio.Event()

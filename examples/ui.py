@@ -2,8 +2,8 @@
 
 import argparse
 
-from pi_coding_agent_client import PiClient
-from pi_coding_agent_client.types import ExtensionUIRequest
+from pi_agent import PiClient
+from pi_agent.types import ExtensionUIRequest
 
 
 def handle_ui(request: ExtensionUIRequest) -> str | bool | None:

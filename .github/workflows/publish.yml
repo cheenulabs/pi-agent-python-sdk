@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: testpypi
-      url: https://test.pypi.org/project/pi-coding-agent-client/
+      url: https://test.pypi.org/project/pi-coding-agent-python-sdk/
     permissions:
       id-token: write
     steps:
@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/pi-coding-agent-client/
+      url: https://pypi.org/project/pi-coding-agent-python-sdk/
     permissions:
       id-token: write
     steps:

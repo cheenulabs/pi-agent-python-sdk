@@ -11,9 +11,9 @@ from pathlib import Path
 
 import pytest
 
-from pi_coding_agent_client.client import AsyncPiClient
-from pi_coding_agent_client.errors import PiCommandError
-from pi_coding_agent_client.types import Event, ExtensionUIRequest
+from pi_agent.client import AsyncPiClient
+from pi_agent.errors import PiCommandError
+from pi_agent.types import Event, ExtensionUIRequest
 
 pytestmark = pytest.mark.integration
 

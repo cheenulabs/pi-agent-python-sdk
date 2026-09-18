@@ -27,8 +27,8 @@ account holder must register the publishers separately on each index.
   disable merge commits and rebase merging while leaving squash enabled.
   Follow the review process in [CONTRIBUTING.md](../CONTRIBUTING.md) and
   keep auto-merge off.
-- Confirm the distribution name `pi-coding-agent-client` is available on
-  PyPI and TestPyPI. The chosen import is `pi_coding_agent_client`; the license
+- Confirm the distribution name `pi-coding-agent-python-sdk` is available on
+  PyPI and TestPyPI. The chosen import is `pi_agent`; the license
   is MIT. Recheck public metadata URLs before release.
 - In Settings → Environments, create `testpypi` and `pypi`, each with
   `cheenulabs` as a required reviewer. Allow self-review if that same account
@@ -41,7 +41,7 @@ account holder must register the publishers separately on each index.
 
   | Field | TestPyPI | PyPI |
   |---|---|---|
-  | Project name | `pi-coding-agent-client` | `pi-coding-agent-client` |
+  | Project name | `pi-coding-agent-python-sdk` | `pi-coding-agent-python-sdk` |
   | GitHub owner | `cheenulabs` | `cheenulabs` |
   | Repository | `pi-coding-agent-python-sdk` | `pi-coding-agent-python-sdk` |
   | Workflow filename | `publish.yml` | `publish.yml` |
@@ -105,7 +105,7 @@ to `main`. Before publishing a release:
    runs tests and validation, and builds once. It publishes those exact
    artifacts to TestPyPI, then to PyPI after the environment approvals. The
    upload jobs download the build artifact and never rebuild it.
-6. Verify a clean `pip install pi-coding-agent-client==0.1.0`, package metadata,
+6. Verify a clean `pip install pi-coding-agent-python-sdk==0.1.0`, package metadata,
    typing marker, and runnable quickstarts. Mark the release complete only
    after the GitHub and package-index states confirm it.
 

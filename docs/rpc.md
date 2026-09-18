@@ -55,17 +55,17 @@ The Python implementation keeps process I/O separate from conversation behavior:
 
 | Module | Responsibility |
 | --- | --- |
-| [`client.py`](../src/pi_coding_agent_client/client.py) | Async lifecycle, typed commands, ownership checks, and extension UI dispatch |
-| [`_transport.py`](../src/pi_coding_agent_client/_transport.py) | Subprocess pipes, JSONL framing, request correlation, deadlines, and process cleanup |
-| [`_launch.py`](../src/pi_coding_agent_client/_launch.py) | Executable resolution, version checks, and launch argument validation |
-| [`_events.py`](../src/pi_coding_agent_client/_events.py) | Bounded event subscriptions |
-| [`_runs.py`](../src/pi_coding_agent_client/_runs.py) | Run ownership, settlement, result collection, and cancellation |
-| [`_usage.py`](../src/pi_coding_agent_client/_usage.py) | Usage accumulation from observed assistant messages |
-| [`sync.py`](../src/pi_coding_agent_client/sync.py) | Synchronous calls through the same async client on one background event loop |
-| [`types.py`](../src/pi_coding_agent_client/types.py), [`errors.py`](../src/pi_coding_agent_client/errors.py) | Typed wire dictionaries, Python results, and explicit failures |
+| [`client.py`](../src/pi_agent/client.py) | Async lifecycle, typed commands, ownership checks, and extension UI dispatch |
+| [`_transport.py`](../src/pi_agent/_transport.py) | Subprocess pipes, JSONL framing, request correlation, deadlines, and process cleanup |
+| [`_launch.py`](../src/pi_agent/_launch.py) | Executable resolution, version checks, and launch argument validation |
+| [`_events.py`](../src/pi_agent/_events.py) | Bounded event subscriptions |
+| [`_runs.py`](../src/pi_agent/_runs.py) | Run ownership, settlement, result collection, and cancellation |
+| [`_usage.py`](../src/pi_agent/_usage.py) | Usage accumulation from observed assistant messages |
+| [`sync.py`](../src/pi_agent/sync.py) | Synchronous calls through the same async client on one background event loop |
+| [`types.py`](../src/pi_agent/types.py), [`errors.py`](../src/pi_agent/errors.py) | Typed wire dictionaries, Python results, and explicit failures |
 
 Underscored modules are private implementation details. Applications import
-`PiClient` and `AsyncPiClient` from `pi_coding_agent_client`.
+`PiClient` and `AsyncPiClient` from `pi_agent`.
 
 Keep protocol compatibility at the wire and command-method level. Copying Pi's
 TypeScript directory structure would not simplify the Python interface. The

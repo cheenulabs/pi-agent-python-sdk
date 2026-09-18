@@ -22,7 +22,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from pi_coding_agent_client import AsyncPiClient, PiClient
+from pi_agent import AsyncPiClient, PiClient
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = (

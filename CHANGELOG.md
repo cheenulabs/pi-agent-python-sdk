@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Rename the unpublished distribution to `pi-coding-agent-python-sdk` and the
+  Python import to `pi_agent`. Source-checkout users must update their imports.
+
 - Keep the standalone SDK scoped to core RPC with zero runtime dependencies;
   document loading caller-owned extensions through native Pi arguments.
 - Prevent owned runs from claiming delayed events after low-level submissions.

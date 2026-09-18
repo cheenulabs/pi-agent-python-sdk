@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 import pytest_asyncio
 
-from pi_coding_agent_client.client import AsyncPiClient
+from pi_agent.client import AsyncPiClient
 
 
 @pytest.fixture

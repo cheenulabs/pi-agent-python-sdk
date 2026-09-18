@@ -11,14 +11,14 @@ from typing import Any
 import pytest
 import pytest_asyncio
 
-from pi_coding_agent_client._transport import Transport
-from pi_coding_agent_client.errors import (
+from pi_agent._transport import Transport
+from pi_agent.errors import (
     PiCommandError,
     PiProcessError,
     PiProtocolError,
     PiTimeoutError,
 )
-from pi_coding_agent_client.types import Limits
+from pi_agent.types import Limits
 
 FAKE = str(Path(__file__).with_name("fake_pi.py"))
 

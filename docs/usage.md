@@ -36,7 +36,7 @@ calls to an async client on the loop that started it.
 Prefer a context manager so exceptions also close the process:
 
 ```python
-from pi_coding_agent_client import PiClient
+from pi_agent import PiClient
 
 
 def main() -> None:
@@ -60,7 +60,7 @@ Both constructors accept the same keyword-only options. Omitted model, provider,
 session, and discovery settings remain omitted from Pi's command line.
 
 ```python
-from pi_coding_agent_client import Limits, PiClient
+from pi_agent import Limits, PiClient
 
 
 def main() -> None:
@@ -110,7 +110,7 @@ clients work without extensions or any Cheenulabs code.
 For an extension you have already placed at the following example path:
 
 ```python
-from pi_coding_agent_client import PiClient
+from pi_agent import PiClient
 
 
 def main() -> None:
@@ -214,7 +214,7 @@ The same `images=` argument is accepted by `run`, `stream`, `prompt`, `steer`, a
 import base64
 from pathlib import Path
 
-from pi_coding_agent_client import ImageContent, PiClient
+from pi_agent import ImageContent, PiClient
 
 
 def main() -> None:
@@ -324,7 +324,7 @@ applies the same run-ownership restrictions as named methods. Callers cannot
 replace `id` or `type`. It is not a separate transport or a bypass for unsupported
 Pi capabilities.
 
-Wire types in `pi_coding_agent_client.types` are `TypedDict`/`Literal` annotations;
+Wire types in `pi_agent.types` are `TypedDict`/`Literal` annotations;
 nested payloads remain dictionaries with Pi's original field spelling. They
 describe the known protocol rather than recursively converting provider data.
 

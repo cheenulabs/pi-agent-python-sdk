@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from pi_coding_agent_client import AsyncPiClient
+from pi_agent import AsyncPiClient
 
 pytestmark = [
     pytest.mark.live,

@@ -2,7 +2,7 @@
 
 import pytest
 
-from pi_coding_agent_client import PiClient, PiRunOwnershipError
+from pi_agent import PiClient, PiRunOwnershipError
 
 from .control import set_responses
 
