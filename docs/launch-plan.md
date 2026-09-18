@@ -11,15 +11,15 @@ entry does not reserve the name or guarantee registration.
 
 ## Current state
 
-Snapshot: 2026-09-18. Repository visibility is private; `main` is unprotected;
-`testpypi` and `pypi` environments are absent. The current automation account has
-push access but no repository administration permission. Package-index account
-settings cannot be inspected through that GitHub account. The package version is
-`0.1.0rc1`; no publication is claimed.
+Snapshot: 2026-09-18. The repository is public, `main` is protected, and
+`testpypi` and `pypi` require approval from `cheenulabs` with admin bypass disabled.
+Only squash merging is enabled; auto-merge is disabled. GitHub administration
+access is available through `cheenulabs`. Package-index account settings still
+require the account holder's confirmation.
 
-The remaining implementation PRs are #15 (runtime), #16 (documentation),
-#17 (package/import names), and #18 (agent instructions). Refresh their state
-before acting: approvals and merges may advance while launch work proceeds.
+PRs #15–#21 are merged. This final-version draft prepares
+`0.1.0`; keep the rehearsal base at `0.1.0rc1` until TestPyPI verification succeeds.
+No publication is claimed. Refresh PR state before acting.
 
 ## Reviewable changes
 
@@ -41,18 +41,19 @@ base, retarget the next PR, and rerun its checks. Leave auto-merge off.
 
 ## 1. Owner setup: repository and publishers
 
-The repository owner performs these account-level steps. The agent can prepare
-and inspect the configuration, but its current credentials cannot change it.
+GitHub setup is complete. The package-index account holder must still register
+and confirm the separate TestPyPI and PyPI publishers.
 
-- [ ] Review the source and history that will become public. Record the owner's
-  approval of the visibility change; in repository Settings → General → Danger
-  Zone, make the repository public when ready for that exposure.
-- [ ] Protect `main`: require the `required` status check, require the branch to
+- [x] Make the repository public under the authorized launch plan. Before the
+  visibility change, Gitleaks 8.30.1 scanned all 65 reachable commits and reported
+  no secrets. This automated check does not certify the absence of all sensitive
+  material.
+- [x] Protect `main`: require the `required` status check, require the branch to
   be current with its base, and enforce protection for administrators. Preserve
   the separate user-approval requirement for every merge.
-- [ ] Enable squash merging and disable merge commits, rebase merging, and
+- [x] Enable squash merging and disable merge commits, rebase merging, and
   auto-merge in repository settings.
-- [ ] Create `testpypi` and `pypi` environments. Require reviewer `cheenulabs`;
+- [x] Create `testpypi` and `pypi` environments. Require reviewer `cheenulabs`;
   allow that owner to approve their own dispatched deployment. Disable protection
   bypass where available. Permit only branch `main` and tags `v*` for TestPyPI,
   and tags `v*` for PyPI.
@@ -80,6 +81,9 @@ Record confirmation of both publisher registrations without credentials.
 
 Completion evidence: public repository URL, protected `main`, environment
 reviewer/ref policies, and account-holder confirmation of both publisher records.
+
+GitHub configuration can be inspected in [branch settings](https://github.com/cheenulabs/pi-agent-python-sdk/settings/branches)
+and [environment settings](https://github.com/cheenulabs/pi-agent-python-sdk/settings/environments).
 
 ## 2. Land the reviewed implementation and rehearsal workflow
 
