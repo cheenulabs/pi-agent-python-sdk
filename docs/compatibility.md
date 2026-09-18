@@ -1,9 +1,7 @@
 # Compatibility
 
-This is a development preview. There is no published PyPI release yet; install
-from the source checkout as described in the [README](../README.md). Compatibility
-claims below distinguish the recorded protocol baseline from platform test
-targets.
+For installation, see the [README](../README.md). Compatibility claims below
+distinguish the recorded protocol baseline from platform test targets.
 
 Check the proposed commit's CI results before relying on platform support.
 

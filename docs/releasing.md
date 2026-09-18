@@ -1,8 +1,8 @@
 # Releasing the package
 
-The package is not yet published. Local build validation is separate from a
-TestPyPI rehearsal, GitHub CI, and a public PyPI release. Complete all of them
-before calling the first release finished.
+Local build validation is separate from a TestPyPI rehearsal, GitHub CI, and a
+public PyPI release. Complete all of them before calling the first release
+finished.
 
 Merge each PR only after explicit approval. Publication, including a
 TestPyPI rehearsal, requires separate explicit approval after the release
@@ -65,8 +65,8 @@ when GitHub presents them.
 
 ## Prepare the public documentation
 
-The development README and package metadata use absolute GitHub URLs pointing
-to `main`. Before publishing a release:
+Keep the README and package metadata's documentation links pinned to the release
+tag with absolute GitHub URLs. Before publishing a release:
 
 - Merge the approved SDK changes into `main` and validate that release commit.
 - Point README documentation, example, source, and license links, plus the
