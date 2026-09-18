@@ -1,5 +1,6 @@
 # Pi Agent Python SDK
 
+[![PyPI](https://img.shields.io/pypi/v/pi-agent-python-sdk?style=flat-square)][pypi]
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)][metadata]
 [![MIT license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)][license]
 
@@ -29,7 +30,7 @@ pi --version
 Run `pi` once to configure your provider and model using Pi's normal setup.
 The SDK uses that configuration when it starts Pi.
 
-Install the Python package:
+Install the Python package from [PyPI][pypi]:
 
 ```sh
 python -m pip install pi-agent-python-sdk==0.1.0
@@ -177,6 +178,7 @@ the [command reference][commands] for every method.
 | [RPC structure][rpc] | How the Python client maps to Pi's protocol |
 | [Compatibility][compatibility] | Runtime versions and platform validation |
 | [Examples][examples] | Runnable sync, async, streaming, sessions, steering, and UI examples |
+| [Release notes][release] | Changes included in 0.1.0 |
 
 Examples use your configured Pi and may make provider calls. Development checks
 use an isolated local test provider; see [CONTRIBUTING.md][contributing] for
@@ -189,6 +191,8 @@ Maintainers: [protocol discovery][discovery] ·
 
 [MIT][license]
 
+[pypi]: https://pypi.org/project/pi-agent-python-sdk/
+[release]: https://github.com/cheenulabs/pi-agent-python-sdk/releases/tag/v0.1.0
 [metadata]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.1.0/pyproject.toml
 [license]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.1.0/LICENSE
 [compatibility]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.1.0/docs/compatibility.md
