@@ -8,6 +8,9 @@ Merge each PR only after explicit approval. Publication, including a
 TestPyPI rehearsal, requires separate explicit approval after the release
 candidate and publishing setup are ready for review.
 
+Follow the [first public release plan](launch-plan.md) for the ordered work,
+approvals, and completion evidence.
+
 ## One-time repository and index setup
 
 The repository belongs to the personal GitHub account `cheenulabs`. Its owner
@@ -16,7 +19,7 @@ push access does not grant those settings. The authenticated package-index
 account holder must register the publishers separately on each index.
 
 - In repository Settings → General → Danger Zone, make
-  `cheenulabs/pi-coding-agent-python-sdk` public when the user authorizes
+  `cheenulabs/pi-agent-python-sdk` public when the user authorizes
   publication. This is not needed to review the private PRs.
 - After the CI workflow runs, use Settings → Branches to protect `main`.
   Require the status check named `required` and require branches to be up to
@@ -30,6 +33,11 @@ account holder must register the publishers separately on each index.
 - Confirm the distribution name `pi-coding-agent-python-sdk` is available on
   PyPI and TestPyPI. The chosen import is `pi_agent`; the license
   is MIT. Recheck public metadata URLs before release.
+
+For a personal repository on GitHub Free or Pro, required environment reviewers
+are available only when the repository is public. Complete the approved
+visibility change before configuring those protections if needed.
+
 - In Settings → Environments, create `testpypi` and `pypi`, each with
   `cheenulabs` as a required reviewer. Allow self-review if that same account
   will both dispatch and approve a deployment. Any deployment branch/tag
@@ -43,7 +51,7 @@ account holder must register the publishers separately on each index.
   |---|---|---|
   | Project name | `pi-coding-agent-python-sdk` | `pi-coding-agent-python-sdk` |
   | GitHub owner | `cheenulabs` | `cheenulabs` |
-  | Repository | `pi-coding-agent-python-sdk` | `pi-coding-agent-python-sdk` |
+  | Repository | `pi-agent-python-sdk` | `pi-agent-python-sdk` |
   | Workflow filename | `publish.yml` | `publish.yml` |
   | Environment | `testpypi` | `pypi` |
 
