@@ -3,6 +3,14 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Full reviewed main commit SHA approved for the TestPyPI rehearsal
+        required: true
+        type: string
+concurrency:
+  group: publish-distributions
+  cancel-in-progress: false
 permissions:
   contents: read
   actions: read
@@ -14,6 +22,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Require the approved main commit for a rehearsal
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/main
+          test "$GITHUB_SHA" = "$EXPECTED_SHA"
       - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -27,25 +42,32 @@ jobs:
           export PI_CLIENT_EXPECTED_PI_VERSION=$(node -p "require('./tests/pi/package.json').devDependencies['@earendil-works/pi-coding-agent']")
           uv run --no-sync pytest -m "not live"
       - run: uv run --no-sync ruff check .
+      - run: uv run --no-sync ruff format --check .
       - run: uv run --no-sync mypy
+      - run: uv run --no-sync mypy --strict examples scripts/check_examples.py
+      - run: uv run --no-sync python scripts/check_examples.py
       - run: uv run --no-sync python scripts/check_upstream.py
       - name: Require successful CI for this release commit
-        if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&status=success" --jq '.workflow_runs | length > 0' > ci-success.txt
           test "$(cat ci-success.txt)" = true
-      - name: Check release version
-        if: github.event_name == 'release'
+      - name: Check candidate version and release tag
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
           uv run --no-sync python - <<'PY'
-          import os, tomllib
+          import os, re, tomllib
           with open('pyproject.toml', 'rb') as source:
               version = tomllib.load(source)['project']['version']
-          assert os.environ['RELEASE_TAG'] == 'v' + version
+          if os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch':
+              assert re.fullmatch(r'\d+\.\d+\.\d+rc\d+', version), 'Rehearsals require an rc version'
+          else:
+              assert os.environ['RELEASE_TAG'] == 'v' + version
+              if os.environ['RELEASE_PRERELEASE'] != 'true':
+                  assert re.fullmatch(r'\d+\.\d+\.\d+', version), 'PyPI requires a final version'
           PY
       - run: uv run --no-sync python -m build
       - run: uv run --no-sync twine check dist/*
@@ -57,6 +79,7 @@ jobs:
   testpypi:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: testpypi
       url: https://test.pypi.org/project/pi-coding-agent-python-sdk/
@@ -70,10 +93,27 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           repository-url: https://test.pypi.org/legacy/
+  verify-testpypi:
+    needs: testpypi
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-distributions
+          path: dist/
+      - run: python scripts/check_distribution.py --index testpypi
   pypi:
     if: github.event_name == 'release' && !github.event.release.prerelease
-    needs: [build, testpypi]
+    needs: [build, verify-testpypi]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: pypi
       url: https://pypi.org/project/pi-coding-agent-python-sdk/
@@ -85,3 +125,19 @@ jobs:
           name: release-distributions
           path: dist/
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+  verify-pypi:
+    needs: pypi
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-distributions
+          path: dist/
+      - run: python scripts/check_distribution.py --index pypi
