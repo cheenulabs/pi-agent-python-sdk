@@ -181,6 +181,31 @@ def test_ui_reentrancy_fails_without_deadlocking_and_sends_cancellation():
         assert isinstance(caught.value.__cause__, RuntimeError)
 
 
+@pytest.mark.parametrize(
+    ("operation", "started"),
+    [("prompt", False), ("run", False), ("stream", False), ("run", True), ("stream", True)],
+)
+def test_ui_failure_preserves_callback_cause_across_loop_thread(operation, started):
+    original = ValueError("synthetic callback detail")
+    nested = LookupError("synthetic nested cause")
+
+    def broken(request):
+        raise original from nested
+
+    fake = str(Path(__file__).with_name("fake_client_pi.py"))
+    with PiClient(executable=[sys.executable, fake], ui_handler=broken) as pi:
+        with pytest.raises(PiUIHandlerError) as caught:
+            message = "ui-started" if started else "ui"
+            if operation == "stream":
+                with pi.stream(message) as stream:
+                    stream.result()
+            else:
+                getattr(pi, operation)(message)
+        assert caught.value.__cause__ is original
+        assert original.__cause__ is nested
+        assert not pi.busy
+
+
 def test_reentrancy_guard_also_covers_loop_thread():
     with client() as pi:
 

@@ -211,6 +211,10 @@ class RunStream:
                 failure = PiTimeoutError(
                     "Pi run deadline elapsed", command="prompt", uncertain=self._submitted
                 )
+            if self._client._ui_error is not None and failure is self._client._ui_error:
+                # The owner now reports this failure. Do not report it again as
+                # a failure of an otherwise successful cleanup command.
+                self._client._ui_error = None
             accepted = self._accepted.done() and not self._accepted.cancelled()
             if (
                 self._submitted
@@ -225,6 +229,10 @@ class RunStream:
                     await self._cleanup()
             if failure is exc:
                 raise
+            if self._error is not None and failure is self._error:
+                # Cancellation only woke the driver; retain the recorded
+                # error's original cause (for example the UI callback error).
+                raise failure from failure.__cause__
             raise failure from exc
         finally:
             if not self._accepted.done():

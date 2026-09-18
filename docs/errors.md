@@ -35,6 +35,11 @@ is in `__cause__`. Those fields can contain application data. Transport failure
 usually requires a new client; command rejection alone does not necessarily
 close the process.
 
+Owned runs and the synchronous facade preserve the callback's original cause,
+including an existing nested cause. Internal cancellation used to stop an owned
+run does not replace it. Once the owner reports a UI failure, that same error is
+not reported again as a failure of an otherwise successful cleanup command.
+
 ## Partial results and stop reasons
 
 ```python

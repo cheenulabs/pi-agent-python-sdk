@@ -86,8 +86,13 @@ def main():
             if message == "handled":
                 reply(request)
                 continue
-            if message == "ui":
-                ui_prompt = request
+            if message in {"ui", "ui-started"}:
+                if message == "ui-started":
+                    active = True
+                    reply(request)
+                    emit({"type": "agent_start"})
+                else:
+                    ui_prompt = request
                 emit(
                     {
                         "type": "extension_ui_request",
@@ -160,6 +165,9 @@ def main():
                 reply(ui_prompt)
                 ui_prompt = None
         elif command == "clear_queue":
+            if "--fail-cleanup" in sys.argv:
+                reply(request, success=False, error="synthetic cleanup failure")
+                continue
             emit({"type": "queue_update", "steering": [], "followUp": []})
             reply(request, {"steering": [], "followUp": []})
         elif command == "abort":
