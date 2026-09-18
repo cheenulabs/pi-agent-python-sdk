@@ -1,5 +1,9 @@
 # Review and merge policy
 
+- Before creating or updating a PR, read `.github/pull_request_template.md`
+  when it is present. Use a `type(scope): concise description` title and fill
+  its Overview, Files changed and why, and Validation sections with the final
+  scope and actual check results.
 - Prepare focused PRs and leave them open for the user's review.
 - Merge only after the user explicitly approves the specific PR. Engineering
   reviews and passing CI do not substitute for that approval. Keep auto-merge off.

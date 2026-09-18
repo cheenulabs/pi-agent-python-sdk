@@ -50,6 +50,11 @@ Describe the concrete behavior change and relevant validation. Changes to the
 supported protocol need updates to types, fixtures, documentation, and the
 coverage inventory. Unknown upstream metadata must remain accessible.
 
+Use `.github/pull_request_template.md` for new PRs and keep descriptions current
+when scope changes. Titles follow `type(scope): concise description`, for example
+`fix(rpc): bound retained run messages`. Complete the Overview, Files changed and
+why, and Validation sections with concrete changes and observed results.
+
 Address review findings before merging. Merge each PR only after explicit
 approval, using squash. After merging, restack each dependent branch's own
 commits onto its updated base, retarget the next PR to main, and rerun its
