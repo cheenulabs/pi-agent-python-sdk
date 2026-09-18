@@ -31,6 +31,8 @@ The following is our editorial guidance, informed by that comparison.
   users. Give substantial highlights their own subheading, a short paragraph,
   and a separate documentation link. Use blank lines between list items so the
   rendered release has visible spacing; use a table for runtime requirements.
+- Keep each paragraph and list item on one source line, including its PR links.
+  Let the editor and browser wrap long lines; preserve line breaks in code blocks.
 - For the first release, explain what callers can build, then show installation
   and one short, runnable example. State the separate Pi installation and
   provider setup requirements. Link to the async and streaming examples.
