@@ -358,3 +358,23 @@ not automatically include Pi's error text. Explicit fields such as `.raw`,
 application data. Diagnostic stderr retention is off by default. Enable a bounded
 tail with `Limits(stderr_tail_bytes=...)` and inspect `pi.stderr_tail` explicitly
 when troubleshooting your own process.
+
+## Observe process output
+
+Enter `pi.observe()` before `pi.start()` to receive original stderr bytes from
+RPC startup through bounded cleanup, including invalid UTF-8. The separate
+`--version` subprocess is excluded. No observer means no output retention or
+printing; `stderr_tail` remains a separate opt-in bounded decoded diagnostic.
+
+Drain concurrently with startup and execution (a task with `AsyncPiClient`, or a
+worker thread with `PiClient`) when output could exceed the queue limits. Close
+the client before finishing the consumer, then inspect `output.status.complete`
+and `output.status.error`. The SDK never invokes a user sink in its pipe reader.
+A consumer's exception belongs to its task/thread; close that subscription and
+handle the exception yourself. Other observers and command routing continue.
+
+[The process-output example](../examples/process_output.py) forwards bytes to
+parent stderr and collects them in caller-owned memory, providing the two
+TypeScript stderr use cases without implicit retention. Applications choose
+storage limits, redaction and export. Slow file/console operations should run
+outside the event loop; the bounded queue deliberately does not backpressure Pi.

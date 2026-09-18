@@ -222,3 +222,12 @@ with that failure after their queued events. Cancelling startup still raises
 `CancelledError` to its caller; observers receive `PiProcessError`. Closing before
 startup also wakes observers with `PiProcessError` and launches no process. The
 blocking client permits draining terminal queues after its loop has stopped.
+
+Process observers use the same independent count/byte budgets as event queues.
+Overflow raises `PiSubscriptionOverflow` immediately, marks `status.lost=True`
+and `complete=False`, and unregisters only that observer. Process failures instead
+allow buffered output to drain and iteration ends normally; inspect `status.error`
+for the primary failure. Shutdown drains stderr for at most `cleanup_timeout`
+after the child exits before releasing inherited pipe handles. If EOF was not
+observed before forced pipe closure, `stderr_eof=False` and `complete=False`.
+Observation failure cannot replace the primary command/run failure.

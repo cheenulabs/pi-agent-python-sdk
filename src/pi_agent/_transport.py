@@ -42,10 +42,15 @@ class Transport:
         limits: Limits,
         on_event: Callable[[dict[str, Any]], None],
         on_failure: Callable[[Exception], None],
+        on_stderr: Callable[[bytes], None] | None = None,
+        on_output_end: Callable[[bool, Exception | None], None] | None = None,
     ) -> None:
         self._limits = limits
         self._on_event = on_event
         self._on_failure = on_failure
+        self._on_stderr = on_stderr
+        self._on_output_end = on_output_end
+        self._stderr_eof = False
         self._process: asyncio.subprocess.Process | None = None
         self._spawning: asyncio.Task[asyncio.subprocess.Process] | None = None
         self._pending: dict[str, _Pending] = {}
@@ -276,9 +281,12 @@ class Transport:
         assert self._process is not None and self._process.stderr is not None
         try:
             while chunk := await self._process.stderr.read(65536):
+                if self._on_stderr is not None:
+                    self._on_stderr(chunk)
                 if self._limits.stderr_tail_bytes:
                     self._stderr.extend(chunk)
                     del self._stderr[: -self._limits.stderr_tail_bytes]
+            self._stderr_eof = True
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -303,6 +311,7 @@ class Transport:
 
     async def _finish_close(self) -> None:
         discard: asyncio.Task[None] | None = None
+        stderr_eof = False
         try:
             if self._spawning is not None:
                 try:
@@ -341,6 +350,11 @@ class Transport:
                             except ProcessLookupError:
                                 pass
                         await _wait_for_exit(process)
+                # Give received shutdown diagnostics a bounded chance to reach EOF.
+                # Descendants may retain the pipe; that is explicitly incomplete.
+                if self._stderr_reader is not None:
+                    await asyncio.wait({self._stderr_reader}, timeout=self._limits.cleanup_timeout)
+                stderr_eof = self._stderr_eof
                 _close_process_pipes(process)
                 await process.wait()
         finally:
@@ -353,6 +367,8 @@ class Transport:
                 if not task.done():
                     task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
+            if self._on_output_end is not None:
+                self._on_output_end(stderr_eof, self._failure)
 
     @staticmethod
     async def _discard(stream: asyncio.StreamReader) -> None:

@@ -12,9 +12,10 @@ import os
 import threading
 from collections.abc import Callable, Coroutine, Mapping, Sequence
 from types import TracebackType
-from typing import Any, Generic, Self, TypeVar
+from typing import Any, Generic, Self, TypeVar, cast
 
-from ._events import EventSubscription
+from ._events import _Subscription
+from ._observation import ObservationStatus, ProcessObservation, ProcessOutput
 from ._runs import RunStream
 from .client import DEFAULT_TIMEOUT, IN_SYNC_UI, AsyncPiClient, Timeout, UIHandler
 from .errors import PiProcessError
@@ -528,6 +529,15 @@ class PiClient:
         """List extension, prompt-template, and skill commands with source information."""
         return self._call(lambda: self._client.get_commands(timeout=timeout))
 
+    def observe(self) -> SyncProcessObservation:
+        """Observe original stderr bytes; enter before start for lifetime coverage.
+
+        Slow consumers raise PiSubscriptionOverflow. Close the client and drain
+        this iterator before checking status.complete and status.error; terminal
+        process failures are reported through status.error after output drains.
+        """
+        return SyncProcessObservation(self)
+
     def events(self) -> SyncEventSubscription:
         """Enter before submitting work, then iterate future events on the calling thread."""
         return SyncEventSubscription(self)
@@ -559,12 +569,13 @@ class PiClient:
         )
 
 
-class SyncEventSubscription:
+class _SyncSubscription(Generic[T]):
     """A blocking context and iterator over a bounded async subscription."""
 
-    def __init__(self, client: PiClient) -> None:
+    def __init__(self, client: PiClient, factory: Callable[[], _Subscription[T]]) -> None:
         self._client = client
-        self._subscription: EventSubscription | None = None
+        self._factory = factory
+        self._subscription: _Subscription[T] | None = None
         self._entered = False
         self._closed = False
 
@@ -573,7 +584,7 @@ class SyncEventSubscription:
             if self._entered or self._closed:
                 raise RuntimeError("Event subscriptions are single-use")
             self._entered = True
-            self._subscription = self._client._client.events()
+            self._subscription = self._factory()
             await self._subscription.__aenter__()
 
         self._client._ensure_loop()
@@ -591,8 +602,8 @@ class SyncEventSubscription:
     def __iter__(self) -> Self:
         return self
 
-    def __next__(self) -> Event:
-        async def next_event() -> Event:
+    def __next__(self) -> T:
+        async def next_event() -> T:
             if self._subscription is None:
                 raise RuntimeError("Enter the event subscription context before iterating")
             return await self._subscription.__anext__()
@@ -617,6 +628,22 @@ class SyncEventSubscription:
             self._client._close_context(self._subscription.aclose)
             if self._client._closed:
                 self._subscription._discard()
+
+
+class SyncEventSubscription(_SyncSubscription[Event]):
+    def __init__(self, client: PiClient) -> None:
+        super().__init__(client, client._client.events)
+
+
+class SyncProcessObservation(_SyncSubscription[ProcessOutput]):
+    def __init__(self, client: PiClient) -> None:
+        super().__init__(client, client._client.observe)
+
+    @property
+    def status(self) -> ObservationStatus:
+        if self._subscription is None:
+            return ObservationStatus()
+        return cast(ProcessObservation, self._subscription).status
 
 
 class SyncRunStream:

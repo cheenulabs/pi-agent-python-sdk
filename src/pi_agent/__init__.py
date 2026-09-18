@@ -3,6 +3,7 @@
 Importing this package never launches Pi or changes its configuration.
 """
 
+from ._observation import ObservationStatus, ProcessOutput
 from .client import AsyncPiClient
 from .errors import (
     PiBusyError,
@@ -27,6 +28,8 @@ __all__ = [
     "Event",
     "ImageContent",
     "Limits",
+    "ObservationStatus",
+    "ProcessOutput",
     "PiBusyError",
     "PiCommandError",
     "PiClient",

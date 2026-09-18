@@ -8,13 +8,16 @@ import inspect
 import json
 import math
 import os
+import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
+from dataclasses import replace
 from enum import Enum
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Self, cast
 
 from ._events import EventSubscription
 from ._launch import check_version, executable_argv, validate_extra_args
+from ._observation import ObservationStatus, ProcessObservation, ProcessOutput
 from ._transport import Transport
 from .errors import PiBusyError, PiProcessError, PiProtocolError, PiTimeoutError, PiUIHandlerError
 from .types import (
@@ -152,6 +155,8 @@ class AsyncPiClient:
         self._allow_unknown_version = allow_unknown_version
         self._transport: Transport | None = None
         self._subscriptions: set[EventSubscription] = set()
+        self._observations: set[ProcessObservation] = set()
+        self._process_started_at_ns: int | None = None
         self._ui_tasks: set[asyncio.Task[None]] = set()
         self._ui_bytes = 0
         self._ui_error: PiUIHandlerError | None = None
@@ -237,7 +242,14 @@ class AsyncPiClient:
                     limits=self.limits,
                     on_event=self._on_event,
                     on_failure=self._on_failure,
+                    on_stderr=self._on_stderr,
+                    on_output_end=self._on_output_end,
                 )
+                self._process_started_at_ns = time.time_ns()
+                for observer in self._observations:
+                    observer._status = replace(
+                        observer.status, started_at_ns=self._process_started_at_ns
+                    )
                 await self._transport.start([*argv, *self._args], cwd=self._cwd, env=child_env)
                 response = await self._transport.request(
                     "get_state", timeout=self.limits.startup_timeout
@@ -279,6 +291,8 @@ class AsyncPiClient:
             await self._startup_done.wait()
         if self._transport is not None:
             await self._transport.aclose()
+        if self._transport is None:
+            self._on_output_end(False, self._terminal_error)
         self._on_failure(PiProcessError("Client is closed"))
         tasks = tuple(task for task in self._ui_tasks if task is not self._close_initiator)
         for task in tasks:
@@ -298,6 +312,42 @@ class AsyncPiClient:
         if self._closed:
             raise PiProcessError("Client is closed")
         self._subscriptions.add(subscription)
+
+    def observe(self) -> ProcessObservation:
+        """Observe original stderr bytes; enter before start for lifetime coverage.
+
+        Slow consumers raise PiSubscriptionOverflow. Close the client and drain
+        this iterator before checking status.complete and status.error; terminal
+        process failures are reported through status.error after output drains.
+        """
+        return ProcessObservation(self.limits, self._register_observer, self._observations.discard)
+
+    def _register_observer(self, observer: ProcessObservation) -> None:
+        self._check_loop()
+        if self._closed or self._terminal_error is not None:
+            raise PiProcessError("Cannot observe a closed or failed client")
+        observer._status = ObservationStatus(
+            started_at_ns=self._process_started_at_ns,
+            from_start=self._process_started_at_ns is None,
+        )
+        self._observations.add(observer)
+
+    def _on_stderr(self, data: bytes) -> None:
+        if self._observations:
+            record = ProcessOutput("stderr", time.time_ns(), data)
+            for observer in tuple(self._observations):
+                observer._put(record, len(data))
+
+    def _on_output_end(self, stderr_eof: bool, error: Exception | None) -> None:
+        for observer in tuple(self._observations):
+            observer._status = replace(
+                observer.status,
+                ended_at_ns=time.time_ns(),
+                stderr_eof=stderr_eof,
+                complete=observer.status.from_start and stderr_eof,
+                error=self._terminal_error or error,
+            )
+            observer._finish()
 
     def _on_event(self, raw: dict[str, Any]) -> None:
         event = Event(raw)

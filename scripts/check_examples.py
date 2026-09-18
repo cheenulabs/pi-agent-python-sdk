@@ -30,6 +30,7 @@ EXAMPLES = (
     "cancellation.py",
     "events.py",
     "images.py",
+    "process_output.py",
     "sessions.py",
     "steering.py",
     "stream.py",
@@ -167,7 +168,7 @@ def main() -> None:
     for name in EXAMPLES:
         version = check_example(ROOT / "examples" / name, fixture)
         print(f"PASS {name}: isolated real Pi {version} faux provider")
-    print("All nine example entry points passed; no live provider calls were used")
+    print(f"All {len(EXAMPLES)} example entry points passed; no live provider calls were used")
 
 
 if __name__ == "__main__":
