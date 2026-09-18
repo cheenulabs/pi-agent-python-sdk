@@ -19,7 +19,7 @@ push access does not grant those settings. The authenticated package-index
 account holder must register the publishers separately on each index.
 
 - In repository Settings → General → Danger Zone, make
-  `cheenulabs/pi-coding-agent-python-sdk` public when the user authorizes
+  `cheenulabs/pi-agent-python-sdk` public when the user authorizes
   publication. This is not needed to review the private PRs.
 - After the CI workflow runs, use Settings → Branches to protect `main`.
   Require the status check named `required` and require branches to be up to
@@ -51,7 +51,7 @@ visibility change before configuring those protections if needed.
   |---|---|---|
   | Project name | `pi-coding-agent-python-sdk` | `pi-coding-agent-python-sdk` |
   | GitHub owner | `cheenulabs` | `cheenulabs` |
-  | Repository | `pi-coding-agent-python-sdk` | `pi-coding-agent-python-sdk` |
+  | Repository | `pi-agent-python-sdk` | `pi-agent-python-sdk` |
   | Workflow filename | `publish.yml` | `publish.yml` |
   | Environment | `testpypi` | `pypi` |
 

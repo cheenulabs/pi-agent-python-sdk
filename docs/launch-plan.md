@@ -61,7 +61,7 @@ current plan does not support them privately. Do not silently omit reviewers.
 | --- | --- | --- |
 | Project | `pi-coding-agent-python-sdk` | `pi-coding-agent-python-sdk` |
 | GitHub owner | `cheenulabs` | `cheenulabs` |
-| Repository | `pi-coding-agent-python-sdk` | `pi-coding-agent-python-sdk` |
+| Repository | `pi-agent-python-sdk` | `pi-agent-python-sdk` |
 | Workflow filename | `publish.yml` | `publish.yml` |
 | Environment | `testpypi` | `pypi` |
 
