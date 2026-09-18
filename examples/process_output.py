@@ -19,12 +19,23 @@ async def main() -> None:
                 collected.extend(record.data)
 
         consumer = asyncio.create_task(consume())
+        primary_error: BaseException | None = None
         try:
             await pi.start()
             print(f"Pi session: {pi.session.session_id}")
+        except BaseException as error:
+            primary_error = error
+            raise
         finally:
             await pi.aclose()
-            await consumer
+            try:
+                await consumer
+            except Exception as error:
+                if primary_error is None:
+                    raise
+                primary_error.add_note(
+                    f"Output consumer also failed: {type(error).__name__}: {error}"
+                )
         print(f"Collected {len(collected)} stderr bytes; complete: {output.status.complete}")
         # Decode once after collection, or use an incremental decoder while streaming.
         _text = collected.decode("utf-8", errors="replace")

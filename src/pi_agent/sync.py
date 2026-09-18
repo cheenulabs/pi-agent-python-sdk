@@ -530,7 +530,12 @@ class PiClient:
         return self._call(lambda: self._client.get_commands(timeout=timeout))
 
     def observe(self) -> SyncProcessObservation:
-        """Observe original stderr bytes through the async client's bounded queue."""
+        """Observe original stderr bytes; enter before start for lifetime coverage.
+
+        Slow consumers raise PiSubscriptionOverflow. Close the client and drain
+        this iterator before checking status.complete and status.error; terminal
+        process failures are reported through status.error after output drains.
+        """
         return SyncProcessObservation(self)
 
     def events(self) -> SyncEventSubscription:

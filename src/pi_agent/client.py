@@ -314,7 +314,12 @@ class AsyncPiClient:
         self._subscriptions.add(subscription)
 
     def observe(self) -> ProcessObservation:
-        """Observe original stderr bytes; enter before start for lifetime coverage."""
+        """Observe original stderr bytes; enter before start for lifetime coverage.
+
+        Slow consumers raise PiSubscriptionOverflow. Close the client and drain
+        this iterator before checking status.complete and status.error; terminal
+        process failures are reported through status.error after output drains.
+        """
         return ProcessObservation(self.limits, self._register_observer, self._observations.discard)
 
     def _register_observer(self, observer: ProcessObservation) -> None:
