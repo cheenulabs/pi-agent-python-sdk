@@ -151,6 +151,14 @@ is accepted but produces no observed start before `run_start_timeout` raises
 `prompt()` for known handled commands; the client does not guess from a slash
 prefix or a period of silence.
 
+`stream()` makes events available on either prompt acknowledgement or observed
+`agent_start`, whichever arrives first. An extension can await a whole conversation
+before acknowledging its command, so stream entry does not itself prove acceptance.
+Iteration and `result()` still require the successful command response before
+completing; a late rejection raises `PiCommandError` even after streamed events.
+Leaving early while acceptance remains unknown closes Pi conservatively, rather
+than assuming that abort can stop an extension's delayed work.
+
 `RunResult` contains:
 
 - `text`: text blocks from the final assistant message observed during this run.

@@ -65,6 +65,12 @@ Within a stream context, iterate and then call `result()`, or call `result()`
 alone to drain. Await it for async streams. An active iterator and a simultaneous
 result drain are mutually exclusive. Contexts are single-use.
 
+Stream entry occurs on prompt acknowledgement or an observed agent start,
+whichever comes first. Completion still requires successful acknowledgement and
+settlement. A late command rejection can therefore surface during iteration or
+`result()`. Early exit before acknowledgement closes Pi conservatively; see
+[run ownership and cleanup](errors.md#cancellation-and-close).
+
 | Property | Meaning |
 |---|---|
 | `running` | Child is running and initial readiness has completed |

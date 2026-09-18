@@ -26,6 +26,23 @@ from .control import set_responses
 pytestmark = pytest.mark.integration
 
 
+@pytest.mark.parametrize("operation", ["run", "stream"])
+async def test_long_extension_run_streams_before_acknowledgement(pi_client, operation):
+    text = "x " * 10000
+    set_responses(pi_client, [{"text": text}])
+    if operation == "run":
+        result = await pi_client.run("/fixture-await-run", timeout=10)
+    else:
+        async with pi_client.stream("/fixture-await-run", timeout=10) as stream:
+            deltas = [event.text_delta or "" async for event in stream]
+            result = await stream.result()
+        assert "".join(deltas) == text
+    assert result.text == text
+    assert pi_client.running and not pi_client.busy
+    set_responses(pi_client, [{"text": "next answer"}])
+    assert (await pi_client.run("ordinary input", timeout=10)).text == "next answer"
+
+
 @pytest.mark.parametrize("phase", ["before", "during", "input"])
 async def test_dialog_deadline_cancels_only_the_dialog(pi_client_factory, phase):
     cancelled = asyncio.Event()

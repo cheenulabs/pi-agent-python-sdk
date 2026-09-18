@@ -108,6 +108,12 @@ operation is waiting: observe tool/compaction start, or the gate notification.
 
 ## Extension scenarios
 
+`/fixture-await-run` starts the scripted conversation and waits for settlement
+before acknowledging the command. Long-response tests verify that consumers can
+drain more than the default queue capacity before this acknowledgement. Sync
+throughput controls use `PI_FIXTURE_TOKENS_PER_SECOND` to pace faux deltas; this
+isolates event ordering from the intentionally bounded slow-consumer policy.
+
 `fixture timeout before`, `fixture timeout during`, and `fixture timeout input`
 open short-lived dialogs before an agent starts or during its turn. They continue
 normally after cancellation, allowing tests to verify expiry without a model call.

@@ -35,6 +35,11 @@ is in `__cause__`. Those fields can contain application data. Transport failure
 usually requires a new client; command rejection alone does not necessarily
 close the process.
 
+Stream context entry can precede prompt acknowledgement when an extension starts
+work before returning. A late command rejection is therefore raised by iteration
+or `result()`; observed events alone never establish a successful result. Rejection
+after an observed start closes Pi conservatively, even if settlement was observed.
+
 Owned runs and the synchronous facade preserve the callback's original cause,
 including an existing nested cause. Internal cancellation used to stop an owned
 run does not replace it. Once the owner reports a UI failure, that same error is
@@ -142,6 +147,11 @@ input and then sends `abort`. Ownership is held until cleanup finishes. If
 cleanup fails or exceeds its bound, the client closes Pi. Synchronous Ctrl-C
 cancels the corresponding async operation and waits for its actual task cleanup
 before re-raising `KeyboardInterrupt`.
+
+If the prompt has not yet been acknowledged, early exit or cancellation closes
+the child instead: `abort` cannot establish that extension preflight or deferred
+input cannot start later. Entering a stream after observing `agent_start` is not
+proof that acknowledgement has arrived.
 
 Direct `abort()` preserves Pi's protocol behavior: it does not implicitly call
 `clear_queue()`. Similarly, cancelling a raw request only abandons its response

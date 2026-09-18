@@ -27,6 +27,9 @@ export default function (pi: ExtensionAPI) {
     provider: "python-fixture",
     api: "python-fixture-api",
     tokenSize: { min: 3, max: 3 },
+    // An unpaced faux stream can outproduce even an ordinary blocking consumer.
+    // Pacing lets sync regressions isolate acknowledgement order from throughput.
+    tokensPerSecond: Number(process.env.PI_FIXTURE_TOKENS_PER_SECOND) || undefined,
     models: [
       { id: "fixture", name: "Offline Fixture", reasoning: true },
       { id: "fixture-other", name: "Other Offline Fixture", reasoning: true },
@@ -128,6 +131,20 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("fixture-error", {
     description: "Emit a synthetic extension error",
     handler: async () => { throw new Error("synthetic fixture error"); },
+  });
+  let settleCommand: (() => void) | undefined;
+  pi.on("agent_settled", () => {
+    const resolve = settleCommand;
+    settleCommand = undefined;
+    resolve?.();
+  });
+  pi.registerCommand("fixture-await-run", {
+    description: "Acknowledge only after a complete scripted conversation",
+    handler: async () => {
+      const settled = new Promise<void>((resolve) => { settleCommand = resolve; });
+      pi.sendUserMessage("synthetic extension input");
+      await settled;
+    },
   });
   pi.registerCommand("fixture-ui", {
     description: "Exercise one dialog (select, confirm, input, editor) or all display methods",

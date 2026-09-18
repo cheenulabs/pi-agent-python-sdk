@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 
 class RunStream:
-    """A single-use owned run. Enter, then iterate or await result() to drain.
+    """A single-use owned run. Enter on acceptance or start, then consume events.
 
     Breaking iteration must be followed by leaving the context so queued work
     is cleared and Pi is aborted. An accepted command without a start event
@@ -58,7 +58,8 @@ class RunStream:
         self._started = asyncio.Event()
         self._settled = asyncio.Event()
         self._task: asyncio.Task[RunResult] | None = None
-        self._accepted: asyncio.Future[None] | None = None
+        self._ready: asyncio.Future[None] | None = None
+        self._accepted = False
         self._error: Exception | None = None
         self._messages: list[dict[str, Any]] = []
         self._message_bytes = 0
@@ -86,12 +87,14 @@ class RunStream:
                 "run()/stream() because delayed session events cannot be attributed safely"
             )
         self._client._owner = self
-        self._accepted = asyncio.get_running_loop().create_future()
+        self._ready = asyncio.get_running_loop().create_future()
         await self._events.__aenter__()
         self._task = asyncio.create_task(self._drive(), name="pi-run")
         self._task.add_done_callback(self._consume_task_exception)
         try:
-            await asyncio.shield(self._accepted)
+            await self._ready
+            if self._error is not None:
+                raise self._error
         except BaseException:
             await self.aclose()
             raise
@@ -120,8 +123,8 @@ class RunStream:
                 await asyncio.shield(self._task)
             except (Exception, asyncio.CancelledError):
                 pass
-        if self._accepted is not None and self._accepted.done() and not self._accepted.cancelled():
-            self._accepted.exception()
+        if self._ready is not None and self._ready.done() and not self._ready.cancelled():
+            self._ready.exception()
         await self._events.aclose()
 
     def _fail(self, error: Exception) -> None:
@@ -137,6 +140,10 @@ class RunStream:
             return
         if event.type == "agent_start":
             self._started.set()
+            # Extensions may wait for the entire run before acknowledging the
+            # prompt. Make consumption possible without declaring acceptance.
+            if self._ready is not None and not self._ready.done():
+                self._ready.set_result(None)
         elif event.type == "agent_settled" and self._started.is_set():
             self._end = time.monotonic()
             self._settled.set()
@@ -167,7 +174,7 @@ class RunStream:
             self._fail(error)
 
     async def _drive(self) -> RunResult:
-        assert self._accepted is not None
+        assert self._ready is not None
         failure: BaseException | None = None
         try:
             async with asyncio.timeout(self._timeout):
@@ -182,7 +189,9 @@ class RunStream:
                 await self._client._request(
                     "prompt", fields, timeout=self._command_timeout, owner=self
                 )
-                self._accepted.set_result(None)
+                self._accepted = True
+                if not self._ready.done():
+                    self._ready.set_result(None)
                 try:
                     async with asyncio.timeout(self._client.limits.run_start_timeout):
                         await self._started.wait()
@@ -215,15 +224,14 @@ class RunStream:
                 # The owner now reports this failure. Do not report it again as
                 # a failure of an otherwise successful cleanup command.
                 self._client._ui_error = None
-            accepted = self._accepted.done() and not self._accepted.cancelled()
             if (
                 self._submitted
-                and not isinstance(failure, PiCommandError)
-                and (not self._settled.is_set() or not accepted)
+                and (not isinstance(failure, PiCommandError) or self._started.is_set())
+                and (not self._settled.is_set() or not self._accepted)
             ):
                 # abort() cannot cancel an extension's pending input/UI preflight.
                 # Keep delayed work from escaping a failed owned operation.
-                if not accepted or not self._started.is_set():
+                if not self._accepted or not self._started.is_set():
                     await self._client.aclose()
                 else:
                     await self._cleanup()
@@ -235,11 +243,11 @@ class RunStream:
                 raise failure from failure.__cause__
             raise failure from exc
         finally:
-            if not self._accepted.done():
+            if not self._ready.done():
                 if isinstance(failure, asyncio.CancelledError):
-                    self._accepted.cancel()
+                    self._ready.cancel()
                 elif failure is not None:
-                    self._accepted.set_exception(failure)
+                    self._ready.set_exception(failure)
             # Final model errors are delivered by result(), after their events are consumed.
             event_error = (
                 failure
