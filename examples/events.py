@@ -13,8 +13,9 @@ async def main() -> None:
         "prompt", nargs="?", default="Explain this project's structure without editing files."
     )
     args = parser.parse_args()
-    async with AsyncPiClient() as pi:
-        # Enter before submitting work; there is no subscription history.
+    pi = AsyncPiClient()
+    try:
+        # Enter before startup to include extension initialization events.
         async with pi.events() as events:
 
             async def observe() -> None:
@@ -24,6 +25,7 @@ async def main() -> None:
 
             observer = asyncio.create_task(observe())
             try:
+                await pi.start()
                 result = await pi.run(args.prompt)
             finally:
                 # This observer is for live progress, not an archival event log.
@@ -31,6 +33,8 @@ async def main() -> None:
                 with suppress(asyncio.CancelledError):
                     await observer
         print(result.text)
+    finally:
+        await pi.aclose()
 
 
 if __name__ == "__main__":

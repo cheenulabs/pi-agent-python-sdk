@@ -216,3 +216,9 @@ as a fatal model failure.
 The library does not automatically retain stderr. For explicit diagnostics,
 construct with `Limits(stderr_tail_bytes=8192)` and inspect `pi.stderr_tail`.
 The tail is bounded and is not attached automatically to exceptions.
+
+Pre-start event subscriptions terminate on version, spawn, or readiness failure
+with that failure after their queued events. Cancelling startup still raises
+`CancelledError` to its caller; observers receive `PiProcessError`. Closing before
+startup also wakes observers with `PiProcessError` and launches no process. The
+blocking client permits draining terminal queues after its loop has stopped.

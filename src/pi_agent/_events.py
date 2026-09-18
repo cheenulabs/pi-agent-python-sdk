@@ -53,6 +53,10 @@ class EventSubscription:
 
     async def aclose(self) -> None:
         """Unsubscribe and release queued payloads; safe to call repeatedly."""
+        self._discard()
+
+    def _discard(self) -> None:
+        """Also used by the sync facade after its loop has stopped."""
         self._finish()
         self._records.clear()
         self._bytes = 0
@@ -97,15 +101,22 @@ class EventSubscription:
         self._reading = True
         try:
             while True:
-                if self._records:
-                    event, size = self._records.popleft()
-                    self._bytes -= size
+                event = self._next_nowait()
+                if event is not None:
                     return event
-                if self._error is not None:
-                    raise self._error
-                if self._closed:
-                    raise StopAsyncIteration
                 self._ready.clear()
                 await self._ready.wait()
         finally:
             self._reading = False
+
+    def _next_nowait(self) -> Event | None:
+        """Read on the owning loop, or after that loop has completely stopped."""
+        if self._records:
+            event, size = self._records.popleft()
+            self._bytes -= size
+            return event
+        if self._error is not None:
+            raise self._error
+        if self._closed:
+            raise StopAsyncIteration
+        return None

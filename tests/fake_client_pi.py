@@ -47,6 +47,11 @@ def main():
     if "--version" in sys.argv:
         print("0.85.1")
         return
+    if "--startup-events" in sys.argv:
+        emit({"type": "fixture_startup", "unknown": {"nested": [1, 2]}})
+        emit({"type": "extension_error", "error": "synthetic startup diagnostic"})
+    if "--startup-malformed" in sys.argv:
+        print("{", flush=True)
     active = False
     ui_prompt = None
     pending_prompt = None
@@ -179,7 +184,17 @@ def main():
         elif command == "extension_ui_response":
             emit({"type": "fixture_ui_reply", "reply": request})
             if ui_prompt is not None:
-                reply(ui_prompt)
+                reply(
+                    ui_prompt,
+                    {
+                        "sessionId": "current-session",
+                        "isStreaming": False,
+                        "isCompacting": False,
+                        "pendingMessageCount": 0,
+                    }
+                    if ui_prompt["type"] == "get_state"
+                    else None,
+                )
                 ui_prompt = None
         elif command == "clear_queue":
             if "--fail-cleanup" in sys.argv:
