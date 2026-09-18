@@ -55,6 +55,12 @@ def main():
         request = json.loads(line)
         command = request["type"]
         if command == "get_state":
+            if "emit_before_failure" in request:
+                for record in request["emit_before_failure"]:
+                    emit(record)
+                sys.stdout.write("{\n")
+                sys.stdout.flush()
+                continue
             if "--slow-state" in sys.argv:
                 time.sleep(0.1)
             if startup_ui:
@@ -204,6 +210,12 @@ def main():
         elif command == "emit":
             for record in request["records"]:
                 emit(record)
+            if request.get("terminal") == "exit":
+                return
+            if request.get("terminal") == "malformed":
+                sys.stdout.write("{\n")
+                sys.stdout.flush()
+                continue
             reply(request)
         elif command in {"cycle_model", "cycle_thinking_level"}:
             reply(request, None)

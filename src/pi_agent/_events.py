@@ -56,6 +56,7 @@ class EventSubscription:
         self._finish()
         self._records.clear()
         self._bytes = 0
+        self._error = None
 
     def _finish(self, error: Exception | None = None) -> None:
         if self._closed:
@@ -63,7 +64,9 @@ class EventSubscription:
         self._closed = True
         self._error = error
         self._unregister(self)
-        if error is not None:
+        if isinstance(error, PiSubscriptionOverflow):
+            # Overflow is loss, not a complete prefix ending at a process failure.
+            # Keep it immediate; a healthy terminal queue can still be drained.
             self._records.clear()
             self._bytes = 0
         self._ready.set()
@@ -94,12 +97,12 @@ class EventSubscription:
         self._reading = True
         try:
             while True:
-                if self._error is not None:
-                    raise self._error
                 if self._records:
                     event, size = self._records.popleft()
                     self._bytes -= size
                     return event
+                if self._error is not None:
+                    raise self._error
                 if self._closed:
                     raise StopAsyncIteration
                 self._ready.clear()

@@ -185,6 +185,13 @@ overflowing subscription belongs to an owned stream, run cleanup is triggered.
 Increasing count and byte limits can accommodate bursts, but does not replace a
 consumer that keeps up.
 
+A healthy subscription retains events already accepted before a terminal process,
+protocol, or handler failure. Read those events in FIFO order, then iteration
+raises the original failure; pending requests and process cleanup do not wait
+for this drain. Overflow instead fails immediately and discards that subscriber's
+unread queue, because delivery is already incomplete. Explicit subscription close
+always discards unread events and its stored error, then ends iteration normally.
+
 Outstanding UI-handler tasks are also bounded by the configured count and byte
 limits. Exceeding this budget raises `PiUIHandlerError` through the transport's
 failure path and closes the child. Handler exceptions normally attempt a dialog
