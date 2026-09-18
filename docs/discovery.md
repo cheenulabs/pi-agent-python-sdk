@@ -29,7 +29,7 @@ wire behavior, source references, and compatibility considerations.
 | Installed Pi | `0.85.1`; requires Node >=22.19.0 | Read package metadata and exercised isolated stdio probes |
 | Upstream main | `53816d7dcc5ebe3a0eedec3cd07196c3a66d83fd` at discovery | Recorded only; not substituted for the stable protocol |
 | Existing private Python source | `cheenulabs/cheenulabs`, `03f7e3e3fd3c6d2775dc063bcee7ee809c0c9587` | Read RPC implementation, exports, tests, and one application caller |
-| Selected distribution name | `pi-coding-agent-python-sdk` | Updated before publication; confirm index availability before release |
+| Selected distribution name | `pi-agent-python-sdk` | Updated before publication; confirm index availability before release |
 
 The existing client is `pi-agent/cheenulabs_pi_runtime/rpc.py`, with tests at
 `pi-agent/tests/test_rpc.py`, in the remote repository. It was absent from the

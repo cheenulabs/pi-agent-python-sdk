@@ -11,11 +11,6 @@ candidate and publishing setup are ready for review.
 Follow the [first public release plan](launch-plan.md) for the ordered work,
 approvals, and completion evidence.
 
-**Current blocker:** the PyPI name `pi-coding-agent-python-sdk` is already used
-by a project referencing another repository. Resolve ownership or select a new
-distribution name as recorded in the launch plan before following the publisher
-registration and release commands below. Their package name is provisional.
-
 ## One-time repository and index setup
 
 The repository belongs to the personal GitHub account `cheenulabs`. Its owner
@@ -35,7 +30,7 @@ account holder must register the publishers separately on each index.
   disable merge commits and rebase merging while leaving squash enabled.
   Follow the review process in [CONTRIBUTING.md](../CONTRIBUTING.md) and
   keep auto-merge off.
-- Confirm the distribution name `pi-coding-agent-python-sdk` is available on
+- Confirm the distribution name `pi-agent-python-sdk` is available on
   PyPI and TestPyPI. The chosen import is `pi_agent`; the license
   is MIT. Recheck public metadata URLs before release.
 
@@ -54,7 +49,7 @@ visibility change before configuring those protections if needed.
 
   | Field | TestPyPI | PyPI |
   |---|---|---|
-  | Project name | `pi-coding-agent-python-sdk` | `pi-coding-agent-python-sdk` |
+  | Project name | `pi-agent-python-sdk` | `pi-agent-python-sdk` |
   | GitHub owner | `cheenulabs` | `cheenulabs` |
   | Repository | `pi-agent-python-sdk` | `pi-agent-python-sdk` |
   | Workflow filename | `publish.yml` | `publish.yml` |
@@ -122,7 +117,7 @@ to `main`. Before publishing a release:
    upload jobs download the build artifact and never rebuild it. A separate
    TestPyPI verification job must pass before the PyPI environment is offered
    for approval; another verification job checks the final PyPI upload.
-6. Verify a clean `pip install pi-coding-agent-python-sdk==0.1.0`, package metadata,
+6. Verify a clean `pip install pi-agent-python-sdk==0.1.0`, package metadata,
    typing marker, and runnable quickstarts. Mark the release complete only
    after the GitHub and package-index states confirm it.
 

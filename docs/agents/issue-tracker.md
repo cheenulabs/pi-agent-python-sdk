@@ -4,7 +4,7 @@ Review the scope and acceptance criteria in the PR description against
 [protocol discovery](../discovery.md) and the public API documentation.
 Record validation and review findings on the PR.
 
-Use GitHub pull requests in `cheenulabs/pi-coding-agent-python-sdk`.
+Use GitHub pull requests in `cheenulabs/pi-agent-python-sdk`.
 For each review, pin the previous milestone commit and compare the proposed
 branch against it. Review standards from CONTRIBUTING.md separately from
 the PR's declared requirements. A PR need only satisfy its declared milestone;

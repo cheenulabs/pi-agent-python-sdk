@@ -19,9 +19,9 @@ spec.loader.exec_module(distribution)
 
 @pytest.fixture
 def release(tmp_path):
-    project, version = "pi-coding-agent-python-sdk", "0.1.0rc1"
-    wheel = tmp_path / "pi_coding_agent_python_sdk-0.1.0rc1-py3-none-any.whl"
-    sdist = tmp_path / "pi_coding_agent_python_sdk-0.1.0rc1.tar.gz"
+    project, version = "pi-agent-python-sdk", "0.1.0rc1"
+    wheel = tmp_path / "pi_agent_python_sdk-0.1.0rc1-py3-none-any.whl"
+    sdist = tmp_path / "pi_agent_python_sdk-0.1.0rc1.tar.gz"
     wheel.write_bytes(b"reviewed wheel")
     sdist.write_bytes(b"reviewed source")
     record = {

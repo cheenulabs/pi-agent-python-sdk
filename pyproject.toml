@@ -3,15 +3,15 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "pi-coding-agent-python-sdk"
+name = "pi-agent-python-sdk"
 version = "0.1.0rc1"
-description = "Typed async and synchronous Python clients for Pi's coding agent RPC runtime"
+description = "Typed async and synchronous Python clients for Pi's agent RPC runtime"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{name = "cheenulabs"}]
-keywords = ["pi", "coding-agent", "rpc", "asyncio"]
+keywords = ["pi", "agent", "rpc", "asyncio"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -25,10 +25,10 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/cheenulabs/pi-coding-agent-python-sdk"
-Documentation = "https://github.com/cheenulabs/pi-coding-agent-python-sdk/tree/main/docs"
-Issues = "https://github.com/cheenulabs/pi-coding-agent-python-sdk/issues"
-Changelog = "https://github.com/cheenulabs/pi-coding-agent-python-sdk/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/cheenulabs/pi-agent-python-sdk"
+Documentation = "https://github.com/cheenulabs/pi-agent-python-sdk/tree/main/docs"
+Issues = "https://github.com/cheenulabs/pi-agent-python-sdk/issues"
+Changelog = "https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [

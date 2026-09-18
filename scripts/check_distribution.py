@@ -107,7 +107,7 @@ def main() -> None:
     args = parser.parse_args()
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
     version = project["version"]
-    archive_name = f"pi_coding_agent_python_sdk-{version}"
+    archive_name = f"pi_agent_python_sdk-{version}"
     (wheel,) = (ROOT / "dist").glob("*.whl")
     (sdist,) = (ROOT / "dist").glob("*.tar.gz")
     assert wheel.name == f"{archive_name}-py3-none-any.whl"
@@ -121,7 +121,7 @@ def main() -> None:
         metadata_path = next(name for name in names if name.endswith(".dist-info/METADATA"))
         metadata = archive.read(metadata_path).decode()
         headers = Parser().parsestr(metadata)
-        assert headers["Name"] == project["name"] == "pi-coding-agent-python-sdk"
+        assert headers["Name"] == project["name"] == "pi-agent-python-sdk"
         assert headers["Version"] == version
         assert "Requires-Dist:" not in metadata, "Runtime dependencies must remain empty"
         assert "License-Expression: MIT" in metadata
@@ -155,7 +155,7 @@ def main() -> None:
             "assert Path(pi_agent.__file__).resolve().is_relative_to(Path(sys.prefix))\n"
             "assert Path(pi_agent.__file__).with_name('py.typed').is_file()\n"
             "from importlib.metadata import version\n"
-            f"assert version('pi-coding-agent-python-sdk') == {version!r}\n"
+            f"assert version('pi-agent-python-sdk') == {version!r}\n"
             "from pi_agent import AsyncPiClient,PiClient\n"
             f"argv=[sys.executable,{json.dumps(fake)}]\n"
             "with PiClient(executable=argv) as pi:\n"
