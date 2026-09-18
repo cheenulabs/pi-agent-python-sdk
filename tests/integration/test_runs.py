@@ -26,6 +26,32 @@ from .control import set_responses
 pytestmark = pytest.mark.integration
 
 
+@pytest.mark.parametrize("phase", ["before", "during", "input"])
+async def test_dialog_deadline_cancels_only_the_dialog(pi_client_factory, phase):
+    cancelled = asyncio.Event()
+
+    async def handler(request):
+        if request["method"] in {"confirm", "input"}:
+            try:
+                await asyncio.Event().wait()
+            finally:
+                cancelled.set()
+
+    async with pi_client_factory(ui_handler=handler) as pi:
+        set_responses(pi, [{"text": "answer after expiry"}])
+        async with pi.events() as observer:
+            assert (await pi.run(f"fixture timeout {phase}", timeout=10)).text == (
+                "answer after expiry"
+            )
+            async with asyncio.timeout(5):
+                await cancelled.wait()
+                while (await anext(observer)).type != "agent_settled":
+                    pass
+        assert pi.running and not pi.busy
+        set_responses(pi, [{"text": "next answer"}])
+        assert (await pi.run("ordinary input", timeout=10)).text == "next answer"
+
+
 async def script(client: AsyncPiClient, *steps: dict[str, Any]) -> None:
     set_responses(client, list(steps))
 

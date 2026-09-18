@@ -350,16 +350,25 @@ class AsyncPiClient:
             if self._ui_handler is not None:
                 timeout_ms = raw.get("timeout")
                 deadline = timeout_ms / 1000 if isinstance(timeout_ms, (int, float)) else None
-                async with asyncio.timeout(deadline):
-                    if inspect.iscoroutinefunction(self._ui_handler):
-                        answer = await self._ui_handler(cast(ExtensionUIRequest, raw))
-                    else:
-                        answer_or_awaitable = await asyncio.to_thread(self._call_sync_ui, raw)
-                        answer = (
-                            await answer_or_awaitable
-                            if inspect.isawaitable(answer_or_awaitable)
-                            else answer_or_awaitable
-                        )
+                timer = asyncio.timeout(deadline)
+                try:
+                    async with timer:
+                        if inspect.iscoroutinefunction(self._ui_handler):
+                            answer = await self._ui_handler(cast(ExtensionUIRequest, raw))
+                        else:
+                            answer_or_awaitable = await asyncio.to_thread(self._call_sync_ui, raw)
+                            answer = (
+                                await answer_or_awaitable
+                                if inspect.isawaitable(answer_or_awaitable)
+                                else answer_or_awaitable
+                            )
+                except TimeoutError:
+                    if not timer.expired():
+                        raise  # The callback itself failed, not the protocol deadline.
+                if timer.expired():
+                    # Pi treats expiry as cancellation. Also discard an answer
+                    # returned by a callback that suppressed timeout cancellation.
+                    answer = None
             if dialog:
                 if answer is None:
                     response["cancelled"] = True

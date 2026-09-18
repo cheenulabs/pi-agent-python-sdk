@@ -151,6 +151,22 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
+  let dialogDuringTurn = false;
+  pi.on("before_agent_start", async (event, ctx) => {
+    dialogDuringTurn = event.prompt === "fixture timeout during";
+    if (event.prompt === "fixture timeout before") {
+      await ctx.ui.confirm("Fixture deadline", "Continue?", { timeout: 25 });
+    }
+    if (event.prompt === "fixture timeout input") {
+      await ctx.ui.input("Fixture deadline", "Type here", { timeout: 25 });
+    }
+  });
+  pi.on("turn_start", async (_event, ctx) => {
+    if (dialogDuringTurn) {
+      await ctx.ui.confirm("Fixture deadline", "Continue?", { timeout: 25 });
+    }
+  });
+
   let veto = false;
   let compactGate: string | undefined;
   let nativeCompaction = false;
