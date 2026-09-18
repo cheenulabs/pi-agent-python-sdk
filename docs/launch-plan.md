@@ -14,12 +14,13 @@ entry does not reserve the name or guarantee registration.
 Snapshot: 2026-09-18. The repository is public, `main` is protected, and
 `testpypi` and `pypi` require approval from `cheenulabs` with admin bypass disabled.
 Only squash merging is enabled; auto-merge is disabled. GitHub administration
-access is available through `cheenulabs`. Package-index account settings still
-require the account holder's confirmation.
+access is available through `cheenulabs`. The owner has confirmed both PyPI and
+TestPyPI pending publisher registrations; OIDC verification remains part of the
+TestPyPI rehearsal.
 
 PRs #15–#21 are merged. This final-version draft prepares
 `0.1.0`; keep the rehearsal base at `0.1.0rc1` until TestPyPI verification succeeds.
-No publication is claimed. Refresh PR state before acting.
+Final `0.1.0` publication remains pending. Refresh PR state before acting.
 
 ## Reviewable changes
 
@@ -41,8 +42,8 @@ base, retarget the next PR, and rerun its checks. Leave auto-merge off.
 
 ## 1. Owner setup: repository and publishers
 
-GitHub setup is complete. The package-index account holder must still register
-and confirm the separate TestPyPI and PyPI publishers.
+GitHub setup and owner-confirmed publisher registration are complete. The
+TestPyPI rehearsal must still verify the registered publisher through OIDC.
 
 - [x] Make the repository public under the authorized launch plan. Before the
   visibility change, Gitleaks 8.30.1 scanned all 65 reachable commits and reported
@@ -57,7 +58,7 @@ and confirm the separate TestPyPI and PyPI publishers.
   allow that owner to approve their own dispatched deployment. Disable protection
   bypass where available. Permit only branch `main` and tags `v*` for TestPyPI,
   and tags `v*` for PyPI.
-- [ ] Confirm the selected name remains available and register the pending
+- [x] Confirm the selected name remains available and register the pending
   publishers below in the intended owner's separate TestPyPI and PyPI accounts.
   No upload token is needed.
 
