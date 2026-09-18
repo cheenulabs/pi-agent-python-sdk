@@ -5,8 +5,8 @@ reviewed source, reproducible validation, and verified PyPI installation.
 A checked-in plan or a green build does not establish publication.
 
 The repository and distribution are named `pi-agent-python-sdk`; Python imports
-remain `pi_agent`. On 2026-09-18, neither PyPI nor TestPyPI listed a project under
-the selected name. Confirm availability during publisher setup; a missing index
+remain `pi_agent`. When the name was selected on 2026-09-18, neither PyPI nor
+TestPyPI listed it. Confirm availability during publisher setup; a missing index
 entry does not reserve the name or guarantee registration.
 
 ## Current state
@@ -15,11 +15,13 @@ Snapshot: 2026-09-18. The repository is public, `main` is protected, and
 `testpypi` and `pypi` require approval from `cheenulabs` with admin bypass disabled.
 Only squash merging is enabled; auto-merge is disabled. GitHub administration
 access is available through `cheenulabs`. The owner has confirmed both PyPI and
-TestPyPI pending publisher registrations; OIDC verification remains part of the
-TestPyPI rehearsal.
+TestPyPI pending publisher registrations. The [TestPyPI rehearsal](https://github.com/cheenulabs/pi-agent-python-sdk/actions/runs/35319268984)
+successfully published and verified `0.1.0rc1` from commit
+`b55edbe24a59b87a6f694ba7a4acd86604a21920`, including artifact hashes and isolated
+sync/async installed-wheel checks.
 
-PRs #15–#21 are merged. This final-version draft prepares
-`0.1.0`; keep the rehearsal base at `0.1.0rc1` until TestPyPI verification succeeds.
+PRs #15–#21 are merged. This final-version candidate prepares `0.1.0` after the
+successful rehearsal of [0.1.0rc1](https://test.pypi.org/project/pi-agent-python-sdk/0.1.0rc1/).
 Final `0.1.0` publication remains pending. Refresh PR state before acting.
 
 ## Reviewable changes
@@ -42,8 +44,8 @@ base, retarget the next PR, and rerun its checks. Leave auto-merge off.
 
 ## 1. Owner setup: repository and publishers
 
-GitHub setup and owner-confirmed publisher registration are complete. The
-TestPyPI rehearsal must still verify the registered publisher through OIDC.
+GitHub setup and owner-confirmed publisher registration are complete. TestPyPI
+trusted publishing is verified; PyPI verification awaits the final publication.
 
 - [x] Make the repository public under the authorized launch plan. Before the
   visibility change, Gitleaks 8.30.1 scanned all 65 reachable commits and reported
