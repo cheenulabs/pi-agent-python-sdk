@@ -132,7 +132,7 @@ def main() -> int:
         )
         return 1
     # Keep the runtime's offline compatibility claim synchronized with the reviewed record.
-    constants = (ROOT / "src/pi_coding_agent_client/_launch.py").read_text()
+    constants = (ROOT / "src/pi_agent/_launch.py").read_text()
     for name, value in (
         ("MINIMUM_PI_VERSION", old["minimumVersion"]),
         ("TESTED_PI_VERSION", exact),

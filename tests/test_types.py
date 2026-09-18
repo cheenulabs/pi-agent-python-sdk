@@ -6,14 +6,14 @@ from typing import Any, NotRequired, get_args, get_origin, get_type_hints
 
 import pytest
 
-from pi_coding_agent_client import types
-from pi_coding_agent_client.errors import (
+from pi_agent import types
+from pi_agent.errors import (
     PiCommandError,
     PiProtocolError,
     PiRunError,
     PiTimeoutError,
 )
-from pi_coding_agent_client.types import Event, Limits, RunResult, SessionInfo, UsageSummary
+from pi_agent.types import Event, Limits, RunResult, SessionInfo, UsageSummary
 
 
 def test_event_preserves_unknown_fields_without_dumping_them() -> None:

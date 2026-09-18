@@ -40,8 +40,8 @@ def baseline(tmp_path, monkeypatch):
     (tmp_path / "tests/pi/package.json").write_text(
         json.dumps({"devDependencies": {upstream.PACKAGE: "0.85.1"}})
     )
-    (tmp_path / "src/pi_coding_agent_client").mkdir(parents=True)
-    (tmp_path / "src/pi_coding_agent_client/_launch.py").write_text(
+    (tmp_path / "src/pi_agent").mkdir(parents=True)
+    (tmp_path / "src/pi_agent/_launch.py").write_text(
         'MINIMUM_PI_VERSION = "0.85.1"\nTESTED_PI_VERSION = "0.85.1"\n'
     )
     upstream.BASELINE.write_text(
@@ -82,7 +82,5 @@ def test_record_is_explicit(baseline, monkeypatch):
 
 
 def test_offline_claim_cannot_disagree_with_record(baseline):
-    (upstream.ROOT / "src/pi_coding_agent_client/_launch.py").write_text(
-        'TESTED_PI_VERSION = "0.84.0"'
-    )
+    (upstream.ROOT / "src/pi_agent/_launch.py").write_text('TESTED_PI_VERSION = "0.84.0"')
     assert upstream.main() == 1

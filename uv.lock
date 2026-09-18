@@ -731,7 +731,7 @@ wheels = [
 ]
 
 [[package]]
-name = "pi-coding-agent-client"
+name = "pi-coding-agent-python-sdk"
 version = "0.1.0rc1"
 source = { editable = "." }
 

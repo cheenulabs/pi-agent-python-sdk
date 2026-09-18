@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pi_coding_agent_client import AsyncPiClient, PiClient
+from pi_agent import AsyncPiClient, PiClient
 
 
 def set_responses(client: AsyncPiClient | PiClient, steps: list[dict[str, Any]]) -> None:

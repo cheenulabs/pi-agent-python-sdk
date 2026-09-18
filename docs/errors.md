@@ -38,7 +38,7 @@ close the process.
 ## Partial results and stop reasons
 
 ```python
-from pi_coding_agent_client import PiClient, PiRunError
+from pi_agent import PiClient, PiRunError
 
 
 def main() -> None:

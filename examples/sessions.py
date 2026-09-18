@@ -2,7 +2,7 @@
 
 import argparse
 
-from pi_coding_agent_client import PiClient
+from pi_agent import PiClient
 
 
 def main() -> None:

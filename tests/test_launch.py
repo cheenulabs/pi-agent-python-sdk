@@ -5,8 +5,8 @@ import sys
 
 import pytest
 
-from pi_coding_agent_client._launch import check_version, executable_argv, validate_extra_args
-from pi_coding_agent_client.errors import PiVersionError
+from pi_agent._launch import check_version, executable_argv, validate_extra_args
+from pi_agent.errors import PiVersionError
 
 
 @pytest.mark.parametrize(
@@ -101,7 +101,7 @@ async def test_unsupported_version(version, strict):
 def test_windows_npm_shim_resolves_without_a_shell(tmp_path, monkeypatch):
     from types import SimpleNamespace
 
-    from pi_coding_agent_client import _launch
+    from pi_agent import _launch
 
     shim = tmp_path / "pi.cmd"
     shim.touch()
@@ -120,8 +120,8 @@ def test_windows_npm_shim_resolves_without_a_shell(tmp_path, monkeypatch):
 def test_unrecognized_windows_shim_has_actionable_error(tmp_path, monkeypatch):
     from types import SimpleNamespace
 
-    from pi_coding_agent_client import _launch
-    from pi_coding_agent_client.errors import PiProcessError
+    from pi_agent import _launch
+    from pi_agent.errors import PiProcessError
 
     monkeypatch.setattr(
         _launch, "os", SimpleNamespace(name="nt", PathLike=os.PathLike, fspath=os.fspath)

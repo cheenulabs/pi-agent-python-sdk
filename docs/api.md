@@ -1,9 +1,9 @@
 # API reference
 
-Import `PiClient` or `AsyncPiClient` from `pi_coding_agent_client`. Both expose
+Import `PiClient` or `AsyncPiClient` from `pi_agent`. Both expose
 the same command arguments and return values. Await command methods on the async
 client; call them directly on the synchronous client. Types named below are
-defined in `pi_coding_agent_client.types`.
+defined in `pi_agent.types`.
 
 Wire values remain ordinary dictionaries, with camelCase keys matching Pi.
 Python method arguments use snake_case. Optional arguments are omitted from the

@@ -10,8 +10,8 @@ from typing import Any
 
 import pytest
 
-from pi_coding_agent_client.client import AsyncPiClient
-from pi_coding_agent_client.errors import (
+from pi_agent.client import AsyncPiClient
+from pi_agent.errors import (
     PiBusyError,
     PiCommandError,
     PiRunError,
@@ -19,7 +19,7 @@ from pi_coding_agent_client.errors import (
     PiRunStartTimeout,
     PiTimeoutError,
 )
-from pi_coding_agent_client.types import Event, Limits
+from pi_agent.types import Event, Limits
 
 from .control import set_responses
 

@@ -37,11 +37,11 @@ cd pi-coding-agent-python-sdk
 python -m pip install .
 ```
 
-The distribution is named `pi-coding-agent-client`; import it as
-`pi_coding_agent_client`.
+The distribution is named `pi-coding-agent-python-sdk`; import it as
+`pi_agent`.
 
 ```python
-from pi_coding_agent_client import PiClient
+from pi_agent import PiClient
 
 with PiClient() as pi:
     result = pi.run("Explain the current project without changing files.")
@@ -64,7 +64,7 @@ messages, session identity, elapsed time, and observed assistant usage.
 ## Streaming
 
 ```python
-from pi_coding_agent_client import PiClient
+from pi_agent import PiClient
 
 with PiClient() as pi:
     with pi.stream("Explain this project's entry points without editing files.") as stream:
@@ -88,7 +88,7 @@ arguments and results match the synchronous client.
 ```python
 import asyncio
 
-from pi_coding_agent_client import AsyncPiClient
+from pi_agent import AsyncPiClient
 
 
 async def main() -> None:
@@ -109,7 +109,7 @@ and `await stream.result()`. See the [complete streaming example][stream-example
 Choose the project directory and whether to save the conversation:
 
 ```python
-from pi_coding_agent_client import PiClient
+from pi_agent import PiClient
 
 with PiClient(cwd=".", no_session=True) as pi:
     print(pi.run("Describe this project without changing files.").text)
@@ -149,7 +149,7 @@ Choose the interface that fits the work:
 For example, inspect session state without starting a model run:
 
 ```python
-from pi_coding_agent_client import PiClient
+from pi_agent import PiClient
 
 with PiClient() as pi:
     state = pi.get_state()
