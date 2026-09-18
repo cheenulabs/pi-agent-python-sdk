@@ -81,6 +81,12 @@ def main() -> None:
             os.write(
                 sys.stdout.fileno(), b"\n".join(json.dumps(r).encode() for r in records) + b"\n"
             )
+        elif command == "burst_exit":
+            records = [{"type": "future", "sequence": i} for i in range(5000)]
+            records.append(response(request))
+            sys.stdout.buffer.write(b"\n".join(json.dumps(r).encode() for r in records))
+            sys.stdout.buffer.flush()
+            return
         elif command == "eof":
             emit(response(request), newline=False)
             return

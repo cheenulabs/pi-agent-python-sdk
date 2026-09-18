@@ -55,6 +55,7 @@ class RunStream:
         self._events = EventSubscription(
             client.limits, lambda subscription: None, lambda subscription: None
         )
+        self._retain_events = True
         self._started = asyncio.Event()
         self._settled = asyncio.Event()
         self._task: asyncio.Task[RunResult] | None = None
@@ -169,9 +170,10 @@ class RunStream:
             self._message_bytes += size
             self._messages.append(message)
             self._usage.add(message)
-        error = self._events._put(event, size)
-        if error is not None:
-            self._fail(error)
+        if self._retain_events:
+            error = self._events._put(event, size)
+            if error is not None:
+                self._fail(error)
 
     async def _drive(self) -> RunResult:
         assert self._ready is not None
@@ -312,6 +314,16 @@ class RunStream:
         self._iterating = True
         try:
             return await self._events.__anext__()
+        except StopAsyncIteration:
+            self._iteration_done = True
+            raise
+
+    async def _next_batch(self) -> list[Event]:
+        if self._draining:
+            raise PiBusyError("Cannot iterate while result() drains the stream")
+        self._iterating = True
+        try:
+            return await self._events._next_batch()
         except StopAsyncIteration:
             self._iteration_done = True
             raise

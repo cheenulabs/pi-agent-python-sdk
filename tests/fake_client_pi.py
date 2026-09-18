@@ -92,6 +92,33 @@ def main():
             )
         elif command == "prompt":
             message = request["message"]
+            if message.startswith("burst:"):
+                _, count, acknowledgement = message.split(":")
+                records = [{"type": "agent_start"}]
+                records.extend(
+                    {
+                        "type": "message_update",
+                        "assistantMessageEvent": {
+                            "type": "text_delta",
+                            "contentIndex": 0,
+                            "delta": "x",
+                        },
+                        "sequence": index,
+                    }
+                    for index in range(int(count))
+                )
+                records.extend([assistant("x" * int(count)), {"type": "agent_settled"}])
+                response = {
+                    "type": "response",
+                    "command": "prompt",
+                    "id": request["id"],
+                    "success": True,
+                }
+                records.insert(0 if acknowledgement == "first" else len(records), response)
+                # One unpaced write, including acceptance and settlement.
+                sys.stdout.write("".join(json.dumps(record) + "\n" for record in records))
+                sys.stdout.flush()
+                continue
             if message in {"preack-paused", "preack-settled"}:
                 pending_prompt = request
                 active = message == "preack-paused"

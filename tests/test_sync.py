@@ -432,7 +432,7 @@ def test_stream_interrupt_finishes_owned_run_before_caller_catches(
             if operation == "next":
                 assert next(stream).type == "agent_start"
             entered = threading.Event()
-            method = "__anext__" if operation == "next" else "result"
+            method = "_next_batch" if operation == "next" else "result"
             original_operation = getattr(stream._stream, method)
 
             async def observed_operation():

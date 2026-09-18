@@ -14,7 +14,6 @@ pytestmark = pytest.mark.integration
 @pytest.mark.parametrize("operation", ["run", "stream"])
 @pytest.mark.parametrize("prompt", ["ordinary input", "/fixture-await-run"])
 def test_sync_long_extension_run_before_acknowledgement(pi_options, operation, prompt):
-    pi_options["env"]["PI_FIXTURE_TOKENS_PER_SECOND"] = "1500"
     with PiClient(**pi_options) as pi:
         text = "x " * 10000
         set_responses(pi, [{"text": text}])
