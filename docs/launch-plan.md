@@ -4,6 +4,15 @@ Target: publish `pi-coding-agent-python-sdk==0.1.0`, imported as `pi_agent`, wit
 reviewed source, reproducible validation, and verified PyPI installation.
 A checked-in plan or a green build does not establish publication.
 
+**Publication blocked pending package ownership or a new name.** On 2026-09-18,
+the [PyPI project](https://pypi.org/project/pi-coding-agent-python-sdk/) already
+existed and referenced `trotsky1997/pi-coding-agent-python-sdk`, with a different
+Python API. Confirm whether the intended publisher controls that project.
+Otherwise choose an available distribution name and update package metadata,
+the lockfile, distribution checks, workflow URLs, and installation documentation
+before registering publishers. The Python import can remain `pi_agent`.
+The existing PyPI project is not evidence that this repository was published.
+
 ## Current state
 
 Snapshot: 2026-09-18. Repository visibility is private; `main` is unprotected;
@@ -49,8 +58,10 @@ and inspect the configuration, but its current credentials cannot change it.
   allow that owner to approve their own dispatched deployment. Disable protection
   bypass where available. Permit only branch `main` and tags `v*` for TestPyPI,
   and tags `v*` for PyPI.
-- [ ] Register the pending publishers below in the intended package owner's
-  separate TestPyPI and PyPI accounts. No upload token is needed.
+- [ ] Resolve the package-name conflict above before registering publishers.
+  Register pending publishers only for a new project; for an existing project
+  controlled by the owner, add the publisher in that project's settings.
+  TestPyPI and PyPI are separate accounts/projects. No upload token is needed.
 
 For this personal repository, required environment reviewers may require public
 visibility: GitHub Free/Pro/Team provide that protection only for public

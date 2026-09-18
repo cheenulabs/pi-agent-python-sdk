@@ -11,6 +11,11 @@ candidate and publishing setup are ready for review.
 Follow the [first public release plan](launch-plan.md) for the ordered work,
 approvals, and completion evidence.
 
+**Current blocker:** the PyPI name `pi-coding-agent-python-sdk` is already used
+by a project referencing another repository. Resolve ownership or select a new
+distribution name as recorded in the launch plan before following the publisher
+registration and release commands below. Their package name is provisional.
+
 ## One-time repository and index setup
 
 The repository belongs to the personal GitHub account `cheenulabs`. Its owner
@@ -101,7 +106,9 @@ to `main`. Before publishing a release:
 
 3. After explicit user approval to publish the rehearsal, manually dispatch
    Publish distributions for that reviewed prerelease
-   commit, approve the `testpypi` environment, and verify the published wheel
+   commit from `main`, supplying its full SHA as `expected_sha`. The workflow
+   refuses a different ref or SHA and requires successful CI for that commit.
+   Approve the `testpypi` environment, then verify the published wheel
    in a fresh environment outside the checkout. Run sync/async smoke scenarios
    against the offline fixture. Do not reuse a version already uploaded to
    TestPyPI; the workflow intentionally does not skip conflicting artifacts.
@@ -112,10 +119,26 @@ to `main`. Before publishing a release:
 5. The release workflow checks that the tag matches the package version,
    runs tests and validation, and builds once. It publishes those exact
    artifacts to TestPyPI, then to PyPI after the environment approvals. The
-   upload jobs download the build artifact and never rebuild it.
+   upload jobs download the build artifact and never rebuild it. A separate
+   TestPyPI verification job must pass before the PyPI environment is offered
+   for approval; another verification job checks the final PyPI upload.
 6. Verify a clean `pip install pi-coding-agent-python-sdk==0.1.0`, package metadata,
    typing marker, and runnable quickstarts. Mark the release complete only
    after the GitHub and package-index states confirm it.
+
+The verification jobs use `scripts/check_distribution.py --index testpypi` or
+`--index pypi` with the original `dist/` artifacts. The script checks both index
+file digests, downloads the exact wheel with a pinned SHA-256, and runs sync/async
+smoke checks from a fresh environment outside the checkout. These commands are
+read-only; they never upload. A missing release is retried briefly, while a
+mismatched or yanked artifact fails verification. Keep the build artifacts to
+rerun verification without rebuilding potentially different files.
+
+For an approved rehearsal, substitute the validated full commit SHA:
+
+```sh
+gh workflow run publish.yml --ref main -f expected_sha=REVIEWED_FULL_COMMIT_SHA
+```
 
 Keep distribution directories clean before changing versions so archive checks
 do not accidentally inspect an older build. Built wheels and sdists include
