@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pi-coding-agent-client"
-version = "0.1.0"
+version = "0.1.0rc1"
 description = "Typed async and synchronous Python clients for Pi's coding agent RPC runtime"
 readme = "README.md"
 requires-python = ">=3.11"
