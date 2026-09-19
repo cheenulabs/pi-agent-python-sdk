@@ -38,3 +38,17 @@ def test_wrong_runtime_version_cannot_satisfy_ci(tmp_path, monkeypatch):
     )
     with pytest.raises(AssertionError, match="Expected real Pi 0.85.1"):
         setup.pi_options.__wrapped__(tmp_path)
+
+
+def test_isolated_runtime_preserves_shell_locations_without_credentials(tmp_path, monkeypatch):
+    monkeypatch.delenv("PI_CLIENT_EXPECTED_PI_VERSION", raising=False)
+    monkeypatch.setenv("ProgramFiles", "C:/synthetic-programs")
+    monkeypatch.setenv("ProgramFiles(x86)", "C:/synthetic-programs-x86")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "synthetic-not-a-credential")
+    monkeypatch.setattr(setup.shutil, "which", lambda executable: "node")
+    monkeypatch.setattr(setup.Path, "is_file", lambda path: True)
+    options = setup.pi_options.__wrapped__(tmp_path)
+    assert options["inherit_env"] is False
+    assert options["env"]["ProgramFiles"] == "C:/synthetic-programs"
+    assert options["env"]["ProgramFiles(x86)"] == "C:/synthetic-programs-x86"
+    assert "ANTHROPIC_API_KEY" not in options["env"]
