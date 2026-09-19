@@ -66,6 +66,12 @@ jobs:
       - name: Compare with pinned TypeScript client
         if: matrix.pi == needs.matrix.outputs.pinned
         run: uv run --no-sync python scripts/check_parity.py
+      - name: Build candidate wheel
+        if: matrix.pi == needs.matrix.outputs.pinned
+        run: uv run --no-sync python -m build
+      - name: Verify installed-wheel conveniences and TypeScript parity
+        if: matrix.pi == needs.matrix.outputs.pinned
+        run: uv run --no-sync python scripts/check_distribution.py --parity
       - name: Smoke runnable examples
         if: matrix.os == 'ubuntu-latest' && matrix.python == '3.14'
         run: uv run --no-sync python scripts/check_examples.py

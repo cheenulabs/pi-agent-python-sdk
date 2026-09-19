@@ -83,5 +83,6 @@ fixture and maintained [behavior contract](compatibility.md#typescript-behavior-
 when an intentional protocol/interface change is approved. Preserve the existing
 failure, UI, output, and bounded-delivery regressions; do not change Python to
 reproduce upstream error-handling or listener-mutation bugs. Run the comparison
-again after internal simplifications and on the release candidate, including
-installed-wheel checks for both `run()`/streaming and protocol helpers.
+again after internal simplifications and on the release candidate. After building,
+run `uv run python scripts/check_distribution.py --parity` to repeat it against
+the installed wheel alongside `run()`/streaming and protocol-helper smoke checks.
