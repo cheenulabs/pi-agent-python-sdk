@@ -131,9 +131,11 @@ finally:
 
 This snippet assumes an async client and `import asyncio`. Usually
 `events = await pi.prompt_and_wait(...)` is simpler and handles local cleanup.
-On `PiClient`, both methods block until settlement; use `prompt_and_wait()` for
-submission and collection in one call, or coordinate submission from another
-thread after collection has registered.
+On `PiClient`, both methods block until settlement and expose no registration
+readiness signal. Starting a collector thread does not guarantee registration
+before a prompt's events arrive. Use `prompt_and_wait()` when collection must
+register before submission; it guarantees that ordering internally. See the
+[runnable blocking example](../examples/rpc_sync.py).
 
 All three helpers observe **session-wide** events, without claiming run ownership
 or correlating them to a particular prompt. `wait_for_idle()` waits for a future

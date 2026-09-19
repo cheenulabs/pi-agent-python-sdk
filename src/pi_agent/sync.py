@@ -362,7 +362,14 @@ class PiClient:
         return unsubscribe
 
     def collect_events(self, *, timeout: float | None = 60.0) -> list[Event]:
-        """Block while collecting future events through the next settlement."""
+        """Block while collecting future events through the next settlement.
+
+        Raises PiTimeoutError on timeout, PiSubscriptionOverflow on backlog
+        overflow, or PiResultOverflow on retained-history overflow. Terminal
+        process/protocol failures propagate. Timeout stops local observation
+        without aborting Pi. Use prompt_and_wait() to guarantee registration
+        before submitting a prompt.
+        """
         self._ensure_loop()
 
         async def collect() -> list[Event]:
@@ -371,7 +378,13 @@ class PiClient:
         return self._call(collect)
 
     def wait_for_idle(self, *, timeout: float | None = 60.0) -> None:
-        """Block until the next settlement; this does not query current idle state."""
+        """Block until the next settlement; this does not query current idle state.
+
+        Raises PiTimeoutError on timeout or PiSubscriptionOverflow on backlog
+        overflow. Terminal process/protocol failures propagate. Timeout stops
+        local observation without aborting Pi. Use prompt_and_wait() to guarantee
+        registration before submitting a prompt.
+        """
         self._ensure_loop()
 
         async def wait() -> None:

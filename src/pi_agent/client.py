@@ -341,7 +341,10 @@ class AsyncPiClient:
         """Register immediately; return a cancellable task collecting through settlement.
 
         Events are session-wide, with separate collection count/byte limits.
-        Timeout or cancellation stops observation without aborting Pi.
+        Awaiting raises PiTimeoutError on timeout, PiSubscriptionOverflow on
+        backlog overflow, or PiResultOverflow on retained-history overflow.
+        Terminal process/protocol failures propagate. Timeout or cancellation
+        stops local observation without aborting Pi.
         """
         self._check_loop()
         return cast(
@@ -353,6 +356,9 @@ class AsyncPiClient:
         """Register immediately for the next settlement, without retaining events.
 
         This does not query whether Pi is idle already; use get_state() for that.
+        Awaiting raises PiTimeoutError on timeout or PiSubscriptionOverflow on
+        backlog overflow. Terminal process/protocol failures propagate. Timeout
+        or cancellation stops local observation without aborting Pi.
         """
         self._check_loop()
         return cast(
