@@ -1,6 +1,6 @@
 # Pi Agent Python SDK
 
-[![PyPI](https://img.shields.io/pypi/v/pi-agent-python-sdk?style=flat-square)][pypi]
+[![PyPI](https://badge.fury.io/py/pi-agent-python-sdk.svg)][pypi]
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)][metadata]
 [![MIT license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)][license]
 
@@ -17,6 +17,15 @@ its usual models, authentication, tools, extensions, skills, and configuration.
 
 [Quick start](#quick-start) · [Streaming](#streaming) · [Async](#async-usage) ·
 [Configuration](#configuration) · [RPC](#rpc-access) · [Documentation](#documentation)
+
+## What you can do
+
+- **Run and stream:** get a final answer or consume text, thinking, and tool events.
+- **Keep a conversation:** send follow-up prompts, resume sessions, fork, or clone.
+- **Control Pi:** select models, adjust thinking, steer work, compact context, and
+  call all 33 RPC commands in the pinned baseline.
+- **Integrate with your application:** use sync or async clients, typed results,
+  raw event dictionaries, and extension UI callbacks.
 
 ## Quick start
 
@@ -63,15 +72,6 @@ with PiClient() as pi:
 
 Pi keeps the conversation context. Each result contains only the messages and
 answer from that call; a call with no assistant output has empty text.
-
-## What you can do
-
-- **Run and stream:** get a final answer or consume text, thinking, and tool events.
-- **Keep a conversation:** send follow-up prompts, resume sessions, fork, or clone.
-- **Control Pi:** select models, adjust thinking, steer work, compact context, and
-  call all 33 RPC commands in the pinned baseline.
-- **Integrate with your application:** use sync or async clients, typed results,
-  raw event dictionaries, and extension UI callbacks.
 
 ## Streaming
 
