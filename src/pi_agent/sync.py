@@ -171,7 +171,7 @@ class PiClient:
 
     def _check_caller(self) -> None:
         if IN_SYNC_UI.get() or threading.current_thread() is self._thread:
-            raise RuntimeError("Blocking PiClient calls are not allowed from UI callbacks")
+            raise RuntimeError("Blocking PiClient calls are not allowed from client callbacks")
 
     def _loop_main(self) -> None:
         loop: asyncio.AbstractEventLoop | None = None
@@ -336,6 +336,67 @@ class PiClient:
         traceback: TracebackType | None,
     ) -> None:
         self.close()
+
+    def on_event(self, listener: Callable[[Event], None]) -> Callable[[], None]:
+        """Register a short callback on the background loop; return unsubscribe.
+
+        May be called before start(). Blocking client calls from callbacks are
+        rejected. Unsubscribe is idempotent and works inside the callback.
+        """
+        self._ensure_loop()
+
+        async def register() -> Callable[[], None]:
+            return self._client.on_event(listener)
+
+        remove = self._call(register)
+
+        async def unregister() -> None:
+            remove()
+
+        def unsubscribe() -> None:
+            if threading.current_thread() is self._thread:
+                remove()
+            else:
+                self._close_context(unregister)
+
+        return unsubscribe
+
+    def collect_events(self, *, timeout: float | None = 60.0) -> list[Event]:
+        """Block while collecting future events through the next settlement."""
+        self._ensure_loop()
+
+        async def collect() -> list[Event]:
+            return await self._client.collect_events(timeout=timeout)
+
+        return self._call(collect)
+
+    def wait_for_idle(self, *, timeout: float | None = 60.0) -> None:
+        """Block until the next settlement; this does not query current idle state."""
+        self._ensure_loop()
+
+        async def wait() -> None:
+            await self._client.wait_for_idle(timeout=timeout)
+
+        self._call(wait)
+
+    def prompt_and_wait(
+        self,
+        message: str,
+        *,
+        images: list[ImageContent] | None = None,
+        timeout: float | None = 60.0,
+        command_timeout: Timeout = DEFAULT_TIMEOUT,
+    ) -> list[Event]:
+        """Collect session events until prompt acknowledgement and settlement.
+
+        Failure cancels local waits without aborting Pi. Model stop reasons stay
+        in the returned events; no owned run or aggregate result is created.
+        """
+        return self._call(
+            lambda: self._client.prompt_and_wait(
+                message, images=images, timeout=timeout, command_timeout=command_timeout
+            )
+        )
 
     def request(
         self, command_type: str, *, timeout: Timeout = DEFAULT_TIMEOUT, **fields: Any

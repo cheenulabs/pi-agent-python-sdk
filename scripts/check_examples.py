@@ -31,6 +31,8 @@ EXAMPLES = (
     "events.py",
     "images.py",
     "process_output.py",
+    "rpc_async.py",
+    "rpc_sync.py",
     "sessions.py",
     "steering.py",
     "stream.py",
@@ -141,7 +143,15 @@ def check_example(path: Path, fixture: ModuleType) -> str:
 
         text = output.getvalue()
         assert text, f"{path.name} produced no output"
-        if path.stem in {"sync", "async_client", "images", "stream", "events"}:
+        if path.stem in {
+            "sync",
+            "async_client",
+            "images",
+            "stream",
+            "events",
+            "rpc_async",
+            "rpc_sync",
+        }:
             assert ANSWER in text, f"{path.name} did not display its synthetic answer"
         elif path.stem == "cancellation":
             assert "Run ownership released: True" in text

@@ -52,6 +52,10 @@ prompts, and startup attachments. Arguments are passed without a shell.
 |---|---|
 | `start()` | Check version, launch RPC mode, and wait for `get_state`; returns `None` |
 | `close()` / async `aclose()` | Wake operations, close stdin, escalate if needed, and reap the owned child; sync also joins its loop thread |
+| `on_event(listener)` | Register a synchronous event callback; return an idempotent unsubscribe function; may register before startup |
+| `collect_events(*, timeout=60.0)` | Collect future `Event` objects through the next `agent_settled`, inclusive |
+| `wait_for_idle(*, timeout=60.0)` | Wait for the next `agent_settled`, retaining no event history; returns `None` |
+| `prompt_and_wait(message, *, images=None, timeout=60.0, command_timeout=DEFAULT_TIMEOUT)` | Register collection before submitting a prompt; return `list[Event]` after both successful acknowledgement and settlement |
 | `run(message, *, images=None, timeout=None, command_timeout=DEFAULT_TIMEOUT)` | `RunResult` after an observed run settles; final model failure raises `PiRunError` with a partial result |
 | `stream(message, *, images=None, timeout=None, command_timeout=DEFAULT_TIMEOUT)` | Context-managed owned run with an event iterator and `result()` |
 | `observe(*, stderr=True, stdout=False, rpc=False)` | Context-managed selected process output; enter before `start()`, drain through close, then inspect `.status` |
@@ -86,6 +90,79 @@ settlement. A late command rejection can therefore surface during iteration or
 | `compatibility` | `unchecked` before startup, then `tested`, `untested`, or `unknown` |
 | `stderr_tail` | Explicit diagnostic text; empty by default because retention is disabled |
 | `limits` | The configured `Limits` object |
+
+## Listeners and settlement helpers
+
+These helpers are available in the source branch; they are not part of the
+published 0.1.0 release. Runnable examples:
+[`rpc_async.py`](../examples/rpc_async.py) and [`rpc_sync.py`](../examples/rpc_sync.py).
+
+`on_event()` delivers future session events in wire order, including unknown
+events, extension errors, and UI requests. Responses are returned by command
+methods; raw RPC envelopes and stderr remain available through `observe()`.
+Each listener receives an `Event` with a separate mutable `.raw` dictionary.
+Callbacks run synchronously on the async client's owning loop, or on `PiClient`'s
+background loop thread. Keep them short; blocking callbacks delay all RPC work.
+Coroutine functions are rejected. Schedule async work explicitly if needed;
+the application owns those tasks and their cleanup. Blocking client calls from
+callbacks raise `RuntimeError`; unsubscribe itself is safe inside a callback.
+
+Registration order determines callback order. Removing a listener before its
+turn skips it; a listener added during delivery starts with the next event.
+Repeated registrations are independent. Exceptions are sent to the standard
+asyncio loop exception handler and do not stop other listeners or the transport.
+A callback returning a cold coroutine is also reported there and the coroutine
+is closed. Client close/failure releases all listeners.
+
+On `AsyncPiClient`, `collect_events()` and `wait_for_idle()` register **at the
+method call** and return already scheduled, cancellable tasks. Await the returned
+task directly; do not pass it to `asyncio.create_task()`. Both can register before
+`start()`. For separate submission and collection:
+
+```python
+pending = pi.collect_events(timeout=60)
+try:
+    await pi.prompt("Explain this project.")
+    events = await pending
+finally:
+    pending.cancel()
+    await asyncio.gather(pending, return_exceptions=True)
+```
+
+This snippet assumes an async client and `import asyncio`. Usually
+`events = await pi.prompt_and_wait(...)` is simpler and handles local cleanup.
+On `PiClient`, both methods block until settlement; use `prompt_and_wait()` for
+submission and collection in one call, or coordinate submission from another
+thread after collection has registered.
+
+All three helpers observe **session-wide** events, without claiming run ownership
+or correlating them to a particular prompt. `wait_for_idle()` waits for a future
+settlement even if Pi is already idle; use `get_state()` to query current state.
+`prompt_and_wait()` requires a successful prompt acknowledgement even when
+settlement arrives first. A handled extension command that never settles reaches
+the configured deadline. Model stop reasons, usage, retries, and tool results
+remain in the original events; these helpers do not create `RunResult`, aggregate
+usage, or raise `PiRunError` for a model failure.
+
+The timeout covers the whole helper call (60 seconds by default, `None` disables
+it). `command_timeout` separately bounds prompt acknowledgement. Timeout,
+cancellation, or collection overflow releases local observation only: no hidden
+`abort()`, `clear_queue()`, or process shutdown. Transport failure still follows
+normal process cleanup. Call those commands explicitly when desired.
+
+`collect_events()` and `prompt_and_wait()` retain at most the configured
+`collection_event_count` and `collection_event_bytes`, including the settlement
+record. These aggregate limits are separate from subscription backlog limits;
+`wait_for_idle()` retains no history but still uses a bounded subscription.
+Overflow raises `PiResultOverflow` for retained history or
+`PiSubscriptionOverflow` for backlog. Neither returns a silently truncated list.
+
+The existing `run()`/`stream()` interface remains during this additive step of
+[#41](https://github.com/cheenulabs/pi-agent-python-sdk/issues/41).
+`prompt_and_wait()` uses low-level `prompt()`, so the existing ownership rule
+still prevents a subsequent owned `run()`/`stream()` on that same client. Use
+one style per client; repeated settlement helpers are supported. Removal of the
+old owned-run interface is a separate breaking change.
 
 ## All 33 RPC commands
 
@@ -229,6 +306,8 @@ capacities are positive integers except `stderr_tail_bytes`, which may be zero.
 | `event_queue_size` | `256` | Records per subscription; also outstanding UI-handler count |
 | `event_queue_bytes` | `16 * 1024 * 1024` | Bytes per subscription; also outstanding UI-handler payload bytes |
 | `stderr_tail_bytes` | `0` | Retained diagnostic stderr tail; zero disables retention |
+| `collection_event_count` | `16384` | Events retained by one settlement collection |
+| `collection_event_bytes` | `64 * 1024 * 1024` | UTF-8 serialized event bytes retained by one settlement collection |
 | `result_message_count` | `4096` | Finalized messages retained by one owned run |
 | `result_message_bytes` | `64 * 1024 * 1024` | Serialized finalized-message event bytes retained by one owned run |
 

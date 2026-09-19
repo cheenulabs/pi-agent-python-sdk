@@ -39,6 +39,9 @@ class _Subscription(Generic[T]):
         self._reading = False
 
     async def __aenter__(self) -> Self:
+        return self._enter()
+
+    def _enter(self) -> Self:
         if self._entered or self._closed:
             raise RuntimeError("Event subscriptions are single-use")
         self._register()

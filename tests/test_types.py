@@ -123,6 +123,8 @@ def test_limits_reject_invalid_deadlines(name: str, value: Any) -> None:
         "event_queue_size",
         "event_queue_bytes",
         "result_message_count",
+        "collection_event_count",
+        "collection_event_bytes",
         "result_message_bytes",
     ],
 )

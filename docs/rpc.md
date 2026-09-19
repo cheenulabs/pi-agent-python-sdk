@@ -110,3 +110,17 @@ see [maintenance](maintenance.md).
 
 [upstream-rpc]: https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/docs/rpc.md
 [upstream-client]: https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-client.ts
+
+## Settlement collection
+
+`_collections.py` drains an existing event subscription through the next
+`agent_settled`, with independent finite aggregate limits. Registration happens
+before the returned task runs. `prompt_and_wait()` starts that collector before
+sending and awaits both collection and acknowledgement. Blocking helpers use the
+same async implementation. This path creates no run owner and makes no implicit
+abort or queue-clear decisions.
+
+`on_event()` uses the existing dispatch path with synchronous callbacks. Each
+listener receives a separate JSON dictionary so mutation cannot alter subsequent
+routing. Callback failures go to the loop exception handler; no worker pool or
+second event bus is involved. See the [public contract](api.md#listeners-and-settlement-helpers).

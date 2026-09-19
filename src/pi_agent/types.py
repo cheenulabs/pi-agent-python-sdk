@@ -938,6 +938,8 @@ class Limits:
     stderr_tail_bytes: int = 0
     result_message_count: int = 4096
     result_message_bytes: int = 64 * 1024 * 1024
+    collection_event_count: int = 16_384
+    collection_event_bytes: int = 64 * 1024 * 1024
 
     def __post_init__(self) -> None:
         for descriptor in fields(self):
