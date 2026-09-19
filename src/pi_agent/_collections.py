@@ -43,7 +43,7 @@ def start_collection(
             async with timer:
                 async for event in subscription:
                     if retain:
-                        size += len(json.dumps(event.raw, ensure_ascii=False).encode("utf-8"))
+                        size += len(json.dumps(event.raw).encode("utf-8"))
                         if (
                             len(events) >= limits.collection_event_count
                             or size > limits.collection_event_bytes

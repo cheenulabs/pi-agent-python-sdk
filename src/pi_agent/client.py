@@ -486,7 +486,7 @@ class AsyncPiClient:
         event = Event(raw)
         # Validate a recognized text update without restricting future variants.
         _ = event.text_delta
-        encoded = json.dumps(raw, ensure_ascii=False)
+        encoded = json.dumps(raw)
         size = len(encoded.encode("utf-8"))
         for subscription in tuple(self._subscriptions):
             subscription._put(event, size)

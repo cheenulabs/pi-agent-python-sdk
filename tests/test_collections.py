@@ -314,3 +314,18 @@ def test_blocking_collection_observes_next_settlement(operation, monkeypatch):
                 assert result is None
         finally:
             client.close()
+
+
+async def test_escaped_unicode_survives_listeners_and_collection():
+    async with AsyncPiClient(executable=FAKE) as client:
+        seen = []
+        client.on_event(seen.append)
+        pending = client.collect_events()
+        try:
+            await client.request("emit_escaped")
+            events = await pending
+            assert events[0].raw["value"] == chr(0xD800)
+            assert [e.raw for e in events] == [e.raw for e in seen]
+        finally:
+            pending.cancel()
+            await asyncio.gather(pending, return_exceptions=True)
