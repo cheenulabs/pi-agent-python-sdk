@@ -1,15 +1,29 @@
 # Releasing the package
 
 Local build validation is separate from a TestPyPI rehearsal, GitHub CI, and a
-public PyPI release. Complete all of them before calling the first release
-finished.
+public PyPI release. For each release, validate the reviewed commit and built artifacts before
+publication, then verify the copies downloaded from both indexes.
+
+## 0.2.0 release verification
+
+The 0.2.0 metadata and release notes describe the reviewed release candidate.
+A source checkout or version number alone does not prove publication. Confirm
+the `v0.2.0` GitHub release and successful TestPyPI/PyPI verification jobs before
+recording 0.2.0 as released or pinning it in a deployed consumer. This keeps the
+same verification requirement before and after the approved publication.
+
+## Approval and scope
 
 Merge each PR only after explicit approval. Publication, including a
 TestPyPI rehearsal, requires separate explicit approval after the release
 candidate and publishing setup are ready for review.
 
-Follow the [first public release plan](launch-plan.md) for the ordered work,
-approvals, and completion evidence.
+The [first public release plan](launch-plan.md) records the original setup.
+Subsequent releases reuse the existing publishers and approval workflow. The
+release version follows the actual API changes: 0.2.0 includes the command-result
+migration from 0.1.0 and retains `run()`, streaming, and `RunResult`.
+[#41](https://github.com/cheenulabs/pi-agent-python-sdk/issues/41) tracks candidate
+validation, approval, publication, and separate Cheenulabs adoption.
 
 ## One-time repository and index setup
 
@@ -42,7 +56,7 @@ visibility change before configuring those protections if needed.
   `cheenulabs` as a required reviewer. Allow self-review if that same account
   will both dispatch and approve a deployment. Any deployment branch/tag
   restrictions must allow `main` for the TestPyPI rehearsal and release tags
-  such as `v0.1.0` for both environments.
+  such as `v0.2.0` for both environments.
 - Register a pending publisher in the intended owner's separate
   [TestPyPI account](https://test.pypi.org/manage/account/publishing/) and
   [PyPI account](https://pypi.org/manage/account/publishing/), using these fields:
@@ -65,7 +79,7 @@ when GitHub presents them.
 
 ## Prepare the public documentation
 
-Use the tag (for example, `v0.1.0`) as the GitHub release title. Write the body
+Use the tag (for example, `v0.2.0`) as the GitHub release title. Write the body
 in `docs/releases/<version>.md`, following the [release notes style](releases/style.md):
 lead with user-facing highlights and link to the tagged documentation.
 
@@ -75,7 +89,7 @@ tag with absolute GitHub URLs. Before publishing a release:
 - Merge the approved SDK changes into `main` and validate that release commit.
 - Point README documentation, example, source, and license links, plus the
   Documentation and Changelog metadata URLs, at the release tag (for example,
-  `blob/v0.1.0/docs/usage.md`). Keep these URLs absolute: PyPI renders the README
+  `blob/v0.2.0/docs/usage.md`). Keep these URLs absolute: PyPI renders the README
   as a package description and does not resolve paths against this repository.
 - Replace the source clone instructions with the published-package
   installation command when the package becomes available. Keep source-install
@@ -85,7 +99,7 @@ tag with absolute GitHub URLs. Before publishing a release:
 
 ## Rehearsal and release
 
-1. Use a unique prerelease version such as `0.1.0rc1` in `pyproject.toml` for
+1. For a separate TestPyPI rehearsal, use a unique prerelease version such as `0.2.0rc1` in `pyproject.toml` for
    the TestPyPI rehearsal. It is the single package-version source. Update the
    lockfile, changelog, and release notes through a reviewed PR.
 2. Run local checks, build and inspect both distributions:
@@ -97,13 +111,16 @@ tag with absolute GitHub URLs. Before publishing a release:
    uv run ruff check .
    uv run ruff format --check .
    uv run mypy
+   uv run mypy --strict examples scripts/check_examples.py scripts/check_parity.py
+   uv run python scripts/check_examples.py
+   uv run python scripts/check_parity.py
    uv run python scripts/check_upstream.py
    uv run python -m build
    uv run twine check dist/*
-   uv run python scripts/check_distribution.py
+   uv run python scripts/check_distribution.py --parity
    ```
 
-3. After explicit user approval to publish the rehearsal, manually dispatch
+3. If a separate rehearsal is needed, after explicit approval to publish it, manually dispatch
    Publish distributions for that reviewed prerelease
    commit from `main`, supplying its full SHA as `expected_sha`. The workflow
    refuses a different ref or SHA and requires successful CI for that commit.
@@ -111,9 +128,9 @@ tag with absolute GitHub URLs. Before publishing a release:
    in a fresh environment outside the checkout. Run sync/async smoke scenarios
    against the offline fixture. Do not reuse a version already uploaded to
    TestPyPI; the workflow intentionally does not skip conflicting artifacts.
-4. Prepare final `0.1.0` metadata and changelog in a reviewed PR. Ensure all
+4. Prepare final `0.2.0` metadata and changelog in a reviewed PR. Ensure all
    required checks pass on the release commit. Only after explicit user approval
-   to publish the final release, create tag `v0.1.0` and publish its GitHub
+   to publish the final release, create tag `v0.2.0` and publish its GitHub
    release with those notes.
 5. The release workflow checks that the tag matches the package version,
    runs tests and validation, and builds once. It publishes those exact
@@ -121,7 +138,7 @@ tag with absolute GitHub URLs. Before publishing a release:
    upload jobs download the build artifact and never rebuild it. A separate
    TestPyPI verification job must pass before the PyPI environment is offered
    for approval; another verification job checks the final PyPI upload.
-6. Verify a clean `pip install pi-agent-python-sdk==0.1.0`, package metadata,
+6. Verify a clean `pip install pi-agent-python-sdk==0.2.0`, package metadata,
    typing marker, and runnable quickstarts. Mark the release complete only
    after the GitHub and package-index states confirm it.
 

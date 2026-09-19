@@ -93,8 +93,7 @@ settlement. A late command rejection can therefore surface during iteration or
 
 ## Listeners and settlement helpers
 
-These helpers are available in the source branch; they are not part of the
-published 0.1.0 release. Runnable examples:
+These helpers were added for 0.2.0. Runnable examples:
 [`rpc_async.py`](../examples/rpc_async.py) and [`rpc_sync.py`](../examples/rpc_sync.py).
 
 `on_event()` delivers future session events in wire order, including unknown
@@ -251,9 +250,10 @@ the originating request. `exclude_from_context=False` is transmitted explicitly;
 omitting it preserves Pi's default. `get_commands()` is discovery, not a promise
 that all terminal built-in commands are callable through RPC.
 
-## Unreleased command migration
+## Migrating from 0.1.0
 
-The source branch changes three convenience results from published 0.1.0:
+Version 0.2.0 changes three convenience results and session-cache refresh
+behavior from 0.1.0:
 
 | Previous use | Updated use |
 | --- | --- |
@@ -264,11 +264,10 @@ The source branch changes three convenience results from published 0.1.0:
 
 Await the equivalent methods on `AsyncPiClient`. Command rejection still raises
 `PiCommandError`; a `None` prompt result means acknowledgement succeeded, not
-that Pi finished or even started an agent run. These breaking changes belong to
-[#41](https://github.com/cheenulabs/pi-agent-python-sdk/issues/41)'s final migration;
-they are not a new published release. `run()`, `stream()`, and `RunResult` remain
-supported. `AcceptanceReceipt` is removed; raw response access
-continues through `request()`.
+that Pi finished or even started an agent run. These changes align command
+results with the pinned TypeScript client. `run()`, `stream()`, and `RunResult`
+remain supported. `AcceptanceReceipt` is removed; raw response access continues
+through `request()`.
 
 ## Events and wire types
 
