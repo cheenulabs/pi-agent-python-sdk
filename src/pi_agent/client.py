@@ -6,7 +6,6 @@ import asyncio
 import contextvars
 import inspect
 import json
-import math
 import os
 import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
@@ -53,6 +52,7 @@ from .types import (
     ThinkingLevel,
     ThinkingLevelCycleResult,
     TreeResult,
+    _validate_timeout,
 )
 
 if TYPE_CHECKING:
@@ -690,13 +690,8 @@ class AsyncPiClient:
             if timeout is DEFAULT_TIMEOUT
             else timeout
         )
-        if deadline is not None and (
-            not isinstance(deadline, (int, float))
-            or isinstance(deadline, bool)
-            or not math.isfinite(deadline)
-            or deadline <= 0
-        ):
-            raise ValueError("timeout must be a positive finite number or None")
+        if deadline is not None:
+            _validate_timeout(deadline)
         if self._owner is None and command in {"prompt", "steer", "follow_up"}:
             # Set before awaiting: input handlers can start work long after acknowledgement.
             # Even rejection/cancellation cannot prove arbitrary extension preflight is idle.

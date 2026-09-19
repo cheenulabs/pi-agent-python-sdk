@@ -4,23 +4,16 @@ from __future__ import annotations
 
 import asyncio
 import json
-import math
 
 from ._events import EventSubscription
 from .errors import PiProcessError, PiResultOverflow, PiTimeoutError
-from .types import Event, Limits
+from .types import Event, Limits, _validate_timeout
 
 
 def deadline(timeout: float | None) -> float | None:
     if timeout is None:
         return None
-    if (
-        isinstance(timeout, bool)
-        or not isinstance(timeout, (int, float))
-        or not math.isfinite(timeout)
-        or timeout <= 0
-    ):
-        raise ValueError("Collection timeout must be a positive finite number or None")
+    _validate_timeout(timeout, "Collection timeout")
     return asyncio.get_running_loop().time() + timeout
 
 

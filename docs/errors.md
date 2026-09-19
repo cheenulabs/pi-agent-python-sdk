@@ -107,6 +107,10 @@ the current run.
 All configured deadlines use seconds. The UI protocol's optional handler timeout
 is supplied by Pi in milliseconds and converted internally.
 
+Caller-supplied numeric deadlines must be positive and finite. Invalid types,
+booleans, and integers too large for the timer raise `ValueError`. Where allowed,
+`None` disables that particular deadline; configured `Limits` require numbers.
+
 Expiry of that UI deadline cancels the dialog, following Pi's normal default
 response, and does not itself fail an owned run. It is distinct from a callback
 that raises `TimeoutError` independently, an overall run deadline, or caller

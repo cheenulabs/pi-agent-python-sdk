@@ -51,6 +51,19 @@ The context manager starts and closes Pi. `run()` waits for the conversation to
 settle, including retries and queued follow-ups. The result includes finalized
 messages, session identity, elapsed time, and observed assistant usage.
 
+Continue the conversation with another call on the same client:
+
+```python
+from pi_agent import PiClient
+
+with PiClient() as pi:
+    print(pi.run("Explain this project's entry points without editing files.").text)
+    print(pi.run("Which of those entry points handles configuration?").text)
+```
+
+Pi keeps the conversation context. Each result contains only the messages and
+answer from that call; a call with no assistant output has empty text.
+
 ## What you can do
 
 - **Run and stream:** get a final answer or consume text, thinking, and tool events.
@@ -75,8 +88,7 @@ with PiClient() as pi:
 ```
 
 `event.raw` contains the full Pi event, including fields the SDK does not yet
-recognize. Keep the stream inside its context: leaving early clears queued input
-and aborts the work it owns. See [errors and cancellation][errors] for
+recognize. Keep the stream inside its context: leaving early cleans up unfinished work. See [errors and cancellation][errors] for
 handling timeouts and partial results.
 
 ## Async usage
@@ -159,10 +171,10 @@ Python arguments use `snake_case`; wire dictionaries retain Pi's `camelCase`
 fields. `prompt()` acknowledges submission, which may be handled entirely by an
 extension. It does not wait for a completed answer.
 
-One client owns one conversation at a time; create separate clients for
-independent conversations. After a low-level prompt submitted outside an owned
-run, use a fresh client for `run()` or `stream()` so events cannot be attributed
-to the wrong work. The SDK launches a new process and cannot attach to an existing
+Use one client per conversation and wait for each `run()` or stream to finish
+before starting the next. After using `prompt()` for your own event handling,
+use a fresh client for `run()` or `stream()` so results cannot include delayed
+events from earlier work. The SDK launches a new process and cannot attach to an existing
 Pi terminal session.
 
 See [RPC structure][rpc] for the protocol mapping and module layout, and

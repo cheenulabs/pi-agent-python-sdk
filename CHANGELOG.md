@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Share deadline validation across runs, commands, collectors, and limits; invalid
+  types and integers too large for timers consistently raise `ValueError`.
+- Document the retained run/stream conveniences and the reasons for their
+  internal ownership, session, and cleanup rules.
+
 ## 0.1.0
 
 - Introduce the `pi-agent-python-sdk` distribution with the `pi_agent` Python
