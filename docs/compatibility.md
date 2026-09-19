@@ -128,9 +128,9 @@ failures, surfaced callback errors, single-use process lifecycle, and opt-in
 stderr forwarding/retention. The source branch now matches TS object returns for thinking-level cycling and
 HTML export, and returns `None` from `prompt()`. Session mutations do not trigger
 hidden state queries. See the [unreleased migration](api.md#unreleased-command-migration).
-The owned-run interface remains to be removed in a separate breaking PR under
-[#41](https://github.com/cheenulabs/pi-agent-python-sdk/issues/41); this additive
-step does not claim complete structural parity.
+`run()`, `stream()`, and `RunResult` remain intentional Python conveniences.
+Their [ownership and cleanup rules](rpc.md#internal-design-assessment) protect
+result attribution without changing the shared command/event protocol.
 
 ## TypeScript behavior contract
 
@@ -140,8 +140,8 @@ the [command table](api.md#all-33-rpc-commands) records wire arguments and resul
 Current source matches TS object results for thinking-level cycling and HTML
 export, and its void prompt result. Session mutation commands issue no implicit
 state refresh. These are unreleased changes, with migration described in the API
-reference. The legacy owned-run interface remains additional Python behavior
-until [#41](https://github.com/cheenulabs/pi-agent-python-sdk/issues/41) removes it.
+reference. The retained `run()`/`stream()` interface is additional Python
+behavior, assessed in [#50](https://github.com/cheenulabs/pi-agent-python-sdk/issues/50).
 
 Normal event delivery preserves every emitted wire field, including thinking,
 tool results, usage, extension errors/UI, and unknown future fields. `text_delta`
@@ -206,6 +206,9 @@ semantics; isolated real-Pi integration supplies that complementary coverage.
 CI runs the comparison on the pinned runtime for each supported Python/OS row.
 Older-runtime compatibility rows, when present, use their integration tests
 rather than comparing an unreviewed TS implementation. Preserve this coverage
-when replacing the legacy run interface; rerun on the final breaking candidate
-and installed wheel. A green additive branch is not proof that the future
-migration or a published release is complete.
+when simplifying internals; rerun on the final candidate and installed wheel,
+including both retained convenience calls and protocol helpers.
+[#45](https://github.com/cheenulabs/pi-agent-python-sdk/issues/45) tracks that
+validation; [#41](https://github.com/cheenulabs/pi-agent-python-sdk/issues/41)
+tracks release and Cheenulabs adoption. A green source branch is not proof that
+adoption or a published release is complete.

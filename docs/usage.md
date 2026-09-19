@@ -1,26 +1,5 @@
 # Using the client
 
-## Conversation ownership and results
-
-Use `run()`/`stream()` for settled work, or `prompt()`/events for low-level
-submission. After an unowned `prompt()`, `steer()`, `follow_up()`, or raw prompt
-request, that client rejects subsequent owned runs with `PiRunOwnershipError`.
-Use a fresh client; neither an idle `get_state()` nor `abort()` proves an
-extension cannot start delayed work. Steering/follow-up calls during an already
-owned run remain supported. Session events do not carry per-prompt attribution.
-
-`RunResult.text` concatenates the final assistant's text blocks in order without
-adding separators. `elapsed_seconds` measures prompt submission through receipt
-of `agent_settled`, excluding state preflight and final identity refresh. The
-overall run timeout still includes those operations.
-
-Usage accumulates finalized assistant messages incrementally. Derived token
-counts are nonnegative integers or unknown (`None`); malformed, negative,
-fractional, or missing counts remain unknown for that field. A zero reasoning
-count accompanied by thinking content, or reasoning exceeding output, is unknown.
-Reasoning is already included in output and total tokens. The raw wire messages
-remain available, and no totals include unobserved detached child work.
-
 Start with the [README](../README.md) installation and quickstarts. Both clients
 launch their own Pi RPC subprocess and preserve Pi's normal defaults. There is
 no runtime installation, authentication flow, or network version lookup in this
@@ -276,6 +255,27 @@ entries and the nullable leaf ID; `get_tree()` returns their tree structure.
 It is distinct from `RunResult.text`, which only uses the current run.
 [examples/sessions.py](../examples/sessions.py) shows an initial session and its
 identity without assuming that a session file is always present.
+
+## Conversation ownership and results
+
+Use `run()`/`stream()` for settled work, or `prompt()`/events for low-level
+submission. After an unowned `prompt()`, `steer()`, `follow_up()`, or raw prompt
+request, that client rejects subsequent owned runs with `PiRunOwnershipError`.
+Use a fresh client; neither an idle `get_state()` nor `abort()` proves an
+extension cannot start delayed work. Steering/follow-up calls during an already
+owned run remain supported. Session events do not carry per-prompt attribution.
+
+`RunResult.text` concatenates the final assistant's text blocks in order without
+adding separators. `elapsed_seconds` measures prompt submission through receipt
+of `agent_settled`, excluding state preflight and final identity refresh. The
+overall run timeout still includes those operations.
+
+Usage accumulates finalized assistant messages incrementally. Derived token
+counts are nonnegative integers or unknown (`None`); malformed, negative,
+fractional, or missing counts remain unknown for that field. A zero reasoning
+count accompanied by thinking content, or reasoning exceeding output, is unknown.
+Reasoning is already included in output and total tokens. The raw wire messages
+remain available, and no totals include unobserved detached child work.
 
 ## Steering, follow-ups, and concurrency
 

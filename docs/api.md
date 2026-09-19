@@ -160,12 +160,12 @@ record. These aggregate limits are separate from subscription backlog limits;
 Overflow raises `PiResultOverflow` for retained history or
 `PiSubscriptionOverflow` for backlog. Neither returns a silently truncated list.
 
-The existing `run()`/`stream()` interface remains during this additive step of
-[#41](https://github.com/cheenulabs/pi-agent-python-sdk/issues/41).
+`run()` and `stream()` remain supported Python conveniences alongside these
+protocol helpers; see the [internal assessment](rpc.md#internal-design-assessment).
 `prompt_and_wait()` uses low-level `prompt()`, so the existing ownership rule
 still prevents a subsequent owned `run()`/`stream()` on that same client. Use
-one style per client; repeated settlement helpers are supported. Removal of the
-old owned-run interface is a separate breaking change.
+one style per client; repeated settlement helpers and sequential completed runs
+are supported.
 
 ## All 33 RPC commands
 
@@ -230,10 +230,10 @@ compatibility fields and may contain headers, so do not assume it is safe to log
 | `get_session_stats()` | `SessionStats` | Message/tool counts, token totals, cost, and optional context usage |
 | `export_html(*, output_path=None)` | `ExportHtmlResult` | Full `{path: ...}` result, preserving unknown fields |
 
-Session mutations send only the requested command. The legacy `session` snapshot
+Session mutations send only the requested command. The cached `session` snapshot
 is invalidated after a successful mutation (including an extension veto); call
-`get_state()` explicitly when updated identity is needed. Startup and the legacy
-owned-run driver still perform their own state reads. `cancelled=True` is a normal return value; it is
+`get_state()` explicitly when updated identity is needed. Startup and the
+run driver still perform their own state reads. `cancelled=True` is a normal return value; it is
 not converted into an exception. In particular, a vetoed fork can omit `text`.
 An unknown `since` entry ID is rejected by Pi. `clone()` requires a selected leaf,
 and `set_session_name()` follows Pi's trimming and nonempty-name rules.
@@ -266,8 +266,8 @@ Await the equivalent methods on `AsyncPiClient`. Command rejection still raises
 `PiCommandError`; a `None` prompt result means acknowledgement succeeded, not
 that Pi finished or even started an agent run. These breaking changes belong to
 [#41](https://github.com/cheenulabs/pi-agent-python-sdk/issues/41)'s final migration;
-they are not a new published release. The legacy owned-run interface remains
-until its separate removal. `AcceptanceReceipt` is removed; raw response access
+they are not a new published release. `run()`, `stream()`, and `RunResult` remain
+supported. `AcceptanceReceipt` is removed; raw response access
 continues through `request()`.
 
 ## Events and wire types

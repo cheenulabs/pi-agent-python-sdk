@@ -923,6 +923,16 @@ class RunResult:
     usage: UsageSummary | None = None
 
 
+def _validate_timeout(value: object, name: str = "timeout") -> None:
+    if isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0:
+        try:
+            if math.isfinite(value):
+                return
+        except OverflowError:
+            pass
+    raise ValueError(f"{name} must be a positive finite number")
+
+
 @dataclass(frozen=True)
 class Limits:
     """Client deadlines (seconds) and bounded transport/subscription storage."""
@@ -945,13 +955,7 @@ class Limits:
             name = descriptor.name
             value = getattr(self, name)
             if name.endswith("timeout"):
-                if (
-                    isinstance(value, bool)
-                    or not isinstance(value, (int, float))
-                    or not math.isfinite(value)
-                    or value <= 0
-                ):
-                    raise ValueError(f"{name} must be a positive finite number")
+                _validate_timeout(value, name)
             elif (
                 isinstance(value, bool)
                 or not isinstance(value, int)

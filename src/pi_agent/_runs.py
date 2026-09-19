@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import math
 import time
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Self
@@ -20,7 +19,7 @@ from .errors import (
     PiRunStartTimeout,
     PiTimeoutError,
 )
-from .types import Event, ImageContent, RunResult
+from .types import Event, ImageContent, RunResult, _validate_timeout
 
 if TYPE_CHECKING:
     from .client import AsyncPiClient, Timeout
@@ -43,10 +42,8 @@ class RunStream:
         timeout: float | None,
         command_timeout: Timeout,
     ) -> None:
-        if timeout is not None and (
-            isinstance(timeout, bool) or not math.isfinite(timeout) or timeout <= 0
-        ):
-            raise ValueError("run timeout must be a positive finite number or None")
+        if timeout is not None:
+            _validate_timeout(timeout, "run timeout")
         self._client = client
         self._message = message
         self._images = images

@@ -82,6 +82,47 @@ its queue count limit. Overflow discards the batch and remains explicit; ordinar
 terminal failures deliver the buffered prefix first. Closing a context releases
 its batch, and discarding unconsumed observation records marks coverage as lost.
 
+## Internal design assessment
+
+The retained public contract is `run()` returning `RunResult`, context-managed
+streaming with `result()`, and equivalent async calls. Command and observation
+helpers remain available. The following decisions address
+[#50](https://github.com/cheenulabs/pi-agent-python-sdk/issues/50); fewer internal
+fields alone would not make that contract simpler or safer.
+
+| Mechanism | Decision | Correctness purpose and caller cost |
+| --- | --- | --- |
+| `_owner` and conflicting-command gate | Keep | Prevent overlapping results and session/model changes during a run. Callers wait for completion; reads, steering, and cancellation remain available. |
+| `_unowned_submission` | Keep | An idle state or ACK cannot rule out delayed extension work. After low-level submission, use a fresh client for results; repeated protocol helpers remain supported. |
+| Run preflight and final state reads | Keep | Reject existing streaming/compaction/queued input; capture identity after extension session changes. Two extra reads per successful run, included in its overall deadline. |
+| Cached `session` snapshot | Keep | Supports existing session/result metadata. Session mutations invalidate it; an explicit `get_state()` refreshes it without hidden mutation-time queries. |
+| Separate ACK, start, and settlement state | Keep | Events can precede ACK, and rejection can follow settlement. Streaming can begin early, but success requires checked ACK and settlement. |
+| Run versus collection cleanup | Keep distinct | Stream exit cancels owned work or closes uncertain work; cancelling an observation helper only stops local observation. Combining them would change caller control. |
+| Bounded result and event storage | Keep distinct | `run()` retains finalized messages without buffering progress; streaming and collectors have separate budgets. Callers get explicit overflow instead of partial success. |
+| Async implementation and blocking facade | Keep | Share protocol/result behavior; blocking iteration and interruption still need thread coordination. No additional public wrapper. |
+| Positive finite deadline checks | Simplify | One private validator serves limits, commands, runs, and collectors. Invalid types and unrepresentable integers raise `ValueError`; defaults and `None` policies stay with each caller. |
+| Repeated deadline predicates | Remove | Replace four copies of the same policy with that validator; add public async/blocking regressions proving invalid deadlines leave the client usable. |
+
+The existing regressions exercise these boundaries in `test_client.py`,
+`test_preack_runs.py`, `test_collections.py`, and isolated Pi integration,
+including delayed extension input, pre-ACK settlement, retries, follow-ups,
+empty/error results, session changes, and cleanup. `test_deadline_validation.py`
+covers the shared validation change. The [compatibility contract](compatibility.md#typescript-behavior-contract)
+records the command/event comparison and remaining intentional differences.
+
+Current examples already use completed results, streaming, session snapshots,
+steering, and independent observations. The
+[Cheenulabs smoke caller](https://github.com/cheenulabs/cheenulabs/blob/065f144601903266823eb39e9f591ca6f8ab13f7/pi-agent/tests/smoke_rpc.py)
+likewise reads text, usage, elapsed time, and session identity across sequential
+calls. Its existing `PiRpcSession.prompt()` waits for results, whereas this SDK's
+`prompt()` only acknowledges input: ordinary result callers must use `run()`.
+Its [extension tests](https://github.com/cheenulabs/cheenulabs/blob/065f144601903266823eb39e9f591ca6f8ab13f7/pi-agent/tests/test_rpc.py)
+also synthesize results for handled goal commands. Those application rules,
+capture formats, and tracing stay in Cheenulabs; they are not SDK result semantics.
+Adoption remains separate work under
+[#41](https://github.com/cheenulabs/pi-agent-python-sdk/issues/41), using this
+package directly rather than adding an SDK adapter.
+
 ## Module layout
 
 The Python implementation keeps process I/O separate from conversation behavior:
