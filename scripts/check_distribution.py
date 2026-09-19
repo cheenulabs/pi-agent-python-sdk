@@ -158,7 +158,8 @@ def main() -> None:
             "import asyncio,sys\n"
             "import pi_agent\n"
             "from pathlib import Path\n"
-            "assert Path(pi_agent.__file__).resolve().is_relative_to(Path(sys.prefix))\n"
+            # Windows temporary directories may use an 8.3 alias in sys.prefix.
+            "assert Path(pi_agent.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())\n"
             "assert Path(pi_agent.__file__).with_name('py.typed').is_file()\n"
             "from importlib.metadata import version\n"
             f"assert version('pi-agent-python-sdk') == {version!r}\n"
