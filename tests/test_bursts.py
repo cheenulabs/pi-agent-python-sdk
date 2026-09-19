@@ -4,6 +4,7 @@ import asyncio
 import concurrent.futures
 import sys
 import threading
+from collections import deque
 from pathlib import Path
 
 import pytest
@@ -174,3 +175,49 @@ def test_sync_overflowed_stream_discards_batch_and_closes_cleanly():
             next(stream)
         assert not client.busy
         assert client.run("normal").text == "answer"
+
+
+@pytest.mark.parametrize("kind", ["events", "observe", "stream"])
+def test_sync_overflow_racing_context_close_keeps_original_error(monkeypatch, kind):
+    with PiClient(executable=FAKE) as client:
+        subscription = (
+            client.stream("paused")
+            if kind == "stream"
+            else client.observe(stderr=False, rpc=True)
+            if kind == "observe"
+            else client.events()
+        )
+        with subscription as records:
+            client.request("get_state", emit=[{"type": "future"}] * 100)
+            next(records)
+            client.request("get_state", emit=[{"type": "future"}] * 1000)
+            clearing_batch = threading.Event()
+            discarded = threading.Event()
+            original_close = client._close_context
+
+            def close_context(close):
+                original_close(close)
+                discarded.set()
+
+            class PausingBatch(deque):
+                def clear(self):
+                    # Close clears the async error before waiting for the reader
+                    # lock. Pause batch disposal to exercise that interleaving.
+                    clearing_batch.set()
+                    assert discarded.wait(5)
+                    super().clear()
+
+            monkeypatch.setattr(client, "_close_context", close_context)
+            records._batch = PausingBatch(records._batch)
+
+            def close_after_overflow():
+                assert clearing_batch.wait(5)
+                records.close()
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                closing = executor.submit(close_after_overflow)
+                with pytest.raises(PiSubscriptionOverflow):
+                    next(records)
+                closing.result(5)
+            with pytest.raises(StopIteration):
+                next(records)

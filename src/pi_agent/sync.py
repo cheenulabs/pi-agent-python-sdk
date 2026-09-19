@@ -613,11 +613,10 @@ class _SyncSubscription(Generic[T]):
         if not self._reading.acquire(blocking=False):
             raise RuntimeError("Only one reader may iterate an event subscription")
         try:
-            if self._subscription is not None and isinstance(
-                self._subscription._error, PiSubscriptionOverflow
-            ):
+            error = self._subscription._error if self._subscription is not None else None
+            if isinstance(error, PiSubscriptionOverflow):
                 self._batch.clear()
-                raise self._subscription._error
+                raise error
             if not self._batch:
                 self._batch.extend(self._next_batch())
             return self._batch.popleft()
@@ -762,11 +761,10 @@ class SyncRunStream:
             return await self._stream._next_batch()
 
         try:
-            if self._stream is not None and isinstance(
-                self._stream._events._error, PiSubscriptionOverflow
-            ):
+            error = self._stream._events._error if self._stream is not None else None
+            if isinstance(error, PiSubscriptionOverflow):
                 self._batch.clear()
-                raise self._stream._events._error
+                raise error
             if not self._batch:
                 self._batch.extend(self._call_owned(next_events))
             return self._batch.popleft()
