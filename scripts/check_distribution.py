@@ -104,6 +104,11 @@ def download_index_wheel(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--index", choices=INDEX_HOSTS, help="Verify a published index copy")
+    parser.add_argument(
+        "--parity",
+        action="store_true",
+        help="Compare the installed wheel with TypeScript; requires locked tests/pi installation",
+    )
     args = parser.parse_args()
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
     version = project["version"]
@@ -153,7 +158,8 @@ def main() -> None:
             "import asyncio,sys\n"
             "import pi_agent\n"
             "from pathlib import Path\n"
-            "assert Path(pi_agent.__file__).resolve().is_relative_to(Path(sys.prefix))\n"
+            # Windows temporary directories may use an 8.3 alias in sys.prefix.
+            "assert Path(pi_agent.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())\n"
             "assert Path(pi_agent.__file__).with_name('py.typed').is_file()\n"
             "from importlib.metadata import version\n"
             f"assert version('pi-agent-python-sdk') == {version!r}\n"
@@ -165,6 +171,7 @@ def main() -> None:
             "        streamed = list(stream)\n"
             "        assert stream.result().text == 'answer'\n"
             "        assert streamed[-1].type == 'agent_settled'\n"
+            "    assert pi.run('empty').text == ''\n"
             "    seen = []\n"
             "    remove = pi.on_event(seen.append)\n"
             "    events = pi.prompt_and_wait('burst:1000:last')\n"
@@ -185,6 +192,7 @@ def main() -> None:
             "            streamed = [event async for event in stream]\n"
             "            assert (await stream.result()).text == 'answer'\n"
             "            assert streamed[-1].type == 'agent_settled'\n"
+            "        assert (await pi.run('empty')).text == ''\n"
             "        seen = []\n"
             "        remove = pi.on_event(seen.append)\n"
             "        events = await pi.prompt_and_wait('burst:1000:last')\n"
@@ -199,7 +207,18 @@ def main() -> None:
             "        assert await pi.new_session() == {'cancelled':False}\n"
             "asyncio.run(main())\n"
         )
-        subprocess.run([str(python), "-I", "-c", probe], cwd=directory, check=True, timeout=30)
+        if args.parity:
+            # Reuse the maintained checker, keeping imports in this wheel's isolated interpreter.
+            probe += (
+                "import runpy\n"
+                f"runpy.run_path({str(ROOT / 'scripts/check_parity.py')!r}, run_name='__main__')\n"
+            )
+        subprocess.run(
+            [str(python), "-I", "-c", probe],
+            cwd=directory,
+            check=True,
+            timeout=90 if args.parity else 30,
+        )
     source = args.index or "local artifacts"
     print(f"{source}: wheel/sdist checks and external sync/async installed-wheel runs passed")
 

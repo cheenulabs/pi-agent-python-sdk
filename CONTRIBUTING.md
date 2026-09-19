@@ -38,7 +38,7 @@ uv run python scripts/check_parity.py
 uv run python scripts/check_upstream.py
 uv run python -m build
 uv run twine check dist/*
-uv run python scripts/check_distribution.py
+uv run python scripts/check_distribution.py --parity
 ```
 
 Without Node/Pi, local unit work may skip offline integration. CI sets
