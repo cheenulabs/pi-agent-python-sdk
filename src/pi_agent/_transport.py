@@ -60,6 +60,7 @@ class Transport:
         self._pending: dict[str, _Pending] = {}
         self._next_id = 0
         self._write_lock = asyncio.Lock()
+        self._dispatch_count = 0
         self._reader: asyncio.Task[None] | None = None
         self._stderr_reader: asyncio.Task[None] | None = None
         self._exit_monitor: asyncio.Task[None] | None = None
@@ -203,7 +204,7 @@ class Transport:
         buffer = self._stdout_buffer
         try:
             while chunk := await self._process.stdout.read(65536):
-                self._feed_stdout(chunk, route=True)
+                await self._feed_stdout(chunk, route=True)
             self._stdout_eof = True
             if buffer:
                 data = bytes(buffer)
@@ -216,7 +217,7 @@ class Transport:
         except Exception as exc:
             self._fail(exc)
 
-    def _feed_stdout(self, chunk: bytes, *, route: bool) -> None:
+    async def _feed_stdout(self, chunk: bytes, *, route: bool) -> None:
         if chunk and self._on_output is not None:
             self._on_output("stdout", chunk)
         buffer = self._stdout_buffer
@@ -230,6 +231,19 @@ class Transport:
                     self._discarding_record = False
                 else:
                     self._record(data, route=route and self._failure is None)
+                # Commit framing before yielding: close may hand this buffer to
+                # the final drain while this reader is suspended.
+                del buffer[:offset]
+                offset = 0
+                self._dispatch_count += 1
+                # A zero-delay yield wakes async readers but can starve the
+                # blocking facade's caller thread. Periodically let the loop
+                # actually wait, while continuing to service responses and UI.
+                if self._dispatch_count == 64:
+                    self._dispatch_count = 0
+                    await asyncio.sleep(0.001)
+                else:
+                    await asyncio.sleep(0)
         finally:
             # Remove the failing line too; cleanup must never observe it twice.
             if offset:
@@ -243,9 +257,9 @@ class Transport:
 
     async def _drain_stdout(self) -> None:
         assert self._process is not None and self._process.stdout is not None
-        self._feed_stdout(b"", route=False)
+        await self._feed_stdout(b"", route=False)
         while chunk := await self._process.stdout.read(65536):
-            self._feed_stdout(chunk, route=False)
+            await self._feed_stdout(chunk, route=False)
         self._stdout_eof = True
         if self._stdout_buffer and not self._discarding_record:
             self._record(bytes(self._stdout_buffer), route=False)
@@ -254,12 +268,21 @@ class Transport:
     async def _monitor_exit(self) -> None:
         assert self._process is not None
         await _wait_for_exit(self._process)
-        # Let already-ready stdout callbacks run before declaring requests lost.
-        # A descendant may retain the pipe, so EOF cannot be our exit signal.
-        await asyncio.sleep(0)
+        # The reader owns framing, including buffered records and the final
+        # unterminated line. A descendant can retain the pipe after Pi exits,
+        # so allow a bounded drain rather than waiting indefinitely for EOF.
+        if self._reader is not None:
+            await asyncio.wait({self._reader}, timeout=self._limits.cleanup_timeout)
         if self._failure is None:
+            # Inherited pipes may never produce EOF. Stop the reader before
+            # interpreting the remaining buffer as Pi's final record.
+            if self._reader is not None and not self._reader.done():
+                self._reader.cancel()
+                await asyncio.gather(self._reader, return_exceptions=True)
+            if self._failure is not None:
+                return
             try:
-                if self._stdout_buffer:
+                if self._stdout_buffer and b"\n" not in self._stdout_buffer:
                     data = bytes(self._stdout_buffer)
                     self._stdout_buffer.clear()
                     self._record(data)

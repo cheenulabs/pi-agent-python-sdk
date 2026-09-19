@@ -908,7 +908,9 @@ class AsyncPiClient:
         command_timeout: Timeout = DEFAULT_TIMEOUT,
     ) -> RunResult:
         """Submit a prompt and wait through retries/continuations until agent_settled."""
-        async with self.stream(
+        stream = self.stream(
             message, images=images, timeout=timeout, command_timeout=command_timeout
-        ) as stream:
+        )
+        stream._retain_events = False
+        async with stream:
             return await stream.result()

@@ -63,6 +63,10 @@ close calls are safe. Use `with` / `async with` for lifecycle management.
 `stream()` and `events()` return their context objects directly, even on the async
 client: use `async with pi.stream(...)`, without awaiting its construction.
 
+`run()` does not buffer progress events; finalized-result limits still apply.
+See [output bursts and backpressure](rpc.md#output-bursts-and-backpressure) for
+queue bounds, blocking iterator batches, and dispatch scheduling costs.
+
 Within a stream context, iterate and then call `result()`, or call `result()`
 alone to drain. Await it for async streams. An active iterator and a simultaneous
 result drain are mutually exclusive. Contexts are single-use.

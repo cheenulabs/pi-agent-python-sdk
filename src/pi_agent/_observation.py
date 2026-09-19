@@ -67,7 +67,7 @@ class ProcessObservation(_Subscription[ProcessOutput]):
             )
         super()._finish(error)
 
-    def _discard(self) -> None:
-        if self._records:
+    def _discard(self, *, buffered: bool = False) -> None:
+        if self._records or buffered:
             self._status = replace(self._status, complete=False, lost=True)
         super()._discard()

@@ -52,13 +52,17 @@ async def test_unowned_submission_permanently_prevents_owned_run(client, raw):
 @pytest.mark.parametrize(
     "limits", [Limits(result_message_count=2), Limits(result_message_bytes=500)]
 )
-async def test_result_retention_is_bounded_even_with_fast_event_consumer(limits):
+@pytest.mark.parametrize("streaming", [False, True])
+async def test_result_retention_is_bounded_even_with_fast_event_consumer(limits, streaming):
     async with AsyncPiClient(executable=[sys.executable, str(FAKE)], limits=limits) as pi:
         with pytest.raises(PiResultOverflow):
-            async with pi.stream("messages:20") as stream:
-                async for _ in stream:
-                    pass
-                await stream.result()
+            if streaming:
+                async with pi.stream("messages:20") as stream:
+                    async for _ in stream:
+                        pass
+                    await stream.result()
+            else:
+                await pi.run("messages:20")
         assert not pi.busy
         assert (await pi.run("normal")).text == "answer"
 
@@ -283,7 +287,10 @@ async def test_owned_stream_overflow_is_explicit_and_cleans_up():
         executable=[sys.executable, str(FAKE)], limits=Limits(event_queue_size=2)
     ) as pi:
         with pytest.raises(PiSubscriptionOverflow):
-            await pi.run("flood")
+            async with pi.stream("burst:1000:first") as stream:
+                # State response is a barrier after the unconsumed burst.
+                await pi.get_state()
+                await anext(stream)
         assert not pi.busy
 
 

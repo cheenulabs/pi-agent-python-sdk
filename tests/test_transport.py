@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -362,3 +363,43 @@ async def test_child_exit_is_terminal_even_when_descendant_inherits_pipes(
         async with asyncio.timeout(5):
             while not finished.exists():  # noqa: ASYNC110 - child filesystem coordination
                 await asyncio.sleep(0.01)
+
+
+@pytest.mark.parametrize("close_early", [False, True])
+async def test_burst_exit_routes_each_record_once_before_unterminated_response(close_early):
+    events = []
+    observed = []
+    failures = []
+    first_event = asyncio.Event()
+
+    def receive(event):
+        events.append(event)
+        first_event.set()
+
+    transport = Transport(
+        limits=Limits(),
+        on_event=receive,
+        on_failure=failures.append,
+        on_output=lambda source, data: observed.append((source, data)),
+    )
+    await transport.start([sys.executable, FAKE])
+    try:
+        pending = asyncio.create_task(transport.request("burst_exit"))
+        if close_early:
+            await asyncio.wait_for(first_event.wait(), 5)
+            await transport.aclose()
+            with pytest.raises(PiProcessError):
+                await pending
+        else:
+            assert (await pending)["success"]
+    finally:
+        await transport.aclose()
+    assert [event["sequence"] for event in events] == list(range(len(events)))
+    if not close_early:
+        assert len(events) == 5000
+    objects = [data for source, data in observed if source == "rpc"]
+    assert len(objects) == 5001
+    assert [event["sequence"] for event in objects[:-1]] == list(range(5000))
+    assert objects[-1]["command"] == "burst_exit"
+    raw = b"".join(data for source, data in observed if source == "stdout")
+    assert [json.loads(line) for line in raw.splitlines()] == objects

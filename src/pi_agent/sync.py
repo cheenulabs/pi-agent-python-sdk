@@ -10,6 +10,7 @@ import asyncio
 import concurrent.futures
 import os
 import threading
+from collections import deque
 from collections.abc import Callable, Coroutine, Mapping, Sequence
 from types import TracebackType
 from typing import Any, Generic, Self, TypeVar, cast
@@ -18,7 +19,7 @@ from ._events import _Subscription
 from ._observation import ObservationStatus, ProcessObservation, ProcessOutput
 from ._runs import RunStream
 from .client import DEFAULT_TIMEOUT, IN_SYNC_UI, AsyncPiClient, Timeout, UIHandler
-from .errors import PiProcessError
+from .errors import PiProcessError, PiSubscriptionOverflow
 from .types import (
     AcceptanceReceipt,
     AgentMessage,
@@ -581,6 +582,8 @@ class _SyncSubscription(Generic[T]):
         self._subscription: _Subscription[T] | None = None
         self._entered = False
         self._closed = False
+        self._batch: deque[T] = deque()
+        self._reading = threading.RLock()
 
     def __enter__(self) -> Self:
         async def enter() -> None:
@@ -607,11 +610,24 @@ class _SyncSubscription(Generic[T]):
 
     def __next__(self) -> T:
         self._client._check_caller()
+        if not self._reading.acquire(blocking=False):
+            raise RuntimeError("Only one reader may iterate an event subscription")
+        try:
+            error = self._subscription._error if self._subscription is not None else None
+            if isinstance(error, PiSubscriptionOverflow):
+                self._batch.clear()
+                raise error
+            if not self._batch:
+                self._batch.extend(self._next_batch())
+            return self._batch.popleft()
+        finally:
+            self._reading.release()
 
-        async def next_event() -> T:
+    def _next_batch(self) -> list[T]:
+        async def next_event() -> list[T]:
             if self._subscription is None:
                 raise RuntimeError("Enter the event subscription context before iterating")
-            return await self._subscription.__anext__()
+            return await self._subscription._next_batch()
 
         try:
             if self._subscription is None:
@@ -623,7 +639,7 @@ class _SyncSubscription(Generic[T]):
                 with self._client._lock:
                     event = self._subscription._next_nowait()
                     assert event is not None
-                    return event
+                    return [event]
             try:
                 return self._client._call(next_event)
             except PiProcessError:
@@ -636,7 +652,7 @@ class _SyncSubscription(Generic[T]):
                 with self._client._lock:
                     event = self._subscription._next_nowait()
                     assert event is not None
-                    return event
+                    return [event]
         except StopAsyncIteration:
             raise StopIteration from None
 
@@ -644,8 +660,10 @@ class _SyncSubscription(Generic[T]):
         self._closed = True
         if self._subscription is not None:
             self._client._close_context(self._subscription.aclose)
-            if self._client._closed:
-                self._subscription._discard()
+        with self._reading:
+            if self._subscription is not None:
+                self._subscription._discard(buffered=bool(self._batch))
+            self._batch.clear()
 
 
 class SyncEventSubscription(_SyncSubscription[Event]):
@@ -684,6 +702,8 @@ class SyncRunStream:
         self._stream: RunStream | None = None
         self._entered = False
         self._closed = False
+        self._batch: deque[Event] = deque()
+        self._reading = threading.RLock()
 
     def __enter__(self) -> Self:
         async def enter() -> None:
@@ -731,15 +751,27 @@ class SyncRunStream:
             raise
 
     def __next__(self) -> Event:
-        async def next_event() -> Event:
+        self._client._check_caller()
+        if not self._reading.acquire(blocking=False):
+            raise RuntimeError("Only one reader may iterate an event subscription")
+
+        async def next_events() -> list[Event]:
             if self._stream is None:
                 raise RuntimeError("Enter the stream context before iterating")
-            return await self._stream.__anext__()
+            return await self._stream._next_batch()
 
         try:
-            return self._call_owned(next_event)
+            error = self._stream._events._error if self._stream is not None else None
+            if isinstance(error, PiSubscriptionOverflow):
+                self._batch.clear()
+                raise error
+            if not self._batch:
+                self._batch.extend(self._call_owned(next_events))
+            return self._batch.popleft()
         except StopAsyncIteration:
             raise StopIteration from None
+        finally:
+            self._reading.release()
 
     def result(self) -> RunResult:
         async def result() -> RunResult:
@@ -753,3 +785,5 @@ class SyncRunStream:
         self._closed = True
         if self._stream is not None:
             self._client._close_context(self._stream.aclose)
+        with self._reading:
+            self._batch.clear()

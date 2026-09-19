@@ -57,8 +57,8 @@ class _Subscription(Generic[T]):
         """Unsubscribe and release queued payloads; safe to call repeatedly."""
         self._discard()
 
-    def _discard(self) -> None:
-        """Also used by the sync facade after its loop has stopped."""
+    def _discard(self, *, buffered: bool = False) -> None:
+        """Also used by the sync facade after closing the subscription."""
         self._finish()
         self._records.clear()
         self._bytes = 0
@@ -110,6 +110,16 @@ class _Subscription(Generic[T]):
                 await self._ready.wait()
         finally:
             self._reading = False
+
+    async def _next_batch(self) -> list[T]:
+        records = [await self.__anext__()]
+        # Transfer only records already buffered; never wait to fill a batch.
+        # This retains at most one queue's byte budget in the blocking facade.
+        while self._records and len(records) < 64:
+            record = self._next_nowait()
+            assert record is not None
+            records.append(record)
+        return records
 
     def _next_nowait(self) -> T | None:
         """Read on the owning loop, or after that loop has completely stopped."""

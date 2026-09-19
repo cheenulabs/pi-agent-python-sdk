@@ -56,6 +56,28 @@ still assigns request IDs and enforces ownership rules. `Event.raw` retains
 unknown event fields and types; retaining them does not certify compatibility
 with a newer Pi release.
 
+## Output bursts and backpressure
+
+`run()` collects finalized messages without buffering progress events. The
+independent result count and byte limits still apply. `stream()`, `events()`,
+and `observe()` retain bounded queues and raise `PiSubscriptionOverflow` when
+consumers fall behind; an observer's overflow does not abort unrelated RPC work.
+
+The reader yields between records and pauses for 1 ms after each 64 records to
+give both async consumers and the blocking caller thread execution time. This
+adds scheduling overhead (including roughly 16 ms per 1,000 records before OS
+timer overhead); it is not an unlimited-throughput or lossless-storage guarantee.
+Responses and extension UI tasks can run during these pauses. Consumers that
+perform slow work should move that work out of their iteration loop and choose
+explicit storage and capacity policies in their application.
+
+Blocking iterators transfer up to 64 already-buffered records per thread crossing,
+without waiting to fill a batch. Each iterator can retain that additional batch,
+bounded by both its configured queue byte limit and the smaller of 64 records or
+its queue count limit. Overflow discards the batch and remains explicit; ordinary
+terminal failures deliver the buffered prefix first. Closing a context releases
+its batch, and discarding unconsumed observation records marks coverage as lost.
+
 ## Module layout
 
 The Python implementation keeps process I/O separate from conversation behavior:
