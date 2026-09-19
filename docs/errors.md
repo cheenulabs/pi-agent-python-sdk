@@ -17,7 +17,7 @@ All library exceptions derive from `PiError` and are exported from the package.
 | `PiRunStartTimeout` | Accepted prompt produced no observed agent start before its deadline; derives from `PiTimeoutError` and closes Pi |
 | `PiBusyError` | Competing owned run, incompatible command, or simultaneous stream consumption modes |
 | `PiSubscriptionOverflow` | An event consumer exceeded its count or byte budget |
-| `PiResultOverflow` | An owned run exceeded its independent retained-message count or byte limit; owned cleanup runs |
+| `PiResultOverflow` | An owned run or settlement collection exceeded its independent retained count/byte limit; only owned runs perform owned cleanup |
 | `PiRunOwnershipError` | Prior low-level conversation submission prevents owned-run attribution; derives from `PiBusyError`, requires a fresh client |
 | `PiUIHandlerError` | UI handler failure or outstanding-handler budget exceeded; callback failures retain their cause |
 | `PiRunError` | Final assistant stopped with `error` or `aborted`; `.result` contains partial work |
@@ -25,7 +25,7 @@ All library exceptions derive from `PiError` and are exported from the package.
 
 Invalid constructor flags, invalid deadlines, or an outbound record above the
 configured size limit raise `ValueError`. Misusing single-use contexts or calling
-blocking methods from a UI callback raises `RuntimeError`. Application task
+blocking methods from a UI or event callback raises `RuntimeError`. Application task
 cancellation remains `asyncio.CancelledError`; synchronous Ctrl-C remains
 `KeyboardInterrupt` after cleanup.
 
@@ -44,6 +44,21 @@ Owned runs and the synchronous facade preserve the callback's original cause,
 including an existing nested cause. Internal cancellation used to stop an owned
 run does not replace it. Once the owner reports a UI failure, that same error is
 not reported again as a failure of an otherwise successful cleanup command.
+
+## Settlement helpers
+
+`collect_events()`, `wait_for_idle()`, and `prompt_and_wait()` cancel local waits
+on timeout, cancellation, or collection overflow. They do not abort Pi, clear
+queues, or close a healthy process. A standalone observation timeout has
+`uncertain=False` because the helper submitted no command; a prompt timeout may
+have submitted work and has `uncertain=True`. There is no automatic retry.
+Successful settlement does not override a later prompt rejection.
+`prompt_and_wait()` preserves UI handler error causes. Model failure remains in
+raw events and is not converted into `PiRunError`.
+
+Event listener exceptions go to asyncio's exception handler and delivery
+continues. Extension UI handlers retain their existing reply and failure rules.
+See [the helper contract](api.md#listeners-and-settlement-helpers).
 
 ## Partial results and stop reasons
 

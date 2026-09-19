@@ -48,10 +48,21 @@ def pi_options(tmp_path: Path) -> dict[str, Any]:
         ),
         encoding="utf-8",
     )
+    # Pi locates Git Bash through ProgramFiles before falling back to PATH.
     # Preserve executable lookup and Windows process requirements, never auth.
     env = {
         key: os.environ[key]
-        for key in ("PATH", "SystemRoot", "WINDIR", "COMSPEC", "PATHEXT", "TEMP", "TMP")
+        for key in (
+            "PATH",
+            "SystemRoot",
+            "WINDIR",
+            "COMSPEC",
+            "PATHEXT",
+            "TEMP",
+            "TMP",
+            "ProgramFiles",
+            "ProgramFiles(x86)",
+        )
         if key in os.environ
     }
     env.update(PI_CODING_AGENT_DIR=str(config), NO_COLOR="1")

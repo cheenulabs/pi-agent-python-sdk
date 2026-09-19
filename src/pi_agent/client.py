@@ -15,6 +15,7 @@ from enum import Enum
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Self, cast
 
+from ._collections import deadline, start_collection
 from ._events import EventSubscription
 from ._launch import check_version, executable_argv, validate_extra_args
 from ._observation import ObservationStatus, OutputSource, ProcessObservation, ProcessOutput
@@ -162,6 +163,7 @@ class AsyncPiClient:
         self._allow_unknown_version = allow_unknown_version
         self._transport: Transport | None = None
         self._subscriptions: set[EventSubscription] = set()
+        self._listeners: dict[object, Callable[[Event], None]] = {}
         self._observations: set[ProcessObservation] = set()
         self._process_started_at_ns: int | None = None
         self._ui_tasks: set[asyncio.Task[None]] = set()
@@ -310,6 +312,99 @@ class AsyncPiClient:
             await asyncio.gather(*tasks, return_exceptions=True)
         self._close_initiator = None
 
+    def on_event(self, listener: Callable[[Event], None]) -> Callable[[], None]:
+        """Register a short synchronous callback on this loop; return unsubscribe.
+
+        Registration may precede start(). Unsubscribe is idempotent and may be
+        called during delivery; removal before a listener's turn skips it.
+        Listener exceptions go to the loop exception handler, not other listeners.
+        """
+        self._check_loop()
+        if self._closed or self._terminal_error is not None:
+            raise PiProcessError("Cannot listen to a closed or failed client")
+        if (
+            not callable(listener)
+            or inspect.iscoroutinefunction(listener)
+            or inspect.iscoroutinefunction(cast(Any, listener).__call__)
+        ):
+            raise TypeError("Event listeners must be synchronous callables")
+        key = object()
+        self._listeners[key] = listener
+
+        def unsubscribe() -> None:
+            self._check_loop()
+            self._listeners.pop(key, None)
+
+        return unsubscribe
+
+    def collect_events(self, *, timeout: float | None = 60.0) -> asyncio.Task[list[Event]]:
+        """Register immediately; return a cancellable task collecting through settlement.
+
+        Events are session-wide, with separate collection count/byte limits.
+        Awaiting raises PiTimeoutError on timeout, PiSubscriptionOverflow on
+        backlog overflow, or PiResultOverflow on retained-history overflow.
+        Terminal process/protocol failures propagate. Timeout or cancellation
+        stops local observation without aborting Pi.
+        """
+        self._check_loop()
+        return cast(
+            "asyncio.Task[list[Event]]",
+            start_collection(self.events(), self.limits, timeout=timeout, retain=True),
+        )
+
+    def wait_for_idle(self, *, timeout: float | None = 60.0) -> asyncio.Task[None]:
+        """Register immediately for the next settlement, without retaining events.
+
+        This does not query whether Pi is idle already; use get_state() for that.
+        Awaiting raises PiTimeoutError on timeout or PiSubscriptionOverflow on
+        backlog overflow. Terminal process/protocol failures propagate. Timeout
+        or cancellation stops local observation without aborting Pi.
+        """
+        self._check_loop()
+        return cast(
+            "asyncio.Task[None]",
+            start_collection(self.events(), self.limits, timeout=timeout, retain=False),
+        )
+
+    async def prompt_and_wait(
+        self,
+        message: str,
+        *,
+        images: list[ImageContent] | None = None,
+        timeout: float | None = 60.0,
+        command_timeout: Timeout = DEFAULT_TIMEOUT,
+    ) -> list[Event]:
+        """Collect before sending; require successful acknowledgement and settlement.
+
+        This observes session events, not a correlated or owned run. Model stop
+        reasons remain events. Failure cancels local waits without aborting Pi.
+        """
+        self._check_loop()
+        timer = asyncio.timeout_at(deadline(timeout))
+        collection = self.collect_events(timeout=None)
+        prompt = asyncio.create_task(
+            self.prompt(message, images=images, timeout=command_timeout), name="pi-prompt"
+        )
+        try:
+            async with timer:
+                await asyncio.gather(prompt, collection)
+                return collection.result()
+        except TimeoutError as exc:
+            if not timer.expired():
+                raise
+            raise PiTimeoutError(
+                "Prompt collection deadline elapsed", command="prompt", uncertain=True
+            ) from exc
+        except PiUIHandlerError as exc:
+            if self._ui_error is exc:
+                self._ui_error = None
+            raise
+        finally:
+            for task in (prompt, collection):
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(prompt, collection, return_exceptions=True)
+
     def events(self) -> EventSubscription:
         """Subscribe on context entry to future events, including extension UI/errors."""
         return EventSubscription(self.limits, self._register, self._subscriptions.discard)
@@ -397,11 +492,25 @@ class AsyncPiClient:
         event = Event(raw)
         # Validate a recognized text update without restricting future variants.
         _ = event.text_delta
-        size = len(json.dumps(raw, ensure_ascii=False).encode("utf-8"))
+        encoded = json.dumps(raw)
+        size = len(encoded.encode("utf-8"))
         for subscription in tuple(self._subscriptions):
             subscription._put(event, size)
         if self._owner is not None:
             self._owner._on_event(event, size)
+        for key, listener in tuple(self._listeners.items()):
+            if key not in self._listeners:
+                continue
+            try:
+                # Listener mutation cannot change routing or another consumer's event.
+                result = cast(Callable[[Event], object], listener)(Event(json.loads(encoded)))
+                if inspect.iscoroutine(result):
+                    result.close()
+                    raise TypeError("Event listeners must be synchronous")
+            except (Exception, asyncio.CancelledError) as exc:
+                asyncio.get_running_loop().call_exception_handler(
+                    {"message": "Pi event listener failed", "exception": exc}
+                )
         if event.type == "session_info_changed":
             if "name" in raw and not isinstance(raw["name"], str):
                 raise PiProtocolError("session_info_changed requires a string name when present")
@@ -440,6 +549,7 @@ class AsyncPiClient:
             self._terminal_error = error
         error = self._terminal_error
         self._session = SessionInfo()
+        self._listeners.clear()
         for task in tuple(self._ui_tasks):
             if task is not asyncio.current_task() and task is not self._close_initiator:
                 task.cancel()

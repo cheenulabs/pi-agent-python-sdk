@@ -64,7 +64,7 @@ class PiSubscriptionOverflow(PiError):
 
 
 class PiResultOverflow(PiError):
-    """An owned run exceeded its independent retained-result capacity."""
+    """An owned run or event collection exceeded its retained-result capacity."""
 
 
 class PiRunOwnershipError(PiBusyError):

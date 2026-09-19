@@ -342,7 +342,7 @@ def test_explicit_methods_preserve_async_signatures_and_forward_all_arguments(mo
         for name, value in vars(AsyncPiClient).items()
         if inspect.iscoroutinefunction(value) and not name.startswith("_")
     } - {"start", "aclose"}
-    assert len(public) == 35  # 33 commands plus raw request and run.
+    assert len(public) == 36  # 33 commands plus raw request, run, and prompt_and_wait.
     assert inspect.signature(PiClient.__init__) == inspect.signature(AsyncPiClient.__init__)
     seen = []
     marker = object()

@@ -254,6 +254,11 @@ def main():
                 emit(assistant())
                 emit({"type": "agent_settled"})
             reply(request)
+        elif command == "emit_escaped":
+            # A valid JSON escape may represent an unpaired UTF-16 surrogate.
+            print(json.dumps({"type": "future", "value": chr(0xD800)}), flush=True)
+            emit({"type": "agent_settled"})
+            reply(request)
         elif command == "emit":
             for record in request["records"]:
                 emit(record)

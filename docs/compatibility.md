@@ -113,3 +113,19 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for validation commands and the
 Automated latest-stable checks run in CI, not during package import or startup.
 The [maintenance guide](maintenance.md) describes upstream protocol review,
 and the [release checklist](releasing.md) records publication requirements.
+
+## TypeScript-style observation helpers
+
+The source branch adds `on_event`, `collect_events`, `wait_for_idle`, and
+`prompt_and_wait`, following the pinned TypeScript client's listener and
+settlement pattern. Python uses `Event` carriers with unchanged wire dictionaries
+at `.raw`, plus a blocking facade delegating to the async client. Collection is
+session-wide and does not infer prompt ownership. These additions are not yet
+in the published 0.1.0 release.
+
+Intentional differences remain: bounded retention and backlog, checked command
+failures, surfaced callback errors, single-use process lifecycle, and opt-in
+stderr forwarding/retention. The current owned-run interface and some scalar
+command result shapes remain to be simplified in a separate breaking PR under
+[#41](https://github.com/cheenulabs/pi-agent-python-sdk/issues/41); this additive
+step does not claim complete structural parity.

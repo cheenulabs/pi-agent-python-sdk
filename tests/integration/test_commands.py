@@ -120,7 +120,10 @@ async def test_history_entries_stats_and_compaction(pi_client: AsyncPiClient) ->
 
 async def test_bash_and_export(pi_client: AsyncPiClient, tmp_path: Path) -> None:
     async with pi_client.events() as events:
-        result = await pi_client.bash("echo synthetic-bash", exclude_from_context=True)
+        try:
+            result = await pi_client.bash("echo synthetic-bash", exclude_from_context=True)
+        except PiCommandError as exc:
+            pytest.fail(f"Pi rejected the synthetic bash command: {exc.error}")
         assert result["exitCode"] == 0 and result["output"].strip() == "synthetic-bash"
         async with asyncio.timeout(10):
             event = await anext(events)
