@@ -73,3 +73,14 @@ not promise immediate compatibility with an unseen upstream release.
 
 References: [Dependabot options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference),
 [scheduled workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+
+## Preserve the TypeScript comparison
+
+Run `uv run python scripts/check_parity.py` after the locked Pi test runtime is
+installed. The check verifies the embedded upstream source against the recorded
+baseline before comparing commands/results and event delivery. Update the small
+fixture and maintained [behavior contract](compatibility.md#typescript-behavior-contract)
+when an intentional protocol/interface change is approved. Preserve the existing
+failure, UI, output, and bounded-delivery regressions; do not change Python to
+reproduce upstream error-handling or listener-mutation bugs. Run the comparison
+again after the final owned-run removal and on the release candidate.

@@ -150,7 +150,8 @@ The timeout covers the whole helper call (60 seconds by default, `None` disables
 it). `command_timeout` separately bounds prompt acknowledgement. Timeout,
 cancellation, or collection overflow releases local observation only: no hidden
 `abort()`, `clear_queue()`, or process shutdown. Transport failure still follows
-normal process cleanup. Call those commands explicitly when desired.
+normal process cleanup; an interrupted stdin write can also close Pi to protect
+framing integrity. Call abort/clear/close explicitly when desired.
 
 `collect_events()` and `prompt_and_wait()` retain at most the configured
 `collection_event_count` and `collection_event_bytes`, including the settlement

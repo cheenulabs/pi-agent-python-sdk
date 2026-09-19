@@ -32,8 +32,9 @@ uv run pytest -m "not live"
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy
-uv run mypy --strict examples scripts/check_examples.py
+uv run mypy --strict examples scripts/check_examples.py scripts/check_parity.py
 uv run python scripts/check_examples.py
+uv run python scripts/check_parity.py
 uv run python scripts/check_upstream.py
 uv run python -m build
 uv run twine check dist/*

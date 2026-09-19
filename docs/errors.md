@@ -52,7 +52,10 @@ on timeout, cancellation, or collection overflow. They do not abort Pi, clear
 queues, or close a healthy process. A standalone observation timeout has
 `uncertain=False` because the helper submitted no command; a prompt timeout may
 have submitted work and has `uncertain=True`. There is no automatic retry.
-Successful settlement does not override a later prompt rejection.
+Successful settlement does not override a later prompt rejection. The helper
+deadline still applies while waiting for that acknowledgement. Cancellation
+after a completed write only abandons local waits; an interrupted or partially
+performed write can close Pi because transport delivery is uncertain.
 `prompt_and_wait()` preserves UI handler error causes. Model failure remains in
 raw events and is not converted into `PiRunError`.
 
