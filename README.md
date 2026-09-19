@@ -1,6 +1,6 @@
 # Pi Agent Python SDK
 
-[![PyPI](https://img.shields.io/pypi/v/pi-agent-python-sdk?style=flat-square)][pypi]
+[![PyPI](https://badge.fury.io/py/pi-agent-python-sdk.svg)][pypi]
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)][metadata]
 [![MIT license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)][license]
 
