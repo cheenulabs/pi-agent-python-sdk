@@ -567,3 +567,11 @@ historical versions or automatically bless new ones.
   final license/release settings before publication.
 - Source coverage does not prove full runtime correctness. Validate with
   fake-process tests, real-Pi offline integration, and opt-in model smoke tests.
+
+## Client behavior comparison
+
+The [maintained TS/Python contract](compatibility.md#typescript-behavior-contract)
+separates shared wire behavior from deliberate lifecycle, error, UI and output
+policies. `scripts/check_parity.py` compares the actual pinned TS implementation
+and both Python facades with a shared synthetic peer; it does not replace the
+real-Pi integration suite or certify provider-internal traces absent from RPC.

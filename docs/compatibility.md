@@ -131,3 +131,81 @@ hidden state queries. See the [unreleased migration](api.md#unreleased-command-m
 The owned-run interface remains to be removed in a separate breaking PR under
 [#41](https://github.com/cheenulabs/pi-agent-python-sdk/issues/41); this additive
 step does not claim complete structural parity.
+
+## TypeScript behavior contract
+
+The [pinned TS client](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-client.ts)
+is the comparison reference. All 33 command wrappers have Python equivalents;
+the [command table](api.md#all-33-rpc-commands) records wire arguments and results.
+Current source matches TS object results for thinking-level cycling and HTML
+export, and its void prompt result. Session mutation commands issue no implicit
+state refresh. These are unreleased changes, with migration described in the API
+reference. The legacy owned-run interface remains additional Python behavior
+until [#41](https://github.com/cheenulabs/pi-agent-python-sdk/issues/41) removes it.
+
+Normal event delivery preserves every emitted wire field, including thinking,
+tool results, usage, extension errors/UI, and unknown future fields. `text_delta`
+is a convenience accessor, not the complete event stream. Collection observes
+session-wide future events through `agent_settled`; neither client can attribute
+those events to a particular prompt or produce provider traces Pi did not emit.
+
+| Area | Deliberate Python behavior |
+| --- | --- |
+| Language interface | Snake-case names, keyword arguments, deadlines in seconds, async context managers, and a blocking facade over the same core |
+| Event carrier | `Event.raw` retains the wire dictionary; no second event representation or derived run result is added by collection |
+| Command options | `streaming_behavior` and `exclude_from_context` expose existing RPC fields absent from TS convenience methods |
+| Failed acknowledgement | All Python commands raise on `success=False`, including void methods; TS only checks methods that extract response data |
+| Listener failure/mutation | Failures reach the loop exception handler without skipping other listeners; payload copies and defined add/remove ordering prevent mutation from changing another listener's delivery |
+| Retention | Record bytes, subscription backlog, collected history and optional stderr retention are bounded; TS collection/stderr histories are unbounded |
+| Deadline | Python's helper deadline includes ACK plus settlement; TS's collector timer ends at settlement, even with ACK outstanding |
+| Long commands | `bash`, `compact`, `new_session`, `switch_session`, `fork`, `clone`, and `export_html` have no default Python response deadline; TS uses 30 seconds. Explicit Python deadlines and finite write limits remain available |
+| Cancellation/terminal failure | Observation cancellation does not abort submitted work after a completed write. Interrupted writes can still close Pi for transport integrity; terminal failures wake collectors |
+| Responses vs events | Late/duplicate response envelopes stay in `observe(rpc=True)` rather than agent listeners; TS dispatches unmatched responses to listeners |
+| Framing | Valid LF/CRLF, fragmented UTF-8, Unicode separators, and final complete records work. Python rejects malformed UTF-8/JSON/envelopes; raw stdout remains explicitly observable |
+| Lifecycle | Python checks version and readiness, reaps its child, and uses a fresh client for restart; TS uses a short startup delay and allows another start after stop |
+| Diagnostics | Explicit output observation and opt-in bounded stderr tail; TS automatically forwards and accumulates stderr and embeds it in errors |
+| Generic UI | Python provides handler replies and default dialog cancellation. TS delivers UI requests without a reply policy. Extensions and application behavior remain outside the SDK |
+
+Do not copy TS's mutable-listener-array bug: removing a collector during
+settlement dispatch can skip the next collector. Python intentionally lets
+independent collectors and idle waiters complete on the same settlement.
+The [TS dispatch/helpers](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-client.ts#L464)
+and [JSONL implementation](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/jsonl.ts)
+are the source for these distinctions.
+
+## Repeatable comparison and regression coverage
+
+After the locked development and `tests/pi` installations:
+
+```sh
+uv run python scripts/check_parity.py
+```
+
+This checks the installed Pi version and embedded TS source hashes against
+`compatibility.json`, then runs the actual TS client and both Python clients
+against the same synthetic subprocess. It compares 42 cases spanning all 33
+commands, including null cycles, omitted arguments, empty values, and false
+flags. A 35-record corpus covers all 25 declared session/extension event types,
+the nine serialized assistant update variants, and unknown metadata. Returned
+payloads, request sequences, event order, and both listeners must match.
+No client methods are patched, and no provider or live Pi configuration is used.
+The command cases exercise wire construction/results, not a real model's command
+semantics; isolated real-Pi integration supplies that complementary coverage.
+
+| Contract | Existing or focused coverage |
+| --- | --- |
+| Complete results, raw receipts, no hidden mutation requests | `tests/test_command_results.py`, `tests/integration/test_commands.py`, and installed-wheel checks |
+| Common TS commands and complete event corpus | `scripts/check_parity.py`, `tests/fixtures/rpc_parity.json`, shared peer under `tests/pi` |
+| Concurrent collectors, safe registration, delayed ACK deadline, listener behavior | `tests/test_collections.py` |
+| Finite 100/1,000/5,000-event delivery and ACK ordering | `tests/test_collections.py`, `tests/test_bursts.py`, `tests/test_preack_runs.py` |
+| Timeout/cancel, bounded writes, strict framing, response correlation, child cleanup | `tests/test_transport.py` |
+| Raw output, stderr, failed/late envelopes and completeness/loss | `tests/test_rpc_observation.py`, `tests/test_process_output.py`, `tests/test_terminal_events.py` |
+| Generic UI, causes, dialog deadlines | `tests/test_client.py`, `tests/test_ui_deadlines.py`, isolated integration |
+| Escaped surrogate send/receive, UI replies and encoded-byte limits | `tests/test_outbound_strings.py`, `tests/test_collections.py` |
+
+CI runs the comparison on the pinned runtime for each supported Python/OS row.
+Older-runtime compatibility rows, when present, use their integration tests
+rather than comparing an unreviewed TS implementation. Preserve this coverage
+when replacing the legacy run interface; rerun on the final breaking candidate
+and installed wheel. A green additive branch is not proof that the future
+migration or a published release is complete.

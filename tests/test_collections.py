@@ -329,3 +329,26 @@ async def test_escaped_unicode_survives_listeners_and_collection():
         finally:
             pending.cancel()
             await asyncio.gather(pending, return_exceptions=True)
+
+
+async def test_concurrent_collectors_and_idle_waiter_share_one_settlement():
+    async with AsyncPiClient(executable=FAKE) as pi:
+        first, second, idle = pi.collect_events(), pi.collect_events(), pi.wait_for_idle()
+        await pi.prompt("normal")
+        one, two, settled = await asyncio.gather(first, second, idle)
+        assert [e.raw for e in one] == [e.raw for e in two]
+        assert one[-1].type == "agent_settled" and settled is None
+
+
+async def test_prompt_overall_deadline_includes_ack_after_settlement():
+    async with AsyncPiClient(executable=FAKE) as pi, pi.events() as events:
+        pending = asyncio.create_task(pi.prompt_and_wait("preack-settled", timeout=0.5))
+        while (await anext(events)).type != "agent_settled":
+            pass
+        with pytest.raises(PiTimeoutError) as caught:
+            await pending
+        assert caught.value.command == "prompt" and caught.value.uncertain
+        assert pi.running
+        # Release the late response explicitly; no automatic abort/close occurred.
+        await pi.steer("ack")
+        assert (await pi.prompt_and_wait("normal"))[-1].type == "agent_settled"
