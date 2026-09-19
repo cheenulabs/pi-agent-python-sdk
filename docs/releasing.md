@@ -4,13 +4,13 @@ Local build validation is separate from a TestPyPI rehearsal, GitHub CI, and a
 public PyPI release. For each release, validate the reviewed commit and built artifacts before
 publication, then verify the copies downloaded from both indexes.
 
-## 0.2.0 candidate status
+## 0.2.0 release verification
 
-The 0.2.0 candidate is prepared for review; it has not been published. At
-preparation, PyPI and TestPyPI still publish 0.1.0. The README install command,
-metadata links, and release notes describe the proposed 0.2.0 release, whose tag
-will exist only after approval. Confirm publication from the index verification
-jobs before recording 0.2.0 as released or pinning it in a deployed consumer.
+The 0.2.0 metadata and release notes describe the reviewed release candidate.
+A source checkout or version number alone does not prove publication. Confirm
+the `v0.2.0` GitHub release and successful TestPyPI/PyPI verification jobs before
+recording 0.2.0 as released or pinning it in a deployed consumer. This keeps the
+same verification requirement before and after the approved publication.
 
 ## Approval and scope
 
