@@ -21,12 +21,12 @@ from ._runs import RunStream
 from .client import DEFAULT_TIMEOUT, IN_SYNC_UI, AsyncPiClient, Timeout, UIHandler
 from .errors import PiProcessError, PiSubscriptionOverflow
 from .types import (
-    AcceptanceReceipt,
     AgentMessage,
     BashResult,
     CompactionResult,
     EntriesResult,
     Event,
+    ExportHtmlResult,
     ForkMessage,
     ForkResult,
     ImageContent,
@@ -42,6 +42,7 @@ from .types import (
     SessionStats,
     SlashCommand,
     ThinkingLevel,
+    ThinkingLevelCycleResult,
     TreeResult,
 )
 
@@ -424,9 +425,12 @@ class PiClient:
         images: list[ImageContent] | None = None,
         streaming_behavior: str | None = None,
         timeout: Timeout = DEFAULT_TIMEOUT,
-    ) -> AcceptanceReceipt:
-        """Wait for acceptance only; handled commands may never start an agent run."""
-        return self._call(
+    ) -> None:
+        """Return None after checked acceptance; handled commands may never start a run.
+
+        Raises PiCommandError on rejection. Use request() for the raw envelope.
+        """
+        self._call(
             lambda: self._client.prompt(
                 message, images=images, streaming_behavior=streaming_behavior, timeout=timeout
             )
@@ -492,8 +496,10 @@ class PiClient:
         """Request a thinking level for the current model."""
         self._call(lambda: self._client.set_thinking_level(level, timeout=timeout))
 
-    def cycle_thinking_level(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> ThinkingLevel | None:
-        """Cycle the current thinking level, or return None when unavailable."""
+    def cycle_thinking_level(
+        self, *, timeout: Timeout = DEFAULT_TIMEOUT
+    ) -> ThinkingLevelCycleResult | None:
+        """Return the complete thinking-level result, or None when unavailable."""
         return self._call(lambda: self._client.cycle_thinking_level(timeout=timeout))
 
     def get_available_thinking_levels(
@@ -554,8 +560,8 @@ class PiClient:
 
     def export_html(
         self, *, output_path: str | None = None, timeout: Timeout = DEFAULT_TIMEOUT
-    ) -> str:
-        """Export the current session and return the path written by Pi."""
+    ) -> ExportHtmlResult:
+        """Return the full export result, including path and unknown metadata."""
         return self._call(
             lambda: self._client.export_html(output_path=output_path, timeout=timeout)
         )
@@ -593,7 +599,7 @@ class PiClient:
         return self._call(lambda: self._client.get_last_assistant_text(timeout=timeout))
 
     def set_session_name(self, name: str, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
-        """Set the session name and refresh cached identity from Pi."""
+        """Set the session name; query get_state() explicitly for updated identity."""
         self._call(lambda: self._client.set_session_name(name, timeout=timeout))
 
     def get_messages(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> list[AgentMessage]:

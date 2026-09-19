@@ -29,12 +29,12 @@ from .errors import (
     PiUIHandlerError,
 )
 from .types import (
-    AcceptanceReceipt,
     AgentMessage,
     BashResult,
     CompactionResult,
     EntriesResult,
     Event,
+    ExportHtmlResult,
     ExtensionUIRequest,
     ForkMessage,
     ForkResult,
@@ -51,6 +51,7 @@ from .types import (
     SessionStats,
     SlashCommand,
     ThinkingLevel,
+    ThinkingLevelCycleResult,
     TreeResult,
 )
 
@@ -708,11 +709,9 @@ class AsyncPiClient:
             if command == "get_state":
                 self._update_session(self._data(response))
             elif command in _SESSION_COMMANDS:
+                # A mutation's result must not depend on an extra state query.
+                # The legacy snapshot stays unknown until an explicit get_state().
                 self._session = SessionInfo()
-                state = await self._transport.request(
-                    "get_state", timeout=self.limits.command_timeout
-                )
-                self._update_session(self._data(state))
             return response
         except (PiTimeoutError, asyncio.CancelledError):
             if command in _SESSION_COMMANDS:
@@ -743,8 +742,11 @@ class AsyncPiClient:
         images: list[ImageContent] | None = None,
         streaming_behavior: str | None = None,
         timeout: Timeout = DEFAULT_TIMEOUT,
-    ) -> AcceptanceReceipt:
-        """Wait for acceptance only; handled commands may never start an agent run."""
+    ) -> None:
+        """Return None after checked acceptance; handled commands may never start a run.
+
+        Raises PiCommandError on rejection. Use request() for the raw envelope.
+        """
         fields: dict[str, Any] = {"message": message}
         if images is not None:
             fields["images"] = images
@@ -752,7 +754,7 @@ class AsyncPiClient:
             if streaming_behavior not in {"steer", "followUp"}:
                 raise ValueError("streaming_behavior must be steer or followUp")
             fields["streamingBehavior"] = streaming_behavior
-        return cast(AcceptanceReceipt, await self._request("prompt", fields, timeout=timeout))
+        await self._request("prompt", fields, timeout=timeout)
 
     async def steer(
         self,
@@ -837,15 +839,15 @@ class AsyncPiClient:
 
     async def cycle_thinking_level(
         self, *, timeout: Timeout = DEFAULT_TIMEOUT
-    ) -> ThinkingLevel | None:
-        """Cycle the current thinking level, or return None when unavailable."""
+    ) -> ThinkingLevelCycleResult | None:
+        """Return the complete thinking-level result, or None when unavailable."""
         response = await self._request("cycle_thinking_level", timeout=timeout)
         if response.get("data") is None:
             return None
-        value = self._data(response).get("level")
-        if not isinstance(value, str):
+        data = self._data(response)
+        if not isinstance(data.get("level"), str):
             raise PiProtocolError("cycle_thinking_level requires a string level")
-        return cast(ThinkingLevel, value)
+        return cast(ThinkingLevelCycleResult, data)
 
     async def get_available_thinking_levels(
         self, *, timeout: Timeout = DEFAULT_TIMEOUT
@@ -928,8 +930,8 @@ class AsyncPiClient:
 
     async def export_html(
         self, *, output_path: str | None = None, timeout: Timeout = DEFAULT_TIMEOUT
-    ) -> str:
-        """Export the current session and return the path written by Pi."""
+    ) -> ExportHtmlResult:
+        """Return the full export result, including path and unknown metadata."""
         data = await self._object(
             "export_html",
             {"outputPath": output_path} if output_path is not None else {},
@@ -937,7 +939,7 @@ class AsyncPiClient:
         )
         if not isinstance(data.get("path"), str):
             raise PiProtocolError("export_html requires a string path")
-        return cast(str, data["path"])
+        return cast(ExportHtmlResult, data)
 
     async def switch_session(
         self, session_path: str, *, timeout: Timeout = DEFAULT_TIMEOUT
@@ -983,7 +985,7 @@ class AsyncPiClient:
         return value
 
     async def set_session_name(self, name: str, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
-        """Set the session name and refresh cached identity from Pi."""
+        """Set the session name; query get_state() explicitly for updated identity."""
         await self._request("set_session_name", {"name": name}, timeout=timeout)
 
     async def get_messages(self, *, timeout: Timeout = DEFAULT_TIMEOUT) -> list[AgentMessage]:

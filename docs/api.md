@@ -179,7 +179,7 @@ bounded. See [errors and deadlines](errors.md#deadlines).
 
 | Method | Return | Meaning |
 |---|---|---|
-| `prompt(message, *, images=None, streaming_behavior=None)` | `AcceptanceReceipt` | Acknowledgement envelope with `id`, `command="prompt"`, and `success=True`; not proof of an agent start |
+| `prompt(message, *, images=None, streaming_behavior=None)` | `None` | Checked acknowledgement; not proof of an agent start; use `request("prompt", ...)` for the envelope |
 | `steer(message, *, images=None)` | `None` | Queue input for Pi's next steering opportunity |
 | `follow_up(message, *, images=None)` | `None` | Queue input after the current response |
 | `abort()` | `None` | Abort using Pi semantics; does not implicitly clear queued input |
@@ -200,7 +200,7 @@ not consumption.
 | `cycle_model()` | `ModelCycleResult` or `None` | Next model with `thinkingLevel` and `isScoped`; `None` when no cycle result exists |
 | `get_available_models()` | `list[Model]` | Available model metadata |
 | `set_thinking_level(level)` | `None` | Request a thinking level supported by Pi |
-| `cycle_thinking_level()` | `ThinkingLevel` or `None` | Next level, or no available cycle result |
+| `cycle_thinking_level()` | `ThinkingLevelCycleResult` or `None` | Full `{level: ...}` result with unknown fields, or no cycle result |
 | `get_available_thinking_levels()` | `list[ThinkingLevel]` | Levels available for the current model |
 | `compact(*, custom_instructions=None)` | `CompactionResult` | Summary, first kept entry ID, tokens before compaction, and any available estimates/usage/details |
 | `set_auto_compaction(enabled)` | `None` | Enable or disable Pi's automatic compaction |
@@ -224,13 +224,15 @@ compatibility fields and may contain headers, so do not assume it is safe to log
 | `get_entries(*, since=None)` | `EntriesResult` | `entries` after the optional referenced ID, plus nullable `leafId`; the referenced entry is excluded |
 | `get_tree()` | `TreeResult` | Recursive `tree` nodes and nullable `leafId` |
 | `get_last_assistant_text()` | `str` or `None` | Most recent usable assistant text in session history; absent/null text becomes `None` |
-| `set_session_name(name)` | `None` | Update the current name and refresh cached identity |
+| `set_session_name(name)` | `None` | Update the current name; query state explicitly afterward |
 | `get_messages()` | `list[AgentMessage]` | Current conversation messages |
 | `get_session_stats()` | `SessionStats` | Message/tool counts, token totals, cost, and optional context usage |
-| `export_html(*, output_path=None)` | `str` | Path of Pi's generated HTML export |
+| `export_html(*, output_path=None)` | `ExportHtmlResult` | Full `{path: ...}` result, preserving unknown fields |
 
-The client refreshes session identity after successful session mutations and
-before finalizing run results. `cancelled=True` is a normal return value; it is
+Session mutations send only the requested command. The legacy `session` snapshot
+is invalidated after a successful mutation (including an extension veto); call
+`get_state()` explicitly when updated identity is needed. Startup and the legacy
+owned-run driver still perform their own state reads. `cancelled=True` is a normal return value; it is
 not converted into an exception. In particular, a vetoed fork can omit `text`.
 An unknown `since` entry ID is rejected by Pi. `clone()` requires a selected leaf,
 and `set_session_name()` follows Pi's trimming and nonempty-name rules.
@@ -247,6 +249,25 @@ and `set_session_name()` follows Pi's trimming and nonempty-name rules.
 the originating request. `exclude_from_context=False` is transmitted explicitly;
 omitting it preserves Pi's default. `get_commands()` is discovery, not a promise
 that all terminal built-in commands are callable through RPC.
+
+## Unreleased command migration
+
+The source branch changes three convenience results from published 0.1.0:
+
+| Previous use | Updated use |
+| --- | --- |
+| `receipt = pi.prompt(text)` | `pi.prompt(text)` returns `None`; use `pi.request("prompt", message=text)` when the response ID/envelope is needed |
+| `level = pi.cycle_thinking_level()` | Read `result["level"]` when the returned result is not `None` |
+| `path = pi.export_html()` | Read `result["path"]`; other returned metadata stays available |
+| Read cached session identity immediately after a mutation | Explicitly call `pi.get_state()` and read its returned dictionary |
+
+Await the equivalent methods on `AsyncPiClient`. Command rejection still raises
+`PiCommandError`; a `None` prompt result means acknowledgement succeeded, not
+that Pi finished or even started an agent run. These breaking changes belong to
+[#41](https://github.com/cheenulabs/pi-agent-python-sdk/issues/41)'s final migration;
+they are not a new published release. The legacy owned-run interface remains
+until its separate removal. `AcceptanceReceipt` is removed; raw response access
+continues through `request()`.
 
 ## Events and wire types
 

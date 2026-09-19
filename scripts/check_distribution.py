@@ -148,6 +148,7 @@ def main() -> None:
         )
         # -I omits checkout paths and PYTHONPATH; the fake executable imports no package code.
         fake = str(ROOT / "tests/fake_client_pi.py")
+        contracts = str(ROOT / "tests/fake_contract_pi.py")
         probe = (
             "import asyncio,sys\n"
             "import pi_agent\n"
@@ -166,6 +167,13 @@ def main() -> None:
             "    remove()\n"
             "    assert len(events) == len(seen) == 1003\n"
             "    assert events[-1].type == 'agent_settled'\n"
+            f"contract_argv=[sys.executable,{json.dumps(contracts)}]\n"
+            "with PiClient(executable=contract_argv) as pi:\n"
+            "    assert pi.prompt('handled') is None\n"
+            "    assert pi.cycle_thinking_level()['futureMetadata'] == {'kept':[1,2]}\n"
+            "    assert pi.export_html()['path'] == '/synthetic/export.html'\n"
+            "    pi.request('configure', reject_state=True)\n"
+            "    assert pi.new_session() == {'cancelled':False}\n"
             "async def main():\n"
             "    async with AsyncPiClient(executable=argv) as pi:\n"
             "        assert (await pi.run('normal')).text == 'answer'\n"
@@ -175,6 +183,12 @@ def main() -> None:
             "        remove()\n"
             "        assert len(events) == len(seen) == 1003\n"
             "        assert events[-1].type == 'agent_settled'\n"
+            "    async with AsyncPiClient(executable=contract_argv) as pi:\n"
+            "        assert await pi.prompt('handled') is None\n"
+            "        assert (await pi.cycle_thinking_level())['futureMetadata'] == {'kept':[1,2]}\n"
+            "        assert (await pi.export_html())['path'] == '/synthetic/export.html'\n"
+            "        await pi.request('configure', reject_state=True)\n"
+            "        assert await pi.new_session() == {'cancelled':False}\n"
             "asyncio.run(main())\n"
         )
         subprocess.run([str(python), "-I", "-c", probe], cwd=directory, check=True, timeout=30)

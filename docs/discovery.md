@@ -52,13 +52,13 @@ Notation: `?` means the JSON property may be absent; `T|null` means explicit nul
 
 ## Complete command coverage
 
-Every row is first-release support. Response envelope: `{type:"response", id?:string, command:string, success:true, data?:…}`. Every command can instead produce `{type:"response", id?:string, command:string, success:false, error:string}`. “Absent” means no `data` key. AcceptanceReceipt is a typed mapping of the successful prompt envelope, including its assigned ID; it conveys no run disposition. Proposed Python methods return the data (or unwrap a single list/scalar as noted), raise on unsuccessful responses, and preserve raw responses through the raw-command escape hatch.
+Every row is first-release support. Response envelope: `{type:"response", id?:string, command:string, success:true, data?:…}`. Every command can instead produce `{type:"response", id?:string, command:string, success:false, error:string}`. “Absent” means no `data` key. The source-branch `prompt()` returns `None` after checked acknowledgement; `request("prompt", ...)` exposes the response envelope and assigned ID. Neither proves a run disposition. Python methods return data (or unwrap list/text fields as noted), raise on unsuccessful responses, and preserve raw responses through `request()`. The unreleased migration from 0.1.0 is recorded in the API reference.
 
 Authoritative [command declarations](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-types.ts#L20), [response declarations](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-types.ts#L108), and [runtime dispatch](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-mode.ts#L394).
 
 | Command | Arguments beyond type/id | Success `data` | Proposed Python method / return |
 |---|---|---|---|
-| prompt | message:string; images?:ImageContent[]; streamingBehavior?:"steer"/"followUp" | Absent | `prompt(message, *, images=None, streaming_behavior=None)` → AcceptanceReceipt |
+| prompt | message:string; images?:ImageContent[]; streamingBehavior?:"steer"/"followUp" | Absent | `prompt(message, *, images=None, streaming_behavior=None)` → None |
 | steer | message:string; images?:ImageContent[] | Absent | `steer(message, *, images=None)` → None |
 | follow_up | message:string; images?:ImageContent[] | Absent | `follow_up(message, *, images=None)` → None |
 | abort | None | Absent | `abort()` → None |
@@ -69,7 +69,7 @@ Authoritative [command declarations](https://github.com/earendil-works/pi/blob/d
 | cycle_model | None | {model:Model, thinkingLevel:ThinkingLevel, isScoped:boolean} or null | `cycle_model()` → ModelCycleResult or None |
 | get_available_models | None | {models:Model[]} | `get_available_models()` → list[Model] |
 | set_thinking_level | level:ThinkingLevel | Absent | `set_thinking_level(level)` → None |
-| cycle_thinking_level | None | {level:ThinkingLevel} or null | `cycle_thinking_level()` → ThinkingLevel or None |
+| cycle_thinking_level | None | {level:ThinkingLevel} or null | `cycle_thinking_level()` → ThinkingLevelCycleResult or None |
 | get_available_thinking_levels | None | {levels:ThinkingLevel[]} | `get_available_thinking_levels()` → list[ThinkingLevel] |
 | set_steering_mode | mode:QueueMode | Absent | `set_steering_mode(mode)` → None |
 | set_follow_up_mode | mode:QueueMode | Absent | `set_follow_up_mode(mode)` → None |
@@ -80,7 +80,7 @@ Authoritative [command declarations](https://github.com/earendil-works/pi/blob/d
 | bash | command:string; excludeFromContext?:boolean | BashResult | `bash(command, *, exclude_from_context=None)` → BashResult |
 | abort_bash | None | Absent | `abort_bash()` → None |
 | get_session_stats | None | SessionStats | `get_session_stats()` → SessionStats |
-| export_html | outputPath?:string | {path:string} | `export_html(*, output_path=None)` → str |
+| export_html | outputPath?:string | {path:string} | `export_html(*, output_path=None)` → ExportHtmlResult |
 | switch_session | sessionPath:string | {cancelled:boolean} | `switch_session(session_path)` → SessionChangeResult |
 | fork | entryId:string | {text?:string, cancelled:boolean}; declaration requires text, runtime omits it on veto | `fork(entry_id)` → ForkResult |
 | clone | None | {cancelled:boolean} | `clone()` → SessionChangeResult |
@@ -108,7 +108,7 @@ session-scoped, so a client cannot allocate them to concurrent prompts by ID.
 | prompt | May emit agent/turn/message/tool events, retries, compaction and eventual agent_settled; may only acknowledge handled input; may request UI before acknowledging |
 | steer, follow_up, clear_queue | queue_update when queue state changes; queued input participates in the session's later run events |
 | abort | May end retries/compaction/agent work; response waits for session idle; idle abort need not emit agent_settled |
-| new_session, switch_session, fork, clone | Rebind session; extensions can veto; response and refreshed get_state establish identity, not an assumed switch event |
+| new_session, switch_session, fork, clone | Rebind session; extensions can veto; response reports the outcome; an explicitly requested get_state establishes identity, not an assumed switch event |
 | set_model, cycle_model | May append model/thinking entries and emit thinking_level_changed; no public model_select RPC event |
 | set_thinking_level, cycle_thinking_level | thinking_level_changed when changed; persistence does not imply an entry_appended event |
 | set_session_name | session_info_changed when applied |

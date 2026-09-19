@@ -54,7 +54,8 @@ def test_persistent_loop_properties_and_clean_join():
         assert pi.session.session_id == "synthetic-session"
         assert pi.run("hello").text == "hello"
         pi.set_session_name("renamed")
-        assert pi.session.session_name == "renamed"
+        assert pi.session.session_id is None
+        assert pi.get_state()["sessionName"] == "renamed"
         assert pi.run("again").text == "again"
         assert pi._thread is loop_thread
         assert not pi.busy
@@ -165,7 +166,7 @@ def test_ui_callback_runs_outside_loop_and_round_trips():
 
     with client(ui_handler=handle) as pi:
         with pi.events() as events:
-            assert pi.prompt("/confirm")["success"]
+            assert pi.prompt("/confirm") is None
             assert next(events).type == "extension_ui_request"
             assert next(events).raw["reply"]["confirmed"] is False
         assert callback_threads and callback_threads[0] is not pi._thread
