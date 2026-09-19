@@ -137,7 +137,8 @@ as described below; application-specific responses remain the caller's choice.
 
 ## Acceptance, settlement, and results
 
-`prompt(message, ...)` returns Pi's successful acknowledgement envelope. It does
+`prompt(message, ...)` returns `None` after checked acknowledgement. Use
+`request("prompt", message=...)` for the response envelope and ID. It does
 not assert that an agent started or produced a response. Slash commands and
 extension input handlers can consume ordinary text without starting the agent.
 Use it when your application controls the event lifecycle or calls a command
@@ -254,8 +255,9 @@ request must fit `max_record_bytes`.
 
 Normal Pi persistence is retained unless explicitly disabled. `pi.session`
 exposes the cached `SessionInfo`; `get_state()` refreshes it from Pi. The session
-file and name may be absent. Session operations also refresh cached identity;
-an ambiguous failed mutation invalidates it rather than retaining stale state.
+file and name may be absent. Session operations invalidate cached identity
+without sending another command; call `get_state()` explicitly for updated state.
+An ambiguous failed mutation also invalidates the snapshot.
 
 Use constructor options to select an initial session:
 
