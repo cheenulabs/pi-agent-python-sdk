@@ -10,7 +10,7 @@ from typing import Any
 
 
 def emit(record: dict[str, Any], *, newline: bool = True) -> None:
-    data = json.dumps(record, ensure_ascii=False).encode("utf-8")
+    data = json.dumps(record).encode("utf-8")
     sys.stdout.buffer.write(data + (b"\n" if newline else b""))
     sys.stdout.buffer.flush()
 
@@ -35,6 +35,18 @@ def main() -> None:
         command = request["type"]
         if command == "extension_ui_response":
             emit({"type": "ui_received", "reply": request})
+        elif command == "record_size":
+            emit(response(request, data={"bytes": len(line) - 1}))
+        elif command == "ui_input":
+            emit(
+                {
+                    "type": "extension_ui_request",
+                    "id": "string-dialog",
+                    "method": request["method"],
+                    "title": "Synthetic input",
+                }
+            )
+            emit(response(request))
         elif command == "echo":
             emit(response(request, data=request.get("data")))
         elif command == "get_state":
