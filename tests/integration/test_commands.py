@@ -22,8 +22,7 @@ async def complete_prompt(client: AsyncPiClient, text: str = "synthetic answer")
     """Use acceptance/events so command tests are independent of run helpers."""
     await client.prompt("/fixture-script " + json.dumps([{"text": text}]))
     async with client.events() as events, asyncio.timeout(10):
-        receipt = await client.prompt("synthetic question")
-        assert receipt["success"] is True
+        assert await client.prompt("synthetic question") is None
         result = []
         async for event in events:
             result.append(event)
@@ -50,7 +49,7 @@ async def test_state_models_thinking_and_configuration(pi_client: AsyncPiClient)
     assert "off" in levels and "high" in levels
     await pi_client.set_thinking_level("high")
     assert (await pi_client.get_state())["thinkingLevel"] == "high"
-    assert await pi_client.cycle_thinking_level() in levels
+    assert (await pi_client.cycle_thinking_level())["level"] in levels
     await pi_client.set_steering_mode("all")
     await pi_client.set_follow_up_mode("one-at-a-time")
     await pi_client.set_auto_compaction(True)
@@ -76,7 +75,7 @@ async def test_prompt_queue_and_idle_abort(pi_client: AsyncPiClient) -> None:
     }
     assert await pi_client.clear_queue() == {"steering": [], "followUp": []}
     await pi_client.abort()
-    assert (await pi_client.prompt("fixture handled", images=[]))["success"] is True
+    assert await pi_client.prompt("fixture handled", images=[]) is None
     assert (await pi_client.get_state())["messageCount"] == 0
     events = await complete_prompt(pi_client)
     assert events[-1].type == "agent_settled"
@@ -104,7 +103,7 @@ async def test_history_entries_stats_and_compaction(pi_client: AsyncPiClient) ->
     fixture = next(c for c in commands if c["name"] == "fixture-script")
     assert fixture["source"] == "extension" and fixture["sourceInfo"]
     await pi_client.set_session_name("Synthetic \u2028session\u2029name")
-    assert pi_client.session.session_name == "Synthetic \u2028session\u2029name"
+    assert (await pi_client.get_state())["sessionName"] == "Synthetic \u2028session\u2029name"
     async with pi_client.events() as events:
         compact = await pi_client.compact(custom_instructions="synthetic instructions")
         assert compact["summary"] == "Synthetic offline compaction summary"
@@ -136,7 +135,7 @@ async def test_bash_and_export(pi_client: AsyncPiClient, tmp_path: Path) -> None
     await complete_prompt(pi_client)
     output = tmp_path / "synthetic-session.html"
     exported = await pi_client.export_html(output_path=str(output))
-    assert Path(exported) == output
+    assert Path(exported["path"]) == output
     html = output.read_text(encoding="utf-8")
     assert "<!DOCTYPE html>" in html
     encoded = re.search(
@@ -156,16 +155,16 @@ async def test_session_fork_clone_switch_and_veto(pi_client: AsyncPiClient) -> N
     assert await pi_client.new_session() == {"cancelled": True}
     assert await pi_client.switch_session(original_path) == {"cancelled": True}
     assert await pi_client.fork(forks[0]["entryId"]) == {"cancelled": True}
-    assert pi_client.session.session_id == original
+    assert (await pi_client.get_state())["sessionId"] == original
     await pi_client.prompt("/fixture-veto off")
     assert await pi_client.clone() == {"cancelled": False}
-    assert pi_client.session.session_id != original
+    assert (await pi_client.get_state())["sessionId"] != original
     assert await pi_client.get_last_assistant_text() == "synthetic answer"
     assert await pi_client.switch_session(original_path) == {"cancelled": False}
-    assert pi_client.session.session_id == original
+    assert (await pi_client.get_state())["sessionId"] == original
     fork = await pi_client.fork(forks[0]["entryId"])
     assert fork == {"cancelled": False, "text": "synthetic question"}
-    assert pi_client.session.session_id != original
+    assert (await pi_client.get_state())["sessionId"] != original
     assert await pi_client.new_session(parent_session=original_path) == {"cancelled": False}
     assert await pi_client.get_last_assistant_text() is None
 
@@ -218,8 +217,7 @@ async def test_display_events_and_unhandled_dialog(pi_client: AsyncPiClient) -> 
 
 async def test_extension_error_remains_an_event(pi_client: AsyncPiClient) -> None:
     async with pi_client.events() as events:
-        receipt = await pi_client.prompt("/fixture-error")
-        assert receipt["success"] is True
+        assert await pi_client.prompt("/fixture-error") is None
         async with asyncio.timeout(10):
             event = await anext(events)
         assert event.type == "extension_error"

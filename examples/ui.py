@@ -33,8 +33,8 @@ def main() -> None:
     args = parser.parse_args()
     with PiClient(ui_handler=handle_ui) as pi:
         # Handled extension commands may never emit agent_start or agent_settled.
-        receipt = pi.prompt(args.command)
-        print(f"Command acknowledged: {receipt['success']}")
+        pi.prompt(args.command)
+        print("Command acknowledged: True")
 
 
 if __name__ == "__main__":

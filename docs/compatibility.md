@@ -125,7 +125,9 @@ in the published 0.1.0 release.
 
 Intentional differences remain: bounded retention and backlog, checked command
 failures, surfaced callback errors, single-use process lifecycle, and opt-in
-stderr forwarding/retention. The current owned-run interface and some scalar
-command result shapes remain to be simplified in a separate breaking PR under
+stderr forwarding/retention. The source branch now matches TS object returns for thinking-level cycling and
+HTML export, and returns `None` from `prompt()`. Session mutations do not trigger
+hidden state queries. See the [unreleased migration](api.md#unreleased-command-migration).
+The owned-run interface remains to be removed in a separate breaking PR under
 [#41](https://github.com/cheenulabs/pi-agent-python-sdk/issues/41); this additive
 step does not claim complete structural parity.

@@ -46,7 +46,7 @@ async def test_unowned_submission_permanently_prevents_owned_run(client, raw):
     with pytest.raises(PiRunOwnershipError, match="fresh client"):
         await client.run("must not be submitted")
     assert client.running  # low-level commands remain usable
-    assert (await client.prompt("handled"))["success"]
+    assert await client.prompt("handled") is None
 
 
 @pytest.mark.parametrize(

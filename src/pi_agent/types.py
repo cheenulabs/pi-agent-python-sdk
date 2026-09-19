@@ -392,6 +392,14 @@ class ModelCycleResult(TypedDict):
     isScoped: bool
 
 
+class ThinkingLevelCycleResult(TypedDict):
+    level: ThinkingLevel
+
+
+class ExportHtmlResult(TypedDict):
+    path: str
+
+
 class ForkMessage(TypedDict):
     entryId: str
     text: str
@@ -526,15 +534,6 @@ RpcCommand: TypeAlias = (
     | GetEntriesCommand
     | SetSessionNameCommand
 )
-
-
-class AcceptanceReceipt(TypedDict):
-    """Successful prompt acknowledgement; it says nothing about run disposition."""
-
-    type: Literal["response"]
-    id: str
-    command: Literal["prompt"]
-    success: Literal[True]
 
 
 class RpcSuccessResponse(TypedDict):

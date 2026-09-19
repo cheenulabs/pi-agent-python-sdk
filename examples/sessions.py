@@ -13,8 +13,8 @@ def main() -> None:
     with PiClient(cwd=args.cwd, session=args.session) as pi:
         state = pi.get_state()
         print(f"Session ID: {state['sessionId']}")
-        print(f"Session file: {pi.session.session_file or '(not available)'}")
-        print(f"Session name: {pi.session.session_name or '(unnamed)'}")
+        print(f"Session file: {state.get('sessionFile') or '(not available)'}")
+        print(f"Session name: {state.get('sessionName') or '(unnamed)'}")
         print(f"Entries: {len(pi.get_entries()['entries'])}")
 
 
