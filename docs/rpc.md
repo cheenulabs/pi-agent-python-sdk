@@ -21,6 +21,10 @@ to the source used for the **0.85.1** baseline; current upstream may differ.
 | Wire fields such as `modelId` | `model_id` arguments; returned dictionaries keep wire keys |
 | Prompt acceptance followed by events | `prompt()` acknowledgement; `run()` / `stream()` wait for settlement |
 
+Outbound strings preserve JSON-escaped lone UTF-16 surrogate code units,
+including values sent back through UI replies. Record limits count the encoded
+bytes after escaping. Ordinary Unicode remains UTF-8.
+
 Records are split on LF (`\n`); Unicode line separators inside JSON strings do
 not delimit records. Responses and events share stdout. Request IDs correlate
 command responses, but session events are not generally attributable to a

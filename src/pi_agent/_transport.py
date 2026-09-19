@@ -170,9 +170,11 @@ class Transport:
             raise PiProcessError("Pi subprocess is not running")
 
     async def _write(self, record: dict[str, Any]) -> None:
+        # Escape lone UTF-16 surrogates, as JSON.stringify does, while keeping
+        # ordinary Unicode as UTF-8. Never emit invalid UTF-8 or replace values.
         data = json.dumps(
             record, ensure_ascii=False, allow_nan=False, separators=(",", ":")
-        ).encode("utf-8")
+        ).encode("utf-8", errors="backslashreplace")
         if len(data) > self._limits.max_record_bytes:
             raise ValueError("Outbound JSON record exceeds max_record_bytes")
         wrote = False
