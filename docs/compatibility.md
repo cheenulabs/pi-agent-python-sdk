@@ -116,18 +116,17 @@ and the [release checklist](releasing.md) records publication requirements.
 
 ## TypeScript-style observation helpers
 
-The source branch adds `on_event`, `collect_events`, `wait_for_idle`, and
+Version 0.2.0 adds `on_event`, `collect_events`, `wait_for_idle`, and
 `prompt_and_wait`, following the pinned TypeScript client's listener and
 settlement pattern. Python uses `Event` carriers with unchanged wire dictionaries
 at `.raw`, plus a blocking facade delegating to the async client. Collection is
-session-wide and does not infer prompt ownership. These additions are not yet
-in the published 0.1.0 release.
+session-wide and does not infer prompt ownership. These helpers are not available in 0.1.0.
 
 Intentional differences remain: bounded retention and backlog, checked command
 failures, surfaced callback errors, single-use process lifecycle, and opt-in
-stderr forwarding/retention. The source branch now matches TS object returns for thinking-level cycling and
+stderr forwarding/retention. Version 0.2.0 matches TS object returns for thinking-level cycling and
 HTML export, and returns `None` from `prompt()`. Session mutations do not trigger
-hidden state queries. See the [unreleased migration](api.md#unreleased-command-migration).
+hidden state queries. See the [migration from 0.1.0](api.md#migrating-from-010).
 `run()`, `stream()`, and `RunResult` remain intentional Python conveniences.
 Their [ownership and cleanup rules](rpc.md#internal-design-assessment) protect
 result attribution without changing the shared command/event protocol.
@@ -139,8 +138,8 @@ is the comparison reference. All 33 command wrappers have Python equivalents;
 the [command table](api.md#all-33-rpc-commands) records wire arguments and results.
 Current source matches TS object results for thinking-level cycling and HTML
 export, and its void prompt result. Session mutation commands issue no implicit
-state refresh. These are unreleased changes, with migration described in the API
-reference. The retained `run()`/`stream()` interface is additional Python
+state refresh. The [migration guide](api.md#migrating-from-010) describes the changes from
+0.1.0. The retained `run()`/`stream()` interface is additional Python
 behavior, assessed in [#50](https://github.com/cheenulabs/pi-agent-python-sdk/issues/50).
 
 Normal event delivery preserves every emitted wire field, including thinking,
