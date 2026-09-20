@@ -302,8 +302,6 @@ class RunStream:
     def __aiter__(self) -> Self:
         if self._draining:
             raise PiBusyError("Cannot iterate while result() drains the stream")
-        if self._iterating:
-            raise PiBusyError("A stream permits one event iterator")
         self._iterating = True
         return self
 

@@ -202,6 +202,59 @@ async def test_result_cannot_compete_with_iterator(client):
         assert (await stream.result()).text == "answer"
 
 
+async def test_async_stream_iterator_can_be_wrapped_and_repeated(client):
+    async with client.stream("normal") as stream:
+        iterator = aiter(stream)
+        assert aiter(iterator) is iterator
+        assert [event.type async for event in iterator][-1] == "agent_settled"
+        assert [event async for event in iterator] == []
+        assert (await stream.result()).text == "answer"
+
+
+async def test_async_stream_can_continue_after_reading_one_event(client):
+    async with client.stream("normal") as stream:
+        assert (await anext(stream)).type == "agent_start"
+        remaining = [event async for event in stream]
+        assert remaining[-1].type == "agent_settled"
+        assert "".join(event.text_delta or "" for event in remaining) == "answer"
+        assert (await stream.result()).text == "answer"
+
+
+async def test_async_stream_still_rejects_overlapping_readers(client):
+    async with asyncio.timeout(5):
+        async with client.stream("paused") as stream:
+            assert (await anext(stream)).type == "agent_start"
+            pending = asyncio.create_task(anext(stream))
+            try:
+                await client.get_state()
+                assert not pending.done()
+                with pytest.raises(RuntimeError, match="Only one reader"):
+                    await anext(aiter(stream))
+                with pytest.raises(PiBusyError):
+                    await stream.result()
+            finally:
+                pending.cancel()
+                await asyncio.gather(pending, return_exceptions=True)
+        assert client.running and not client.busy
+        assert (await client.run("normal")).text == "answer"
+
+
+async def test_async_stream_still_rejects_iteration_during_result_drain(client):
+    async with asyncio.timeout(5):
+        async with client.stream("paused") as stream:
+            pending = asyncio.create_task(stream.result())
+            try:
+                await client.get_state()
+                assert not pending.done()
+                with pytest.raises(PiBusyError):
+                    aiter(stream)
+                await client.steer("release")
+                assert (await pending).text == "answer"
+            finally:
+                pending.cancel()
+                await asyncio.gather(pending, return_exceptions=True)
+
+
 async def test_owned_run_guards_raw_escape_and_keeps_control_commands(client):
     async with client.stream("paused") as stream:
         with pytest.raises(PiBusyError):
