@@ -141,6 +141,9 @@ def check_example(path: Path, fixture: ModuleType) -> str:
                     if path.stem == "stream":
                         # Exercise forward-compatible display without inventing a Pi wire event.
                         module.display(Event({"type": "future_event", "future": {"value": 17}}))
+                        module.display(
+                            Event({"type": "message_update", "assistantMessageEvent": None})
+                        )
                 else:
                     module.main()
                     for client in sync_clients:
@@ -166,6 +169,7 @@ def check_example(path: Path, fixture: ModuleType) -> str:
             ):
                 assert event_type in text
             assert '"future": {"value": 17}' in text
+            assert '"assistantMessageEvent": null' in text
         if path.stem in {
             "sync",
             "async_client",
