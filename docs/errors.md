@@ -29,6 +29,12 @@ blocking methods from a UI or event callback raises `RuntimeError`. Application 
 cancellation remains `asyncio.CancelledError`; synchronous Ctrl-C remains
 `KeyboardInterrupt` after cleanup.
 
+Input rejected locally before a write (for example, an oversized record or
+non-JSON value) does not claim the conversation or close a healthy client.
+Correct the input and retry. This does not undo any earlier real submission:
+the existing ownership restriction still applies after low-level conversation
+work may have reached Pi.
+
 Exception messages avoid automatically dumping wire payloads. Pi's command error
 text is explicitly available as `.error`, while a handler's original exception
 is in `__cause__`. Those fields can contain application data. Transport failure

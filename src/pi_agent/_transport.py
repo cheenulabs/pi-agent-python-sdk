@@ -124,6 +124,7 @@ class Transport:
         fields: dict[str, Any] | None = None,
         *,
         timeout: float | None = 30,  # noqa: ASYNC109 - per-response API, distinct from write bound
+        before_write: Callable[[], None] | None = None,
     ) -> dict[str, Any]:
         if not isinstance(command, str) or not command:
             raise ValueError("command must be a nonempty string")
@@ -136,7 +137,9 @@ class Transport:
         # A fast child can respond while drain() is still suspended.
         self._pending[request_id] = _Pending(command, future)
         try:
-            await self._write({"type": command, "id": request_id, **(fields or {})})
+            await self._write(
+                {"type": command, "id": request_id, **(fields or {})}, before_write=before_write
+            )
             try:
                 # Keep cancellation on this task: wait_for can lose cancellation
                 # when its separate waiter completes at the same time on Python 3.11.
@@ -169,7 +172,9 @@ class Transport:
         if not self.running:
             raise PiProcessError("Pi subprocess is not running")
 
-    async def _write(self, record: dict[str, Any]) -> None:
+    async def _write(
+        self, record: dict[str, Any], *, before_write: Callable[[], None] | None = None
+    ) -> None:
         # Escape lone UTF-16 surrogates, as JSON.stringify does, while keeping
         # ordinary Unicode as UTF-8. Never emit invalid UTF-8 or replace values.
         data = json.dumps(
@@ -177,6 +182,10 @@ class Transport:
         ).encode("utf-8", errors="backslashreplace")
         if len(data) > self._limits.max_record_bytes:
             raise ValueError("Outbound JSON record exceeds max_record_bytes")
+        # Local validation cannot submit work. Notify ownership before the first
+        # suspension so another run cannot race a validated, queued write.
+        if before_write is not None:
+            before_write()
         wrote = False
         try:
             # Bound lock acquisition too: a wedged pipe must not queue writers forever.

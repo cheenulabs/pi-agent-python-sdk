@@ -172,6 +172,10 @@ class RunStream:
             if error is not None:
                 self._fail(error)
 
+    def _mark_submitted(self) -> None:
+        self._submitted = True
+        self._begin = time.monotonic()
+
     async def _drive(self) -> RunResult:
         assert self._ready is not None
         failure: BaseException | None = None
@@ -183,8 +187,6 @@ class RunStream:
                 fields: dict[str, Any] = {"message": self._message}
                 if self._images is not None:
                     fields["images"] = self._images
-                self._submitted = True
-                self._begin = time.monotonic()
                 await self._client._request(
                     "prompt", fields, timeout=self._command_timeout, owner=self
                 )
