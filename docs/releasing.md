@@ -4,6 +4,12 @@ Local build validation is separate from a TestPyPI rehearsal, GitHub CI, and a
 public PyPI release. For each release, validate the reviewed commit and built artifacts before
 publication, then verify the copies downloaded from both indexes.
 
+## 0.2.1 release verification
+
+The 0.2.1 metadata and release notes describe the reviewed patch candidate.
+Confirm the `v0.2.1` GitHub release and successful TestPyPI/PyPI verification
+jobs before recording 0.2.1 as released or pinning it in a deployed consumer.
+
 ## 0.2.0 release verification
 
 The 0.2.0 metadata and release notes describe the reviewed release candidate.
