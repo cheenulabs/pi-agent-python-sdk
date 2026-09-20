@@ -2,18 +2,28 @@
 
 ## Unreleased
 
-- Clarify Python interface choice, async event consumption, and structured-output
-  boundaries; demonstrate thinking, tool events, and unknown metadata.
+## 0.2.1
+
+### Added
+
 - Stop process observations without closing Pi, then drain buffered records;
   report scoped stop, discard, overflow, and process termination separately.
-- Allow sequential async stream iterator reuse while retaining concurrent-reader
-  and result-drain protections.
+
+### Fixed
+
 - Drain the ready queue in each blocking iterator transfer to avoid finite-burst
   overflow caused by repeated partial transfers. Queue limits remain unchanged;
   the additional batch is bounded by the same count and byte budgets.
+- Allow sequential async stream iterator reuse while retaining concurrent-reader
+  and result-drain protections.
 - Keep a healthy client usable after locally rejected, unsent input, without
   relaxing ownership or cleanup for commands that may have reached Pi.
+
+### Changed
+
 - Update the tested Pi runtime to 0.86.0, retaining 0.85.1 as the minimum.
+- Clarify Python interface choice, async event consumption, and structured-output
+  boundaries; demonstrate thinking, tool events, and unknown metadata.
 - Describe system transcript messages, session usage entries, compaction system
   snapshots, and model prompt-cache metadata in the wire annotations. Preserve
   legacy optional fields and raw metadata; Pi still owns transcript and cache behavior.
