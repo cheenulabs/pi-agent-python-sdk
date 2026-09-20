@@ -20,7 +20,7 @@ from pi_agent import (
 )
 
 CHILD = """
-import json, sys
+import json, os, sys, time
 if "--version" in sys.argv:
     print("0.85.1")
     sys.exit()
@@ -64,6 +64,11 @@ for line in sys.stdin:
     elif command == "invalid_envelope":
         emit({"future":"object without type"})
         emit({"type":"after_bad"})
+    elif command == "gated_failure":
+        emit({"future":"object without type"})
+        release = sys.argv[sys.argv.index("--exit-gate") + 1]
+        while not os.path.exists(release):
+            time.sleep(0.005)
     elif command == "oversize":
         emit({"type":"huge", "data":"x"*200000})
         emit({"type":"after_bad"})
@@ -437,6 +442,7 @@ async def test_stop_racing_client_shutdown_is_drainable(options, blocking):
                 assert records[0].data["type"] == "startup"
                 assert output.status.end_reason in {"stopped", "process_end"}
                 assert not output.status.lost
+                assert output.status.error is None
                 output.stop()
 
         await asyncio.to_thread(run)
@@ -449,6 +455,7 @@ async def test_stop_racing_client_shutdown_is_drainable(options, blocking):
             assert records[0].data["type"] == "startup"
             assert output.status.end_reason in {"stopped", "process_end"}
             assert not output.status.lost
+            assert output.status.error is None
             await output.stop()
 
 
@@ -464,6 +471,50 @@ async def test_stop_after_process_failure_preserves_terminal_status(options):
         assert output.status == status
         assert status.end_reason == "process_end" and status.error is failure.value
         assert [r async for r in output]
+
+
+@pytest.mark.parametrize("blocking", [False, True])
+async def test_stop_before_failed_process_teardown_preserves_error(options, tmp_path, blocking):
+    release = tmp_path / "release-child"
+    executable = [*options["executable"], "--exit-gate", str(release)]
+    if blocking:
+
+        def run():
+            pi = PiClient(executable=executable)
+            with pi.observe(stderr=False, rpc=True) as output:
+                try:
+                    pi.start()
+                    with pytest.raises(PiProtocolError) as failure:
+                        pi.request("gated_failure")
+                    output.stop()
+                    records = list(output)
+                    status = output.status
+                    assert status.end_reason == "stopped" and not status.lost
+                    assert status.error is failure.value
+                    assert {"future": "object without type"} in sources(records, "rpc")
+                finally:
+                    release.touch()
+                    pi.close()
+                assert output.status == status
+
+        await asyncio.to_thread(run)
+    else:
+        pi = AsyncPiClient(executable=executable)
+        async with pi.observe(stderr=False, rpc=True) as output:
+            try:
+                await pi.start()
+                with pytest.raises(PiProtocolError) as failure:
+                    await pi.request("gated_failure")
+                await output.stop()
+                records = [r async for r in output]
+                status = output.status
+                assert status.end_reason == "stopped" and not status.lost
+                assert status.error is failure.value
+                assert {"future": "object without type"} in sources(records, "rpc")
+            finally:
+                release.touch()
+                await pi.aclose()
+            assert output.status == status
 
 
 @pytest.mark.parametrize("blocking", [False, True])
