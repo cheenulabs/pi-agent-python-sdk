@@ -12,6 +12,11 @@ event loop for its lifetime; every command uses the same process and session.
 Use `AsyncPiClient` in an application that already runs an event loop. Keep all
 calls to an async client on the loop that started it.
 
+Start with `run()` for a final answer or `stream()` for progress and a final result.
+Use direct commands and `events()` when your application manages completion.
+`observe()` can capture process diagnostics alongside either style. See
+[choosing an interface](rpc.md#choosing-an-interface) for their lifecycle differences.
+
 Prefer a context manager so exceptions also close the process:
 
 ```python
@@ -164,7 +169,8 @@ amount to add. Final `error` and `aborted` stop reasons raise `PiRunError`, whos
 
 `stream()` combines run ownership with a bounded event iterator. Use its context
 manager even when breaking early. The synchronous example is in the README;
-[examples/stream.py](../examples/stream.py) shows the async form.
+[examples/stream.py](../examples/stream.py) shows async text, thinking, tool
+start/update/end, and a raw fallback for other events and future metadata.
 
 Choose one consumption mode:
 
@@ -193,6 +199,18 @@ loop of their first subscription, start, or close. Run a consumer task (or a
 separate thread for blocking clients) concurrently with startup if extensions
 produce more events than the bounded queue can hold. Later subscriptions see
 only future events; observing UI requests does not answer them.
+
+For async application I/O, consume `stream()` or `events()` with `async for` and
+await your destination there. Move blocking destinations to a worker, as the
+stream example does. Keep up with the bounded queue; awaiting I/O does not make
+the buffer unlimited. `on_event()` is for short synchronous callbacks and runs
+on the client loop, including the background loop of `PiClient`.
+
+For a low-level prompt followed by collected events, use `prompt_and_wait()`:
+it registers before sending, through both clients. The advanced
+[settlement helper reference](api.md#listeners-and-settlement-helpers) explains
+why async `collect_events()` / `wait_for_idle()` tasks are already scheduled,
+and why waiting for a future settlement differs from querying whether Pi is idle.
 
 Subscriptions have count and byte limits. A slow consumer receives
 `PiSubscriptionOverflow`; response routing and UI replies continue. Overflow in

@@ -22,7 +22,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from pi_agent import AsyncPiClient, PiClient
+from pi_agent import AsyncPiClient, Event, PiClient
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = (
@@ -73,6 +73,16 @@ def check_example(path: Path, fixture: ModuleType) -> str:
         async_clients: list[AsyncPiClient] = []
         versions: list[str | None] = []
         control = load(ROOT / "tests/integration/control.py", "pi_example_control")
+        steps: list[dict[str, Any]] = [{"text": ANSWER}] * 6
+        if path.stem == "stream":
+            steps = [
+                {
+                    "thinking": "Synthetic reasoning.",
+                    "tool": "fixture_echo",
+                    "arguments": {"text": "Synthetic tool result."},
+                },
+                {"text": ANSWER},
+            ]
 
         class SyncFixture(PiClient):
             def __init__(self, **kwargs: Any) -> None:
@@ -84,7 +94,7 @@ def check_example(path: Path, fixture: ModuleType) -> str:
             def start(self) -> None:
                 super().start()
                 versions.append(self.pi_version)
-                control.set_responses(self, [{"text": ANSWER}] * 6)
+                control.set_responses(self, steps)
 
         class AsyncFixture(AsyncPiClient):
             def __init__(self, **kwargs: Any) -> None:
@@ -94,7 +104,7 @@ def check_example(path: Path, fixture: ModuleType) -> str:
             async def start(self) -> None:
                 await super().start()
                 versions.append(self.pi_version)
-                control.set_responses(self, [{"text": ANSWER}] * 6)
+                control.set_responses(self, steps)
 
         module = load(path, f"pi_checked_example_{path.stem}")
         for name, replacement in (("PiClient", SyncFixture), ("AsyncPiClient", AsyncFixture)):
@@ -128,6 +138,12 @@ def check_example(path: Path, fixture: ModuleType) -> str:
             with contextlib.redirect_stdout(output):
                 if inspect.iscoroutinefunction(module.main):
                     asyncio.run(run_async())
+                    if path.stem == "stream":
+                        # Exercise forward-compatible display without inventing a Pi wire event.
+                        module.display(Event({"type": "future_event", "future": {"value": 17}}))
+                        module.display(
+                            Event({"type": "message_update", "assistantMessageEvent": None})
+                        )
                 else:
                     module.main()
                     for client in sync_clients:
@@ -144,6 +160,16 @@ def check_example(path: Path, fixture: ModuleType) -> str:
 
         text = output.getvalue()
         assert text, f"{path.name} produced no output"
+        if path.stem == "stream":
+            assert "[thinking]" in text
+            for event_type in (
+                "tool_execution_start",
+                "tool_execution_update",
+                "tool_execution_end",
+            ):
+                assert event_type in text
+            assert '"future": {"value": 17}' in text
+            assert '"assistantMessageEvent": null' in text
         if path.stem in {
             "sync",
             "async_client",
