@@ -13,7 +13,7 @@ from ._transport import _close_process_pipes, _wait_for_exit
 from .errors import PiProcessError, PiVersionError
 
 MINIMUM_PI_VERSION = "0.85.1"
-TESTED_PI_VERSION = "0.85.1"
+TESTED_PI_VERSION = "0.86.0"
 
 # The client owns these options. In particular --print consumes an initial prompt.
 _RESERVED = {

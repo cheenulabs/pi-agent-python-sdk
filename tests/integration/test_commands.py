@@ -88,9 +88,22 @@ async def test_history_entries_stats_and_compaction(pi_client: AsyncPiClient) ->
     initial = await pi_client.get_entries()
     assert initial["entries"]
     assert isinstance(initial["leafId"], str)
-    await complete_prompt(pi_client)
+    events = await complete_prompt(pi_client)
     assert await pi_client.get_last_assistant_text() == "synthetic answer"
-    assert [m["role"] for m in await pi_client.get_messages()] == ["user", "assistant"]
+    messages = await pi_client.get_messages()
+    if pi_client.pi_version == "0.85.1":
+        assert [m["role"] for m in messages] == ["user", "assistant"]
+    else:
+        assert [m["role"] for m in messages] == ["system", "user", "assistant"]
+        system = messages[0]
+        assert system["role"] == "system" and system["sections"]
+        assert any(tool["name"] == "fixture_echo" for tool in system["toolsAdded"])
+        observed_system = next(
+            event.raw["message"]
+            for event in events
+            if event.type == "message_end" and event.raw["message"]["role"] == "system"
+        )
+        assert observed_system == system
     stats = await pi_client.get_session_stats()
     assert stats["userMessages"] == 1 and stats["assistantMessages"] == 1
     assert stats["sessionId"] == pi_client.session.session_id
@@ -114,7 +127,25 @@ async def test_history_entries_stats_and_compaction(pi_client: AsyncPiClient) ->
                 if event.type == "compaction_end":
                     break
         assert "compaction_start" in observed
-    assert any(e["type"] == "compaction" for e in (await pi_client.get_entries())["entries"])
+    compacted = (await pi_client.get_entries())["entries"]
+    compaction = next(e for e in compacted if e["type"] == "compaction")
+    if pi_client.pi_version != "0.85.1":
+        assert compaction["systemMessage"]["role"] == "system"
+        assert compaction["systemMessage"]["toolsAdded"] == system["toolsAdded"]
+
+
+async def test_rpc_queue_input_handlers(pi_client: AsyncPiClient) -> None:
+    if pi_client.pi_version == "0.85.1":
+        pytest.skip("RPC steer/follow-up input handlers were added in Pi 0.86.0")
+    await pi_client.steer("fixture handled")
+    await pi_client.follow_up("fixture handled")
+    assert (await pi_client.get_state())["pendingMessageCount"] == 0
+    await pi_client.steer("fixture transform")
+    await pi_client.follow_up("fixture transform")
+    assert await pi_client.clear_queue() == {
+        "steering": ["transformed rpc input"],
+        "followUp": ["transformed rpc input"],
+    }
 
 
 async def test_bash_and_export(pi_client: AsyncPiClient, tmp_path: Path) -> None:

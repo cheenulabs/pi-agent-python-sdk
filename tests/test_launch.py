@@ -68,8 +68,9 @@ def test_explicit_command_argv():
 @pytest.mark.parametrize(
     "version,strict,allow_unknown,expected",
     [
-        ("0.85.1", False, False, ("0.85.1", "tested")),
-        ("0.86.0", False, False, ("0.86.0", "untested")),
+        ("0.85.1", False, False, ("0.85.1", "untested")),
+        ("0.86.0", True, False, ("0.86.0", "tested")),
+        ("0.87.0", False, False, ("0.87.0", "untested")),
         ("custom", False, True, (None, "unknown")),
     ],
 )
@@ -85,7 +86,10 @@ async def test_version_status(version, strict, allow_unknown, expected):
     assert result == expected
 
 
-@pytest.mark.parametrize("version,strict", [("0.85.0", False), ("0.86.0", True), ("custom", False)])
+@pytest.mark.parametrize(
+    "version,strict",
+    [("0.85.0", False), ("0.85.1", True), ("0.87.0", True), ("custom", False)],
+)
 async def test_unsupported_version(version, strict):
     with pytest.raises(PiVersionError):
         await check_version(

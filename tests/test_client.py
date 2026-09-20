@@ -144,7 +144,7 @@ async def client():
 
 
 async def test_readiness_and_early_run_events(client):
-    assert client.running and client.compatibility == "tested"
+    assert client.running and client.compatibility == "untested"
     result = await client.run("normal")
     assert result.text == "answer"
     assert [message["role"] for message in result.messages] == ["user", "assistant"]

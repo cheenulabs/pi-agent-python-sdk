@@ -12,7 +12,7 @@ and no third-party Python runtime dependencies. Pi runs as a subprocess and keep
 its usual models, authentication, tools, extensions, skills, and configuration.
 
 > Requires Python **3.11+** and a separate Pi installation. The tested protocol
-> baseline is **Pi 0.85.1**; see [compatibility][compatibility] for version and
+> baseline is **Pi 0.86.0**; see [compatibility][compatibility] for version and
 > platform scope.
 
 [Quick start](#quick-start) · [Streaming](#streaming) · [Async](#async-usage) ·
@@ -32,7 +32,7 @@ its usual models, authentication, tools, extensions, skills, and configuration.
 Install Pi with Node.js **22.19.0 or newer**:
 
 ```sh
-npm install -g @earendil-works/pi-coding-agent@0.85.1
+npm install -g @earendil-works/pi-coding-agent@0.86.0
 pi --version
 ```
 

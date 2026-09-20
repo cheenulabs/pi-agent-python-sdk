@@ -1,4 +1,4 @@
-"""Pi 0.85.1 wire annotations and small Python conveniences.
+"""Pi 0.86.0 wire annotations and small Python conveniences.
 
 Wire fields retain Pi's spelling and remain ordinary dictionaries. These
 annotations describe known shapes, not a recursive runtime validator: extensions
@@ -97,6 +97,26 @@ class AssistantMessageDiagnostic(TypedDict):
     details: NotRequired[JSONObject]
 
 
+class ToolDefinition(TypedDict):
+    name: str
+    description: str
+    parameters: JSONObject
+    constrainedSampling: NotRequired[Literal[False] | JSONObject]
+
+
+class ToolReference(TypedDict):
+    name: str
+
+
+class SystemMessage(TypedDict):
+    role: Literal["system"]
+    content: str | list[TextContent]
+    sections: NotRequired[dict[str, str | None]]
+    toolsAdded: NotRequired[list[ToolDefinition]]
+    toolsRemoved: NotRequired[list[ToolReference]]
+    timestamp: float
+
+
 class UserMessage(TypedDict):
     role: Literal["user"]
     content: str | list[TextContent | ImageContent]
@@ -129,7 +149,7 @@ class ToolResultMessage(TypedDict):
     content: list[TextContent | ImageContent]
     details: NotRequired[JSONValue]
     usage: NotRequired[Usage]
-    addedToolNames: NotRequired[list[str]]
+    addedToolNames: NotRequired[list[str]]  # Legacy Pi 0.85.1 field.
     isError: bool
     timestamp: float
 
@@ -170,7 +190,8 @@ class CompactionSummaryMessage(TypedDict):
 
 
 AgentMessage: TypeAlias = (
-    UserMessage
+    SystemMessage
+    | UserMessage
     | AssistantMessage
     | ToolResultMessage
     | BashExecutionMessage
@@ -195,6 +216,11 @@ class ModelCost(ModelCostRates):
     tiers: NotRequired[list[ModelCostTier]]
 
 
+class ModelPromptCache(TypedDict, total=False):
+    short: float
+    long: float
+
+
 class Model(TypedDict):
     id: str
     name: str
@@ -210,6 +236,7 @@ class Model(TypedDict):
     samplingParams: NotRequired[JSONObject]
     headers: NotRequired[dict[str, str]]
     compat: NotRequired[JSONObject]
+    promptCache: NotRequired[ModelPromptCache]
 
 
 class SessionState(TypedDict):
@@ -308,6 +335,15 @@ class ModelChangeEntry(_EntryBase):
     modelId: str
 
 
+class UsageEntry(_EntryBase):
+    type: Literal["usage"]
+    kind: str
+    provider: str
+    model: str
+    usage: Usage
+    note: NotRequired[str]
+
+
 class CompactionEntry(_EntryBase):
     type: Literal["compaction"]
     summary: str
@@ -316,6 +352,7 @@ class CompactionEntry(_EntryBase):
     details: NotRequired[JSONValue]
     usage: NotRequired[Usage]
     fromHook: NotRequired[bool]
+    systemMessage: NotRequired[SystemMessage]
 
 
 class BranchSummaryEntry(_EntryBase):
@@ -356,6 +393,7 @@ SessionEntry: TypeAlias = (
     MessageEntry
     | ThinkingLevelChangeEntry
     | ModelChangeEntry
+    | UsageEntry
     | CompactionEntry
     | BranchSummaryEntry
     | CustomEntry

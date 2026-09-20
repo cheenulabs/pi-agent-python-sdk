@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Update the tested Pi runtime to 0.86.0, retaining 0.85.1 as the minimum.
+- Describe system transcript messages, session usage entries, compaction system
+  snapshots, and model prompt-cache metadata in the wire annotations. Preserve
+  legacy optional fields and raw metadata; Pi still owns transcript and cache behavior.
+
 ## 0.2.0
 
 ### Breaking changes
