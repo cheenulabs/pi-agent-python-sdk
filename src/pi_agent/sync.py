@@ -756,6 +756,16 @@ class SyncProcessObservation(_SyncSubscription[ProcessOutput]):
         subscription = client._client.observe(stderr=stderr, stdout=stdout, rpc=rpc)
         super().__init__(client, lambda: subscription)
 
+    def stop(self) -> None:
+        """Unsubscribe and preserve buffered output for iteration; keep Pi running.
+
+        Raises:
+            RuntimeError: If the observation context has not been entered.
+        """
+        if self._subscription is None:
+            raise RuntimeError("Enter the observation context before stopping")
+        self._client._close_context(cast(ProcessObservation, self._subscription).stop)
+
     @property
     def status(self) -> ObservationStatus:
         if self._subscription is None:

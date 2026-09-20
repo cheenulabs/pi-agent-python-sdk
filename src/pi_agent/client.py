@@ -424,9 +424,9 @@ class AsyncPiClient:
         """Observe selected process output; enter before start for lifetime coverage.
 
         Raises ValueError if no source is selected. Slow consumers raise
-        PiSubscriptionOverflow. Close the client and drain this iterator before
-        checking status.complete and status.error; terminal process failures are
-        reported through status.error after output drains.
+        PiSubscriptionOverflow. Stop the observation or close the client, then
+        drain this iterator before checking final status. Known terminal process
+        failures remain in status.error even when stopped before cleanup ends.
         """
         sources: set[OutputSource] = set()
         if stderr:
@@ -486,6 +486,7 @@ class AsyncPiClient:
                 rpc_complete=rpc_complete,
                 complete=complete,
                 error=self._close_error if self._closed else self._terminal_error or error,
+                end_reason="process_end",
             )
             observer._finish()
 
@@ -551,6 +552,13 @@ class AsyncPiClient:
         error = self._terminal_error
         self._session = SessionInfo()
         self._listeners.clear()
+        # Observers keep receiving shutdown output, but stop() must retain a
+        # failure already known before pipe drainage finishes. Normal close is
+        # not a process error for observation consumers.
+        for observer in self._observations:
+            observer._status = replace(
+                observer.status, error=self._close_error if self._closed else error
+            )
         for task in tuple(self._ui_tasks):
             if task is not asyncio.current_task() and task is not self._close_initiator:
                 task.cancel()

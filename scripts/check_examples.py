@@ -33,6 +33,7 @@ EXAMPLES = (
     "process_output.py",
     "rpc_async.py",
     "rpc_sync.py",
+    "scoped_output.py",
     "sessions.py",
     "steering.py",
     "stream.py",
@@ -151,6 +152,7 @@ def check_example(path: Path, fixture: ModuleType) -> str:
             "events",
             "rpc_async",
             "rpc_sync",
+            "scoped_output",
         }:
             assert ANSWER in text, f"{path.name} did not display its synthetic answer"
         elif path.stem == "cancellation":
