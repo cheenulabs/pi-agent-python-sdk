@@ -62,6 +62,9 @@ class ProcessObservation(_Subscription[ProcessOutput]):
 
         Drain the iterator afterwards, then inspect status. Repeated stops retain
         the first termination status, including overflow or process failure.
+
+        Raises:
+            RuntimeError: If the observation context has not been entered.
         """
         if not self._entered:
             raise RuntimeError("Enter the observation context before stopping")

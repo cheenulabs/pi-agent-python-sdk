@@ -375,8 +375,9 @@ To end a scoped observation while keeping Pi alive, call `await output.stop()`
 (async) or `output.stop()` (blocking), then drain the iterator. Stop unregisters
 immediately and preserves accepted records, including blocking iterator batches.
 It sends no RPC command, does not wait for future output, and does not establish a
-provider or prompt boundary. Selected records already delivered to the observation
-retain their order and `time_ns`; use that receipt timestamp when storing them,
+provider or prompt boundary. Accepted records retain SDK delivery order within
+each source; relative ordering across stdout and stderr is not guaranteed.
+They retain their `time_ns`; use that receipt timestamp when storing them,
 rather than the time a worker eventually processes them.
 
 `end_reason` is `None` while active, `"stopped"` after a scoped stop, `"closed"`
