@@ -4,19 +4,40 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)][metadata]
 [![MIT license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)][license]
 
-**Run Pi from Python. Stream responses, continue conversations, and control sessions.**
+**Use your installed Pi coding agent as a Python API. Stream responses,
+continue conversations, and control sessions from Python.**
 
 A community Python SDK for [Pi coding agent](https://github.com/earendil-works/pi).
-Use synchronous or asynchronous clients with typed access to Pi's RPC commands
-and no third-party Python runtime dependencies. Pi runs as a subprocess and keeps
-its usual models, authentication, tools, extensions, skills, and configuration.
+It starts Pi as a subprocess and exposes the same agent runtime through a typed
+Python interface for RPC commands, streaming, and session control.
 
 > Requires Python **3.11+** and a separate Pi installation. The tested protocol
 > baseline is **Pi 0.86.0**; see [compatibility][compatibility] for version and
 > platform scope.
 
 [Quick start](#quick-start) · [Streaming](#streaming) · [Async](#async-usage) ·
-[Configuration](#configuration) · [RPC](#rpc-access) · [Documentation](#documentation)
+[Configuration](#configuration) · [Thinking](#models-and-thinking) ·
+[RPC](#rpc-access) · [Documentation](#documentation)
+
+## Why use this?
+
+If you already use Pi from the terminal, this SDK lets you use the same agent
+from Python code. Instead of managing a separate implementation, you can start Pi
+in RPC mode and call it as a programmatic API from scripts, apps, services, or
+background jobs.
+
+This is useful when you want to:
+
+- Add Pi-powered coding or reasoning to a Python application.
+- Automate project analysis, refactors, or repository workflows.
+- Build a service or CLI around Pi without reimplementing the agent runtime.
+- Stream text, thinking, tool, and session events in Python.
+- Reuse your existing Pi configuration, models, tools, and extensions.
+
+The SDK keeps Pi's usual setup and model selection, while exposing a typed Python
+interface for prompts, follow-ups, model control, and RPC access. It launches Pi
+as a subprocess and communicates over its JSONL protocol; it does not attach to
+an already-running interactive Pi terminal session.
 
 ## What you can do
 
@@ -136,6 +157,38 @@ pass `extra_args=["--extension", "/absolute/path/to/your-extension.ts"]` to eith
 client. See [using your own extensions][extensions]
 for details and [extension UI][ui-example] for an interactive example.
 
+## Models and thinking
+
+The SDK uses Pi's configured model unless you pass `provider=` and `model=`.
+Pi determines which thinking levels that model supports; query them before
+choosing a level:
+
+```python
+from pi_agent import PiClient
+
+with PiClient() as pi:
+    levels = pi.get_available_thinking_levels()
+    print("Supported thinking levels:", levels)
+    if "high" in levels:
+        pi.set_thinking_level("high")
+    print("Effective thinking level:", pi.get_state()["thinkingLevel"])
+
+    result = pi.run("Analyse this project's architecture without changing files.")
+    print(result.text)
+```
+
+Set the model and thinking level before starting `run()` or `stream()`. Pi can
+adjust unsupported level requests, so read `get_state()["thinkingLevel"]` for the
+effective value. The setting applies to subsequent prompts in the current
+session without changing global defaults. With `AsyncPiClient`, await the same
+methods. See the [model and thinking commands][thinking-reference] for cycling
+levels and other controls.
+
+The thinking level controls Pi's reasoning setting. Thinking **output** is
+separate: when Pi emits it, deltas are available in `event.raw` during streaming
+and finalized thinking blocks in `result.messages`. `result.text` contains the
+final assistant text, not thinking.
+
 ## RPC access
 
 The SDK speaks Pi's existing JSONL protocol over stdin/stdout:
@@ -217,6 +270,7 @@ Maintainers: [protocol discovery][discovery] ·
 [ui-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.0/examples/ui.py
 [rpc]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.0/docs/rpc.md
 [commands]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.0/docs/api.md#all-33-rpc-commands
+[thinking-reference]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.0/docs/api.md#models-state-and-compaction
 [usage]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.0/docs/usage.md
 [api]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.0/docs/api.md
 [examples]: https://github.com/cheenulabs/pi-agent-python-sdk/tree/v0.2.0/examples
