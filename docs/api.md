@@ -104,8 +104,10 @@ methods; raw RPC envelopes and stderr remain available through `observe()`.
 Each listener receives an `Event` with a separate mutable `.raw` dictionary.
 Callbacks run synchronously on the async client's owning loop, or on `PiClient`'s
 background loop thread. Keep them short; blocking callbacks delay all RPC work.
-Coroutine functions are rejected. Schedule async work explicitly if needed;
-the application owns those tasks and their cleanup. Blocking client calls from
+Coroutine functions are rejected. Prefer `async for` over `events()` or `stream()`
+when application work needs `await`; see the [streaming example](../examples/stream.py).
+If a callback schedules tasks itself, the application owns their bounds and cleanup.
+Blocking client calls from
 callbacks raise `RuntimeError`; unsubscribe itself is safe inside a callback.
 
 Registration order determines callback order. Removing a listener before its
@@ -291,6 +293,11 @@ Known wire annotations include `RpcCommand`, `RpcResponse`, `RpcEvent`,
 `ExtensionUIRequest`, and `ExtensionUIResponse`. They are annotations for plain
 dictionaries, not recursively validating models. Unknown future records remain
 available through raw access.
+
+These wire annotations and `RunResult` do not validate an assistant's answer
+against a Pydantic model or JSON schema. `RunResult.text` is ordinary text; parse
+and validate structured answers in your application when needed. The SDK adds
+no schema-driven prompting or model-output retry loop.
 
 UI handlers receive a typed request and return `str`, `bool`, or `None`, directly
 or through an awaitable. The client assigns matching reply envelopes internally.

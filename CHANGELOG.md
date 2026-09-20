@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Clarify Python interface choice, async event consumption, and structured-output
+  boundaries; demonstrate thinking, tool events, and unknown metadata.
 - Stop process observations without closing Pi, then drain buffered records;
   report scoped stop, discard, overflow, and process termination separately.
 - Allow sequential async stream iterator reuse while retaining concurrent-reader

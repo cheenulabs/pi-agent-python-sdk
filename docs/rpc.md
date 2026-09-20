@@ -55,6 +55,17 @@ requests), that client rejects later `run()` / `stream()` calls with
 follow-ups within an already owned run remain supported. See
 [conversation ownership](usage.md#conversation-ownership-and-results).
 
+This restriction applies after input may have reached Pi: delayed extension
+events have no general prompt ID, even after an idle state response. A locally
+rejected, known-unsent serialization or size error does not create that
+restriction or close an otherwise healthy client. It also does not undo an
+earlier real submission. See [local validation failures](errors.md).
+
+`observe()` works alongside either interface for stderr, stdout bytes and all
+parsed RPC objects. Use observation `stop()` and drain for a bounded scope, or
+close the client and drain for whole-process coverage. Storage and extensions
+remain application responsibilities; see [process observation](usage.md#observe-process-output).
+
 `request()` exposes the checked response envelope for raw command access. It
 still assigns request IDs and enforces ownership rules. `Event.raw` retains
 unknown event fields and types; retaining them does not certify compatibility
