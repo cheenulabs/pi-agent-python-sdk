@@ -3,6 +3,9 @@
 import asyncio
 import json
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import pytest
 
@@ -13,6 +16,7 @@ from pi_agent import (
     PiCommandError,
     PiProcessError,
     PiProtocolError,
+    PiSubscriptionOverflow,
 )
 
 CHILD = """
@@ -28,10 +32,18 @@ def response(request, **fields):
             "data":{"sessionId":session_id, "isStreaming":False, "isCompacting":False,
                     "pendingMessageCount":0}, **fields}
 emit({"type":"startup", "future":{"values":[1]}})
+commands=[]
 for line in sys.stdin:
     request=json.loads(line)
     command=request["type"]
-    if command == "new_session":
+    commands.append(command)
+    if command == "commands":
+        emit(response(request, data={"commands":commands}))
+    elif command == "burst":
+        for i in range(100):
+            emit({"type":"progress", "index":i})
+        emit(response(request))
+    elif command == "new_session":
         session_id="second-session"
         emit(response(request, data={"cancelled":False}))
     elif command == "deep":
@@ -108,6 +120,7 @@ async def test_all_rpc_responses_and_mutation_isolation(options):
         parsed = [json.loads(line) for line in raw.splitlines()[:-1]]
         assert len(parsed) == len(other)  # no extra parsed delivery from cleanup
         assert first.status.complete and second.status.complete
+        assert first.status.end_reason == "process_end"
         assert first.status.error is None
         assert any(r.get("data", {}).get("sessionId") == "second-session" for r in other)
 
@@ -256,3 +269,223 @@ async def test_deep_valid_response_is_not_broken_by_observation(options):
         records = [r async for r in output]
         assert any(r.data.get("command") == "deep" for r in records)
         assert output.status.complete
+
+
+async def test_stop_drains_queued_output_without_sending_a_command(options):
+    async with AsyncPiClient(**options) as pi:
+        async with (
+            pi.observe(stderr=False, rpc=True) as output,
+            pi.observe(stderr=False, rpc=True) as witness,
+        ):
+            await pi.request("burst")
+            await output.stop()
+            ended = output.status
+            await output.stop()
+            assert output.status == ended
+            await pi.get_state()
+            assert (await pi.request("commands"))["data"]["commands"] == [
+                "get_state",
+                "burst",
+                "get_state",
+                "commands",
+            ]
+            records = [r async for r in output]
+            await witness.stop()
+            all_records = [r async for r in witness]
+            assert records == all_records[:101]  # Original receipt times are preserved.
+            assert [r.data["index"] for r in records[:-1]] == list(range(100))
+            assert ended.end_reason == "stopped"
+            assert not ended.complete and not ended.lost and ended.error is None
+            assert not ended.stdout_eof and ended.ended_at_ns is not None
+        assert output.status == ended  # Drained context exit does not mark loss.
+        assert pi.running
+
+
+def test_sync_stop_preserves_prefetched_batch_and_queue(options):
+    with PiClient(**options) as pi:
+        with pi.observe(stderr=False, rpc=True) as output:
+            pi.request("burst")
+            first = next(output)  # Prefetches a batch; stop must preserve it too.
+            output.stop()
+            ended = output.status
+            output.stop()
+            records = [first, *output]
+            assert [r.data["index"] for r in records[:-1]] == list(range(100))
+            assert records[-1].data["command"] == "burst"
+            assert ended.end_reason == "stopped" and not ended.lost
+            assert not ended.complete and ended.error is None
+            assert (pi.request("commands"))["data"]["commands"] == [
+                "get_state",
+                "burst",
+                "commands",
+            ]
+        assert output.status == ended
+        assert pi.get_state()["sessionId"] == "fixture"
+
+
+@pytest.mark.parametrize("close_first", [False, True])
+async def test_stop_and_close_discard_status(options, close_first):
+    async with AsyncPiClient(**options) as pi:
+        async with pi.observe(stderr=False, rpc=True) as output:
+            await pi.get_state()
+            if not close_first:
+                await output.stop()
+            await output.aclose()
+            status = output.status
+            await output.stop()
+            await output.aclose()
+            assert output.status == status
+            assert status.end_reason == "closed" and status.lost
+            assert not status.complete
+            assert [r async for r in output] == []
+
+
+def test_sync_close_after_stop_reports_discarded_batch(options):
+    with PiClient(**options) as pi:
+        with pi.observe(stderr=False, rpc=True) as output:
+            pi.request("burst")
+            next(output)
+            output.stop()
+            output.close()
+            output.stop()
+            assert list(output) == []
+            assert output.status.end_reason == "closed" and output.status.lost
+
+
+@pytest.mark.parametrize("blocking", [False, True])
+async def test_stop_preserves_overflow(options, blocking):
+    limits = Limits(event_queue_size=2)
+    if blocking:
+
+        def run():
+            with PiClient(**options, limits=limits) as pi:
+                with pi.observe(stderr=False, rpc=True) as output:
+                    pi.request("burst")
+                    output.stop()
+                    output.stop()
+                    with pytest.raises(PiSubscriptionOverflow):
+                        list(output)
+                assert output.status.end_reason == "overflow" and output.status.lost
+                assert isinstance(output.status.error, PiSubscriptionOverflow)
+                assert pi.running
+
+        await asyncio.to_thread(run)
+    else:
+        async with AsyncPiClient(**options, limits=limits) as pi:
+            async with pi.observe(stderr=False, rpc=True) as output:
+                await pi.request("burst")
+                await output.stop()
+                await output.stop()
+                with pytest.raises(PiSubscriptionOverflow):
+                    [r async for r in output]
+            assert output.status.end_reason == "overflow" and output.status.lost
+            assert isinstance(output.status.error, PiSubscriptionOverflow)
+            assert pi.running
+
+
+async def test_stop_wakes_waiting_reader_and_requires_context(options):
+    async with AsyncPiClient(**options) as pi:
+        output = pi.observe(stderr=False, rpc=True)
+        with pytest.raises(RuntimeError, match="Enter the observation"):
+            await output.stop()
+        async with output:
+            reader = asyncio.create_task(anext(output))
+            await asyncio.sleep(0)  # Allow the reader to wait on the empty queue.
+            await output.stop()
+            with pytest.raises(StopAsyncIteration):
+                await asyncio.wait_for(reader, 2)
+
+
+async def test_stop_racing_output_keeps_the_accepted_prefix(options):
+    async with AsyncPiClient(**options) as pi:
+        async with (
+            pi.observe(stderr=False, rpc=True) as output,
+            pi.observe(stderr=False, rpc=True) as witness,
+        ):
+            await pi.get_state()
+            await asyncio.gather(pi.request("burst"), output.stop())
+            await witness.stop()
+            records = [r async for r in output]
+            all_records = [r async for r in witness]
+            assert records and records == all_records[: len(records)]
+            assert output.status.end_reason == "stopped" and not output.status.lost
+
+
+@pytest.mark.parametrize("blocking", [False, True])
+async def test_stop_racing_client_shutdown_is_drainable(options, blocking):
+    if blocking:
+
+        def run():
+            pi = PiClient(**options)
+            with pi.observe(stderr=False, rpc=True) as output, ThreadPoolExecutor(2) as workers:
+                pi.start()
+                barrier = threading.Barrier(2)
+
+                def close():
+                    barrier.wait(timeout=2)
+                    pi.close()
+
+                def stop():
+                    barrier.wait(timeout=2)
+                    output.stop()
+
+                closer = workers.submit(close)
+                stopper = workers.submit(stop)
+                closer.result(timeout=5)
+                stopper.result(timeout=5)
+                records = list(output)
+                assert records[0].data["type"] == "startup"
+                assert output.status.end_reason in {"stopped", "process_end"}
+                assert not output.status.lost
+                output.stop()
+
+        await asyncio.to_thread(run)
+    else:
+        pi = AsyncPiClient(**options)
+        async with pi.observe(stderr=False, rpc=True) as output:
+            await pi.start()
+            await asyncio.gather(pi.aclose(), output.stop())
+            records = [r async for r in output]
+            assert records[0].data["type"] == "startup"
+            assert output.status.end_reason in {"stopped", "process_end"}
+            assert not output.status.lost
+            await output.stop()
+
+
+async def test_stop_after_process_failure_preserves_terminal_status(options):
+    pi = AsyncPiClient(**options)
+    async with pi.observe(stderr=False, rpc=True) as output:
+        await pi.start()
+        with pytest.raises(PiProtocolError) as failure:
+            await pi.request("malformed")
+        await pi.aclose()
+        status = output.status
+        await output.stop()
+        assert output.status == status
+        assert status.end_reason == "process_end" and status.error is failure.value
+        assert [r async for r in output]
+
+
+@pytest.mark.parametrize("blocking", [False, True])
+async def test_scoped_observation_allows_subsequent_owned_run(blocking):
+    executable = [sys.executable, str(Path(__file__).with_name("fake_client_pi.py"))]
+    if blocking:
+
+        def run():
+            with PiClient(executable=executable) as pi:
+                with pi.observe(stderr=False, rpc=True) as output:
+                    assert pi.run("normal").text == "answer"
+                    output.stop()
+                    records = list(output)
+                    assert any(r.data.get("type") == "agent_settled" for r in records)
+                assert pi.run("normal").text == "answer"
+
+        await asyncio.to_thread(run)
+    else:
+        async with AsyncPiClient(executable=executable) as pi:
+            async with pi.observe(stderr=False, rpc=True) as output:
+                assert (await pi.run("normal")).text == "answer"
+                await output.stop()
+                records = [r async for r in output]
+                assert any(r.data.get("type") == "agent_settled" for r in records)
+            assert (await pi.run("normal")).text == "answer"

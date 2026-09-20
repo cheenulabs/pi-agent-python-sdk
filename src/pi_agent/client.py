@@ -486,6 +486,7 @@ class AsyncPiClient:
                 rpc_complete=rpc_complete,
                 complete=complete,
                 error=self._close_error if self._closed else self._terminal_error or error,
+                end_reason="process_end",
             )
             observer._finish()
 

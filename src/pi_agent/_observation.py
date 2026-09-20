@@ -36,6 +36,7 @@ class ObservationStatus:
     stdout_eof: bool = False
     rpc_complete: bool = True
     error: Exception | None = field(default=None, repr=False)
+    end_reason: Literal["stopped", "closed", "overflow", "process_end"] | None = None
 
 
 class ProcessObservation(_Subscription[ProcessOutput]):
@@ -56,18 +57,36 @@ class ProcessObservation(_Subscription[ProcessOutput]):
     def status(self) -> ObservationStatus:
         return self._status
 
+    async def stop(self) -> None:
+        """Unsubscribe without discarding queued output or closing the client.
+
+        Drain the iterator afterwards, then inspect status. Repeated stops retain
+        the first termination status, including overflow or process failure.
+        """
+        if not self._entered:
+            raise RuntimeError("Enter the observation context before stopping")
+        if not self._closed:
+            self._status = replace(self._status, end_reason="stopped")
+            self._finish()
+
     def _finish(self, error: Exception | None = None) -> None:
         if not self._closed and self._status.ended_at_ns is None:
-            self._status = ObservationStatus(
-                started_at_ns=self._status.started_at_ns,
+            overflow = isinstance(error, PiSubscriptionOverflow)
+            self._status = replace(
+                self._status,
                 ended_at_ns=time.time_ns(),
-                from_start=self._status.from_start,
-                lost=self._status.lost or isinstance(error, PiSubscriptionOverflow),
+                lost=self._status.lost or overflow,
                 error=error,
+                end_reason="overflow" if overflow else self._status.end_reason or "closed",
             )
         super()._finish(error)
 
     def _discard(self, *, buffered: bool = False) -> None:
         if self._records or buffered:
-            self._status = replace(self._status, complete=False, lost=True)
+            self._status = replace(
+                self._status,
+                complete=False,
+                lost=True,
+                end_reason="overflow" if self._status.end_reason == "overflow" else "closed",
+            )
         super()._discard()
