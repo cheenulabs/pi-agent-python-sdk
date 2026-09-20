@@ -104,7 +104,7 @@ methods; raw RPC envelopes and stderr remain available through `observe()`.
 Each listener receives an `Event` with a separate mutable `.raw` dictionary.
 Callbacks run synchronously on the async client's owning loop, or on `PiClient`'s
 background loop thread. Keep them short; blocking callbacks delay all RPC work.
-Coroutine functions are rejected. Prefer `async for` over `events()` or `stream()`
+Coroutine functions are rejected. Prefer `async for` on `events()` or `stream()`
 when application work needs `await`; see the [streaming example](../examples/stream.py).
 If a callback schedules tasks itself, the application owns their bounds and cleanup.
 Blocking client calls from
