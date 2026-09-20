@@ -75,10 +75,12 @@ Responses and extension UI tasks can run during these pauses. Consumers that
 perform slow work should move that work out of their iteration loop and choose
 explicit storage and capacity policies in their application.
 
-Blocking iterators transfer up to 64 already-buffered records per thread crossing,
-without waiting to fill a batch. Each iterator can retain that additional batch,
-bounded by both its configured queue byte limit and the smaller of 64 records or
-its queue count limit. Overflow discards the batch and remains explicit; ordinary
+Blocking iterators transfer all already-buffered records per thread crossing,
+without waiting to fill a batch. This avoids leaving a backlog solely because
+each crossing takes time. Each iterator can retain that additional batch,
+bounded by both its configured queue byte and count limits. The queue can refill
+while the caller consumes the batch, so total buffered payload can reach twice
+those limits. Overflow discards the batch and remains explicit; ordinary
 terminal failures deliver the buffered prefix first. Closing a context releases
 its batch, and discarding unconsumed observation records marks coverage as lost.
 

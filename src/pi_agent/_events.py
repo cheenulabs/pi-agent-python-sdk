@@ -117,8 +117,10 @@ class _Subscription(Generic[T]):
     async def _next_batch(self) -> list[T]:
         records = [await self.__anext__()]
         # Transfer only records already buffered; never wait to fill a batch.
-        # This retains at most one queue's byte budget in the blocking facade.
-        while self._records and len(records) < 64:
+        # Drain the ready queue in one crossing so bridge latency does not leave
+        # a growing backlog. No await below: count and bytes stay within the
+        # existing queue budgets, including the first record just removed.
+        while self._records:
             record = self._next_nowait()
             assert record is not None
             records.append(record)
