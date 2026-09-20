@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Yield the OS thread every 64 stdout records instead of sleeping for 1 ms, so
+  blocking consumers stay fair without a fixed timer delay.
 - Drain the ready queue in each blocking iterator transfer to avoid finite-burst
   overflow caused by repeated partial transfers. Queue limits remain unchanged;
   the additional batch is bounded by the same count and byte budgets.
