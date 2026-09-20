@@ -9,13 +9,15 @@ from pi_agent import AsyncPiClient, Event
 
 def display(event: Event) -> None:
     raw = event.raw
+    update = raw.get("assistantMessageEvent")
     if event.text_delta is not None:
         print(event.text_delta, end="", flush=True)
     elif (
         event.type == "message_update"
-        and raw.get("assistantMessageEvent", {}).get("type") == "thinking_delta"
+        and isinstance(update, dict)
+        and update.get("type") == "thinking_delta"
     ):
-        print(f"\n[thinking] {raw['assistantMessageEvent']['delta']}", flush=True)
+        print(f"\n[thinking] {update.get('delta', '')}", flush=True)
     elif event.type in {"tool_execution_start", "tool_execution_update", "tool_execution_end"}:
         # Original args, partialResult, result, isError, IDs and future fields stay available.
         print(f"\n[tool] {json.dumps(raw)}", flush=True)
