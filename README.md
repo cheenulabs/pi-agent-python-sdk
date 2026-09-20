@@ -4,12 +4,12 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)][metadata]
 [![MIT license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)][license]
 
-**Run Pi from Python. Stream responses, continue conversations, and control sessions.**
+**Use your installed Pi coding agent as a Python API. Stream responses,
+continue conversations, and control sessions from Python.**
 
 A community Python SDK for [Pi coding agent](https://github.com/earendil-works/pi).
-Use synchronous or asynchronous clients with typed access to Pi's RPC commands
-and no third-party Python runtime dependencies. Pi runs as a subprocess and keeps
-its usual models, authentication, tools, extensions, skills, and configuration.
+It starts Pi as a subprocess and exposes the same agent runtime through a typed
+Python interface for RPC commands, streaming, and session control.
 
 > Requires Python **3.11+** and a separate Pi installation. The tested protocol
 > baseline is **Pi 0.86.0**; see [compatibility][compatibility] for version and
@@ -17,6 +17,26 @@ its usual models, authentication, tools, extensions, skills, and configuration.
 
 [Quick start](#quick-start) · [Streaming](#streaming) · [Async](#async-usage) ·
 [Configuration](#configuration) · [RPC](#rpc-access) · [Documentation](#documentation)
+
+## Why use this?
+
+If you already use Pi from the terminal, this SDK lets you use the same agent
+from Python code. Instead of managing a separate implementation, you can start Pi
+in RPC mode and call it as a programmatic API from scripts, apps, services, or
+background jobs.
+
+This is useful when you want to:
+
+- Add Pi-powered coding or reasoning to a Python application.
+- Automate project analysis, refactors, or repository workflows.
+- Build a service or CLI around Pi without reimplementing the agent runtime.
+- Stream text, thinking, tool, and session events in Python.
+- Reuse your existing Pi configuration, models, tools, and extensions.
+
+The SDK keeps Pi's usual setup and model selection, while exposing a typed Python
+interface for prompts, follow-ups, model control, and RPC access. It launches Pi
+as a subprocess and communicates over its JSONL protocol; it does not attach to
+an already-running interactive Pi terminal session.
 
 ## What you can do
 
