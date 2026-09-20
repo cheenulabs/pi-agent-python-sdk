@@ -383,6 +383,8 @@ rather than the time a worker eventually processes them.
 after explicit close/discard, `"overflow"` for queue loss, or `"process_end"` after
 client/process termination (including startup failure). Check `error` separately
 for terminal failure. A stopped observation never claims `complete=True`.
+Stopping after a known terminal failure preserves `error`, even while process
+cleanup is still draining pipes. The buffered records remain available to iterate.
 Repeated stop preserves the existing end reason and errors. Context exit or
 `aclose()` / `close()` still discards unread records, setting `lost=True` and
 `end_reason="closed"`; overflow remains marked as overflow. Closing an already

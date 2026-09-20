@@ -76,7 +76,7 @@ class ProcessObservation(_Subscription[ProcessOutput]):
                 self._status,
                 ended_at_ns=time.time_ns(),
                 lost=self._status.lost or overflow,
-                error=error,
+                error=error or self._status.error,
                 end_reason="overflow" if overflow else self._status.end_reason or "closed",
             )
         super()._finish(error)
