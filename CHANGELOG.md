@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Keep a healthy client usable after locally rejected, unsent input, without
+  relaxing ownership or cleanup for commands that may have reached Pi.
+
 - Update the tested Pi runtime to 0.86.0, retaining 0.85.1 as the minimum.
 - Describe system transcript messages, session usage entries, compaction system
   snapshots, and model prompt-cache metadata in the wire annotations. Preserve

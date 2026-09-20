@@ -692,12 +692,23 @@ class AsyncPiClient:
         )
         if deadline is not None:
             _validate_timeout(deadline)
-        if self._owner is None and command in {"prompt", "steer", "follow_up"}:
-            # Set before awaiting: input handlers can start work long after acknowledgement.
-            # Even rejection/cancellation cannot prove arbitrary extension preflight is idle.
-            self._unowned_submission = True
+
+        def mark_submission() -> None:
+            if owner is not None:
+                owner._mark_submitted()
+            elif self._owner is None:
+                # Even rejection cannot prove extension preflight is idle.
+                self._unowned_submission = True
+
         try:
-            response = await self._transport.request(command, fields, timeout=deadline)
+            response = await self._transport.request(
+                command,
+                fields,
+                timeout=deadline,
+                before_write=(
+                    mark_submission if command in {"prompt", "steer", "follow_up"} else None
+                ),
+            )
             if self._ui_error is not None:
                 error, self._ui_error = self._ui_error, None
                 raise error
