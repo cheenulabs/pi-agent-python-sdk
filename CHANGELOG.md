@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Allow sequential async stream iterator reuse while retaining concurrent-reader
+  and result-drain protections.
 - Drain the ready queue in each blocking iterator transfer to avoid finite-burst
   overflow caused by repeated partial transfers. Queue limits remain unchanged;
   the additional batch is bounded by the same count and byte budgets.

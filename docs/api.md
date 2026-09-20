@@ -73,7 +73,9 @@ queue bounds, blocking iterator batches, and dispatch scheduling costs.
 
 Within a stream context, iterate and then call `result()`, or call `result()`
 alone to drain. Await it for async streams. An active iterator and a simultaneous
-result drain are mutually exclusive. Contexts are single-use.
+result drain are mutually exclusive. Contexts are single-use. The async iterator
+can be obtained repeatedly or continued with `async for` after `anext(stream)`;
+overlapping reads remain invalid.
 
 Stream entry occurs on prompt acknowledgement or an observed agent start,
 whichever comes first. Completion still requires successful acknowledgement and
