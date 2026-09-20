@@ -1,9 +1,35 @@
 # Discovery: Pi coding agent Python client
 
-Protocol snapshot: 2026-09-15, Pi 0.85.1. This document records upstream
-wire behavior, source references, and compatibility considerations.
+Original protocol snapshot: 2026-09-15, Pi 0.85.1. Reviewed update: 2026-09-20,
+Pi 0.86.0. Historical observations below retain their original version/source;
+the coverage inventory includes the additions described here.
 
-## Findings that shape the package
+## Pi 0.86.0 update
+
+The published npm release identifies commit
+[`ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc`](https://github.com/earendil-works/pi/tree/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc).
+All 20 recorded surfaces were compared; 11 changed. The RPC client, command types,
+JSONL framing and event serializer are unchanged: 33 commands, 25 declared
+session/extension event types, and nine UI methods remain the wire surface.
+
+The [message/model types](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/ai/src/types.ts)
+add system-role messages and model prompt-cache lifetimes. The
+[session types](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/core/session-manager.ts)
+add usage entries and compaction system snapshots. Tool additions/removals now
+travel in system messages; optional `addedToolNames` remains in Python only for
+older supported runtimes. Unknown metadata remains available unchanged.
+
+`steer` and `follow_up` now pass through extension input handlers with source
+`rpc`; transformed or handled input follows Pi's behavior. Provider transcript
+normalization, prompt replay, cache warming, extension hooks, and retry fixes
+remain upstream responsibilities. Cache-warming usage appears in session entries
+and session statistics, not in the assistant-only `RunResult.usage` summary.
+
+The minimum remains 0.85.1; the recorded tested baseline is now 0.86.0. The updated
+shared corpus checks 42 command cases and 39 event records against both Python
+facades and the actual TypeScript client, including the new payload shapes.
+
+## Original 0.85.1 findings that shape the package
 
 - The installed runtime and npm latest stable both resolve to **0.85.1**.
   There is no baseline-to-latest stable protocol difference at this snapshot.
@@ -226,26 +252,28 @@ Source: [content and message definitions](https://github.com/earendil-works/pi/b
 - `StopReason`: `pending|stop|length|toolUse|error|aborted|deferred`.
 - `DeferredHandle`: provider:string; modelId:string; api:string; id:string; expiresAt?:number; pollAfterMs?:number; data?:JSON.
 - `AssistantMessageDiagnostic`: type:string; timestamp:number; error?:{name?:string,message:string,stack?:string,code?:string|number}; details?:object of JSON.
+- `SystemMessage` (0.86.0): role:"system"; content:string or TextContent[]; sections?:map string to string/null; toolsAdded?:ToolDefinition[]; toolsRemoved?:{name:string}[]; timestamp:number. Tool definitions carry name, description, parameters (JSON schema), and optional constrainedSampling (false or a JSON configuration).
 - `UserMessage`: role:"user"; content:string or (TextContent|ImageContent)[]; timestamp:number.
 - `AssistantMessage`: role:"assistant"; content:(TextContent|ThinkingContent|ToolCall)[]; api:string; provider:string; model:string; responseModel?:string; responseId?:string; providerThinkingLevel?:string; diagnostics?:AssistantMessageDiagnostic[]; usage:Usage; stopReason:StopReason; deferred?:DeferredHandle; errorMessage?:string; rawStopReason?:string; endTurn?:boolean; timestamp:number.
-- `ToolResultMessage`: role:"toolResult"; toolCallId:string; toolName:string; content:(TextContent|ImageContent)[]; details?:JSON; usage?:Usage; addedToolNames?:string[]; isError:boolean; timestamp:number.
+- `ToolResultMessage`: role:"toolResult"; toolCallId:string; toolName:string; content:(TextContent|ImageContent)[]; details?:JSON; usage?:Usage; addedToolNames?:string[] (legacy 0.85.1); isError:boolean; timestamp:number.
 - `BashExecutionMessage`: role:"bashExecution"; command:string; output:string; exitCode?:number; cancelled:boolean; truncated:boolean; fullOutputPath?:string; timestamp:number; excludeFromContext?:boolean.
 - `CustomMessage`: role:"custom"; customType:string; content:string or (TextContent|ImageContent)[]; display:boolean; details?:JSON; timestamp:number.
 - `BranchSummaryMessage`: role:"branchSummary"; summary:string; fromId:string|null; timestamp:number.
 - `CompactionSummaryMessage`: role:"compactionSummary"; summary:string; tokensBefore:number; timestamp:number.
 
-`AgentMessage` is these seven roles at this baseline; agent-core allows declaration merging, so preserve unknown roles too. Provider IDs and API IDs are open strings, not closed enums. Opaque signatures must be preserved unchanged.
+`AgentMessage` includes these eight roles at the updated baseline; agent-core allows declaration merging, so preserve unknown roles too. Provider IDs and API IDs are open strings, not closed enums. Opaque signatures must be preserved unchanged.
 
 ### Session entries and tree
 
-[Authoritative session types](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/session-manager.ts#L46). All nine entry variants have `type`, `id:string`, `parentId:string|null`, `timestamp:string` plus:
+[Authoritative session types](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/session-manager.ts#L46). With the 0.86.0 additions above, all ten entry variants have `type`, `id:string`, `parentId:string|null`, `timestamp:string` plus:
 
 | Entry type | Additional fields |
 |---|---|
 | message | message:AgentMessage |
 | thinking_level_change | thinkingLevel:string |
 | model_change | provider:string; modelId:string |
-| compaction | summary:string; firstKeptEntryId:string; tokensBefore:number; details?:JSON; usage?:Usage; fromHook?:boolean |
+| usage | kind:string; provider:string; model:string; usage:Usage; note?:string |
+| compaction | summary:string; firstKeptEntryId:string; tokensBefore:number; details?:JSON; usage?:Usage; fromHook?:boolean; systemMessage?:SystemMessage |
 | branch_summary | fromId:string; summary:string; details?:JSON; usage?:Usage; fromHook?:boolean |
 | custom | customType:string; data?:JSON |
 | custom_message | customType:string; content:string or (TextContent\|ImageContent)[]; details?:JSON; display:boolean |
@@ -255,6 +283,11 @@ Source: [content and message definitions](https://github.com/earendil-works/pi/b
 `SessionTreeNode`: entry:SessionEntry; children:SessionTreeNode[]; label?:string; labelTimestamp?:string. `get_entries` and `get_tree` expose entries, not raw session-file headers. The separate `SessionHeader` (`type:"session",version?:number,id:string,timestamp:string,cwd:string,parentSession?:string`) is not a returned SessionEntry. Do not accidentally require headers or build a session-file parser to satisfy RPC coverage.
 
 ### Model and provider metadata
+
+Pi 0.86.0 additionally exposes `promptCache?:{short?:number,long?:number}` in
+seconds. Missing tiers have unknown lifetimes. `compat` continues to preserve
+all provider-specific JSON, including new mid-conversation capability fields.
+The detailed inventory below records the original 0.85.1 provider fields.
 
 [Model definition](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/ai/src/types.ts#L825): id:string; name:string; api:string; provider:string; baseUrl:string; reasoning:boolean; thinkingLevelMap?:partial map of ThinkingLevel to string|null; input:("text"|"image")[]; cost:ModelCost; contextWindow:number; maxTokens:number; samplingParams?:object of JSON; headers?:map string→string; compat?:provider-specific JSON object.
 

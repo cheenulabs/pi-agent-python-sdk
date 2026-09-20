@@ -118,6 +118,9 @@ export default function (pi: ExtensionAPI) {
       return { action: "handled" };
     }
     if (event.text === "fixture handled") return { action: "handled" };
+    if (event.text === "fixture transform") {
+      return { action: "transform", text: `transformed ${event.source} input` };
+    }
   });
   pi.registerCommand("fixture-release-delayed", {
     description: "Start work previously consumed by the delayed input fixture",

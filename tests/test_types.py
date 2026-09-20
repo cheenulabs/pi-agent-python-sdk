@@ -171,8 +171,9 @@ def test_wire_unions_cover_the_discovered_protocol() -> None:
     assert len(events) == 25
     assert len(nested) == 12
     assert len(ui) == 9
-    assert len(entries) == 9
+    assert len(entries) == 10
     assert _discriminators(types.AgentMessage, "role") == {
+        "system",
         "user",
         "assistant",
         "toolResult",

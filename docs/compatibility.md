@@ -10,8 +10,8 @@ Check the proposed commit's CI results before relying on platform support.
 | Component | Policy |
 |---|---|
 | Python | Package requires 3.11 or newer; Linux CI targets 3.11, 3.12, 3.13, and 3.14 |
-| Pi | Minimum and recorded tested protocol version: **0.85.1** |
-| Node.js | Pi 0.85.1 requires **22.19.0 or newer** |
+| Pi | Minimum **0.85.1**; recorded tested protocol version **0.86.0** |
+| Node.js | Pi 0.86.0 requires **22.19.0 or newer** |
 | Python runtime dependencies | None beyond the standard library |
 | Platforms | CI targets Linux with Python 3.11–3.14; macOS and Windows with Python 3.14 |
 
@@ -20,10 +20,17 @@ version has passed tests. Similarly, successfully launching an untested Pi
 version is not a compatibility certification.
 
 The pinned Pi source is commit
-[`d981de1229ef899957bbe968bc8dcda02a21f477`](https://github.com/earendil-works/pi/tree/d981de1229ef899957bbe968bc8dcda02a21f477).
+[`ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc`](https://github.com/earendil-works/pi/tree/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc).
 The [discovery document](discovery.md) records the upstream types, serializer,
 implementation, and observed runtime behavior used to build the client. The
 package wraps Pi's RPC protocol and is not an official upstream Python SDK.
+
+Pi 0.86.0 adds system transcript messages, session usage entries, compaction
+system snapshots, and model prompt-cache metadata. These remain wire dictionaries;
+Python does not replay system messages or implement cache warming. The optional
+`addedToolNames` annotation remains for Pi 0.85.1 tool results. Session statistics
+may include cache-warming usage; `RunResult.usage` still summarizes only observed
+assistant messages. CI also exercises the minimum version on Linux.
 
 ## Startup version policy
 
@@ -33,8 +40,8 @@ PyPI, GitHub, or another version service. After startup:
 | Selected executable | Behavior |
 |---|---|
 | Recognized version below 0.85.1 | Reject with `PiVersionError` |
-| Exactly 0.85.1 | `pi_version="0.85.1"`, `compatibility="tested"` |
-| Recognized newer version | Allow by default, with `compatibility="untested"` |
+| Exactly 0.86.0 | `pi_version="0.86.0"`, `compatibility="tested"` |
+| Other recognized version at or above the minimum | Allow by default, with `compatibility="untested"` |
 | Recognized untested version and `strict_version=True` | Reject with `PiVersionError` |
 | Unparseable/custom version output | Reject unless `allow_unknown_version=True` |
 | Explicit unknown-version override | `pi_version=None`, `compatibility="unknown"` |
@@ -133,7 +140,7 @@ result attribution without changing the shared command/event protocol.
 
 ## TypeScript behavior contract
 
-The [pinned TS client](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-client.ts)
+The [pinned TS client](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/modes/rpc/rpc-client.ts)
 is the comparison reference. All 33 command wrappers have Python equivalents;
 the [command table](api.md#all-33-rpc-commands) records wire arguments and results.
 Current source matches TS object results for thinking-level cycling and HTML
@@ -170,8 +177,8 @@ those events to a particular prompt or produce provider traces Pi did not emit.
 Do not copy TS's mutable-listener-array bug: removing a collector during
 settlement dispatch can skip the next collector. Python intentionally lets
 independent collectors and idle waiters complete on the same settlement.
-The [TS dispatch/helpers](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-client.ts#L464)
-and [JSONL implementation](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/jsonl.ts)
+The [TS dispatch/helpers](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/modes/rpc/rpc-client.ts#L464)
+and [JSONL implementation](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/modes/rpc/jsonl.ts)
 are the source for these distinctions.
 
 ## Repeatable comparison and regression coverage
@@ -188,7 +195,7 @@ This checks the installed Pi version and embedded TS source hashes against
 `compatibility.json`, then runs the actual TS client and both Python clients
 against the same synthetic subprocess. It compares 42 cases spanning all 33
 commands, including null cycles, omitted arguments, empty values, and false
-flags. A 35-record corpus covers all 25 declared session/extension event types,
+flags. A 39-record corpus covers all 25 declared session/extension event types,
 the nine serialized assistant update variants, and unknown metadata. Returned
 payloads, request sequences, event order, and both listeners must match.
 No client methods are patched, and no provider or live Pi configuration is used.

@@ -50,7 +50,7 @@ def test_persistent_loop_properties_and_clean_join():
         assert loop_thread is not None and loop_thread.is_alive()
         assert pi.running
         assert pi.pi_version == "0.85.1"
-        assert pi.compatibility == "tested"
+        assert pi.compatibility == "untested"
         assert pi.session.session_id == "synthetic-session"
         assert pi.run("hello").text == "hello"
         pi.set_session_name("renamed")
