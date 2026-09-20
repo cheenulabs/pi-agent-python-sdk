@@ -67,11 +67,11 @@ independent result count and byte limits still apply. `stream()`, `events()`,
 and `observe()` retain bounded queues and raise `PiSubscriptionOverflow` when
 consumers fall behind; an observer's overflow does not abort unrelated RPC work.
 
-The reader yields to the event loop between records. Every 64 records it also
-yields the OS thread without a fixed delay so the blocking caller can run;
-`asyncio.sleep(0)` alone can starve that thread. This is a scheduling
-fairness measure, not an unlimited-throughput or lossless-storage guarantee.
-Responses and extension UI tasks can run between yields. Consumers that
+The reader yields between records and pauses for 1 ms after each 64 records to
+give both async consumers and the blocking caller thread execution time. This
+adds scheduling overhead (including roughly 16 ms per 1,000 records before OS
+timer overhead); it is not an unlimited-throughput or lossless-storage guarantee.
+Responses and extension UI tasks can run during these pauses. Consumers that
 perform slow work should move that work out of their iteration loop and choose
 explicit storage and capacity policies in their application.
 

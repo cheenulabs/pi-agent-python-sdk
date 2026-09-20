@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -239,12 +238,14 @@ class Transport:
                 del buffer[:offset]
                 offset = 0
                 self._dispatch_count += 1
-                # asyncio.sleep(0) yields to loop tasks, not the blocking caller
-                # thread. Periodically yield the OS thread without a fixed delay.
+                # A zero-delay yield wakes async readers but can starve the
+                # blocking facade's caller thread. Periodically let the loop
+                # actually wait, while continuing to service responses and UI.
                 if self._dispatch_count == 64:
                     self._dispatch_count = 0
-                    time.sleep(0)  # noqa: ASYNC251 - intentional zero-duration thread yield
-                await asyncio.sleep(0)
+                    await asyncio.sleep(0.001)
+                else:
+                    await asyncio.sleep(0)
         finally:
             # Remove the failing line too; cleanup must never observe it twice.
             if offset:
