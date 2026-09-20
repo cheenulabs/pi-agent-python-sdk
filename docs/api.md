@@ -358,7 +358,7 @@ unspecified; concatenate bytes before decoding or use an incremental decoder.
 
 `ObservationStatus` exposes `started_at_ns` (RPC spawn attempt), `ended_at_ns`
 (observation end), `from_start`, `stdout_eof`, `stderr_eof`, `rpc_complete`,
-`complete`, `lost`, and `error`.
+`complete`, `lost`, `error`, and `end_reason`.
 `complete` means a subscription attached before spawn received all selected output
 through natural pipe EOF with no queue loss. It does not promise successful RPC
 execution or that a caller saved every record. `error` preserves the terminal
@@ -370,6 +370,23 @@ After client shutdown, drain queued records before leaving the observer context;
 this works even after a blocking client's loop has stopped. Leaving the context
 unsubscribes and discards unread records, marking loss if records were queued.
 All data fields and errors are omitted from default observation representations.
+
+To end a scoped observation while keeping Pi alive, call `await output.stop()`
+(async) or `output.stop()` (blocking), then drain the iterator. Stop unregisters
+immediately and preserves accepted records, including blocking iterator batches.
+It sends no RPC command, does not wait for future output, and does not establish a
+provider or prompt boundary. Selected records already delivered to the observation
+retain their order and `time_ns`; use that receipt timestamp when storing them,
+rather than the time a worker eventually processes them.
+
+`end_reason` is `None` while active, `"stopped"` after a scoped stop, `"closed"`
+after explicit close/discard, `"overflow"` for queue loss, or `"process_end"` after
+client/process termination (including startup failure). Check `error` separately
+for terminal failure. A stopped observation never claims `complete=True`.
+Repeated stop preserves the existing end reason and errors. Context exit or
+`aclose()` / `close()` still discards unread records, setting `lost=True` and
+`end_reason="closed"`; overflow remains marked as overflow. Closing an already
+drained observation preserves its status. Stop requires an entered context.
 
 Select at least one source. Raw stdout includes blank lines, invalid UTF-8, malformed
 JSON and partial trailing bytes. RPC observation includes every parsed JSON object

@@ -410,3 +410,39 @@ whole process in memory. Each source preserves reader order. To reconstruct raw
 stdout/stderr, concatenate that source's byte payloads; inspect `rpc` dictionaries
 separately. Applications adapt these records to their own capture schema and
 viewer. The SDK defines no capture file, Base64 convention or export destination.
+
+For a scoped capture, stop the observation and drain it while leaving Pi alive.
+`stop()` preserves records already accepted, without sending a command as a fence.
+It does not wait for output that Pi has not yet emitted or the SDK has not read.
+Use a concurrent consumer for potentially large output:
+
+```python
+import asyncio
+from pi_agent import AsyncPiClient, ProcessOutput
+
+
+async def capture_run(pi: AsyncPiClient, prompt: str) -> list[ProcessOutput]:
+    records: list[ProcessOutput] = []  # Caller chooses retention limits.
+    async with pi.observe(stderr=False, rpc=True) as output:
+
+        async def collect() -> None:
+            async for record in output:
+                records.append(record)  # Preserve record.time_ns when exporting.
+
+        consumer = asyncio.create_task(collect())
+        try:
+            await pi.run(prompt)
+        finally:
+            await output.stop()
+            await consumer
+        assert output.status.end_reason == "stopped"
+        assert not output.status.lost
+    return records  # pi remains available for the next run.
+```
+
+A clean scoped drain has `end_reason="stopped"`, no loss/error, and
+`complete=False`: it is not whole-process coverage. Leaving the observation
+context before draining discards unread output. The blocking equivalent is
+`output.stop()` followed by iteration; a concurrent worker may continue draining
+while stop is called. See the runnable [scoped-output example](../examples/scoped_output.py)
+and [observation status reference](api.md#process-observation).
