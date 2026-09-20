@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Allow sequential async stream iterator reuse while retaining concurrent-reader
+  and result-drain protections.
 - Keep a healthy client usable after locally rejected, unsent input, without
   relaxing ownership or cleanup for commands that may have reached Pi.
 
