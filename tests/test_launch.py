@@ -69,7 +69,8 @@ def test_explicit_command_argv():
     "version,strict,allow_unknown,expected",
     [
         ("0.85.1", False, False, ("0.85.1", "untested")),
-        ("0.86.0", True, False, ("0.86.0", "tested")),
+        ("0.86.0", False, False, ("0.86.0", "untested")),
+        ("0.86.1", True, False, ("0.86.1", "tested")),
         ("0.87.0", False, False, ("0.87.0", "untested")),
         ("custom", False, True, (None, "unknown")),
     ],

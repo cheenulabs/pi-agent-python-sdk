@@ -1,8 +1,19 @@
 # Discovery: Pi coding agent Python client
 
 Original protocol snapshot: 2026-09-15, Pi 0.85.1. Reviewed update: 2026-09-20,
-Pi 0.86.0. Historical observations below retain their original version/source;
-the coverage inventory includes the additions described here.
+Pi 0.86.0. Reviewed patch: 2026-09-22, Pi 0.86.1. Historical observations below
+retain their original version/source; the coverage inventory includes the
+additions described here.
+
+## Pi 0.86.1 update
+
+The published npm release identifies commit
+[`13cbf77df2396303013a41646bcfa77b4271ae56`](https://github.com/earendil-works/pi/tree/13cbf77df2396303013a41646bcfa77b4271ae56).
+Four fingerprinted surfaces changed: CLI env-key docs, package version pins,
+the AI provider union (`"meta"`), and the coding-agent changelog. RPC client,
+command types, JSONL framing, and the event serializer are unchanged.
+
+The recorded tested baseline is now 0.86.1; the minimum remains 0.85.1.
 
 ## Pi 0.86.0 update
 
@@ -25,9 +36,10 @@ normalization, prompt replay, cache warming, extension hooks, and retry fixes
 remain upstream responsibilities. Cache-warming usage appears in session entries
 and session statistics, not in the assistant-only `RunResult.usage` summary.
 
-The minimum remains 0.85.1; the recorded tested baseline is now 0.86.0. The updated
-shared corpus checks 42 command cases and 39 event records against both Python
-facades and the actual TypeScript client, including the new payload shapes.
+The minimum remains 0.85.1; the recorded tested baseline was 0.86.0 until the
+0.86.1 review above. The updated shared corpus checks 42 command cases and 39
+event records against both Python facades and the actual TypeScript client,
+including the new payload shapes.
 
 ## Original 0.85.1 findings that shape the package
 

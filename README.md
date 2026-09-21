@@ -43,8 +43,8 @@ Requires an installed, configured Pi CLI — see [Prerequisites](#prerequisites)
 | Requirement | Notes |
 | --- | --- |
 | Python **3.11+** | Package metadata requires 3.11 or newer |
-| Node.js **22.19.0+** | Required by Pi 0.86.0 |
-| Pi **0.85.1+** | Minimum accepted version; **0.86.0** is the tested baseline |
+| Node.js **22.19.0+** | Required by Pi 0.86.1 |
+| Pi **0.85.1+** | Minimum accepted version; **0.86.1** is the tested baseline |
 | Model provider | Required; configure with the Pi CLI (see Quick start) |
 
 ## Quick start
@@ -52,7 +52,7 @@ Requires an installed, configured Pi CLI — see [Prerequisites](#prerequisites)
 Install Pi with Node.js **22.19.0 or newer** (pin matches the tested baseline):
 
 ```sh
-npm install -g @earendil-works/pi-coding-agent@0.86.0
+npm install -g @earendil-works/pi-coding-agent@0.86.1
 pi --version
 ```
 
@@ -292,7 +292,7 @@ setup and validation commands.
 | Symptom | What to check |
 | --- | --- |
 | `pi` not found / launch fails | Ensure the Pi CLI is on `PATH`, or pass `executable=` to the client |
-| Version rejected | Upgrade to Pi **0.85.1+**; prefer the tested baseline **0.86.0** |
+| Version rejected | Upgrade to Pi **0.85.1+**; prefer the tested baseline **0.86.1** |
 | No model / auth errors | Run `pi` once and complete provider setup |
 | Unexpected file or command changes | Review Pi tool/extension settings before automation |
 
