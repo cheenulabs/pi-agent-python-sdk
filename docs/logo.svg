@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Unofficial community mark for pi-agent-python-sdk.
+  Geometry adapted from the Pi logo (https://pi.dev/logo.svg).
+  Dual-snake motif adapted from the Python logo (PSF).
+  Not affiliated with Earendil Inc. or the Python Software Foundation.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-label="Pi Agent Python SDK">
+  <title>Pi Agent Python SDK</title>
+  <!-- Soft round tile so the mark reads on light and dark GitHub themes -->
+  <rect width="800" height="800" rx="160" fill="#0F172A"/>
+
+  <!-- Pi mark silhouette in Python brand colors -->
+  <!-- top / crossbar -->
+  <path fill="#FFD43B" d="M165.29 165.29H517.36V400H400V282.65H165.29Z"/>
+  <!-- stem -->
+  <path fill="#3776AB" d="M165.29 282.65H282.65V400H400V517.36H282.65V634.72H165.29Z"/>
+  <!-- accent block -->
+  <path fill="#FFD43B" d="M517.36 400H634.72V634.72H517.36Z"/>
+
+  <!-- Python dual-snake badge in the open center notch of the Pi mark -->
+  <g transform="translate(282.65 282.65) scale(1.067)">
+    <path fill="#3776AB" d="M54.813-0.077c-25.971 0-26.25 10.081-26.25 12.156 0 3.148 0 12.594 0 12.594h26.75v3.781s-27.852 0-37.375 0c-7.949 0-17.938 4.833-17.938 26.25 0 19.673 7.792 27.281 15.656 27.281 2.335 0 9.344 0 9.344 0s0-9.765 0-13.125c0-5.491 2.721-15.656 15.406-15.656 15.91 0 19.971 0 26.531 0 3.902 0 14.906-1.696 14.906-14.406 0-13.452 0-17.89 0-24.219C81.844 11.426 81.305-0.077 54.813-0.077z M40.063 8.392c2.662 0 4.813 2.15 4.813 4.813 0 2.661-2.151 4.813-4.813 4.813s-4.813-2.151-4.813-4.813c0-2.663 2.151-4.813 4.813-4.813z"/>
+    <path fill="#FFD43B" d="M55.187 109.923c25.959 0 26.282-10.271 26.282-12.156 0-3.148 0-12.594 0-12.594H54.687v-3.781s28.032 0 37.375 0c8.009 0 17.938-4.954 17.938-26.25 0-23.322-10.538-27.281-15.656-27.281-2.336 0-9.344 0-9.344 0s0 10.216 0 13.125c0 5.491-2.631 15.656-15.406 15.656-15.91 0-19.476 0-26.532 0-3.892 0-14.906 1.896-14.906 14.406 0 14.475 0 18.265 0 24.219 0 15.656 3.196 25.082 27.031 25.082z M69.938 101.454c-2.662 0-4.813-2.151-4.813-4.813s2.15-4.813 4.813-4.813c2.661 0 4.813 2.151 4.813 4.813s-2.152 4.813-4.813 4.813z"/>
+  </g>
+</svg>
