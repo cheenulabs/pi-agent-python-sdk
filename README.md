@@ -1,6 +1,10 @@
 # Pi Agent Python SDK
 
 <p align="center">
+  <strong>Your terminal agent. Your Python API.</strong>
+</p>
+
+<p align="center">
   <a href="https://github.com/cheenulabs/pi-agent-python-sdk">
     <img alt="Pi Agent Python SDK" src="docs/logo.svg" width="160">
   </a>
@@ -9,8 +13,6 @@
 [![PyPI](https://img.shields.io/pypi/v/pi-agent-python-sdk.svg?style=flat-square)][pypi]
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)][metadata]
 [![MIT license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)][license]
-
-**Your terminal agent. Your Python API.**
 
 [Pi](https://github.com/earendil-works/pi) is the coding agent that runs in your
 terminal. This unofficial community SDK puts *your* Pi behind a typed sync and
