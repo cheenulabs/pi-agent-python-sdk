@@ -107,10 +107,15 @@ with PiClient() as pi:
     print(f"\nStop reason: {result.stop_reason}")
 ```
 
+<details>
+<summary>Streaming details</summary>
+
 `event.raw` contains the full Pi event, including fields the SDK does not yet
 recognize. Keep the stream inside its context: leaving early cleans up unfinished
 work. See [errors and cancellation][errors] for handling timeouts and partial
 results.
+
+</details>
 
 ## Async usage
 
@@ -133,8 +138,13 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-Async streaming uses `async with pi.stream(...)`, `async for event in stream`,
-and `await stream.result()`. See the [complete streaming example][stream-example].
+<details>
+<summary>Async streaming</summary>
+
+Use `async with pi.stream(...)`, `async for event in stream`, and
+`await stream.result()`. See the [complete streaming example][stream-example].
+
+</details>
 
 ## Configuration
 
@@ -149,14 +159,20 @@ with PiClient(cwd=".", no_session=True) as pi:
 
 Leave `no_session` unset to preserve Pi's normal session persistence. Use
 `session=` to open an existing session. For model overrides, see
-[Models and thinking](#models-and-thinking). See
-[constructor options][constructor-options] for environment overrides, executable
-paths, and deadlines.
+[Models and thinking](#models-and-thinking).
+
+<details>
+<summary>More configuration</summary>
+
+See [constructor options][constructor-options] for environment overrides,
+executable paths, and deadlines.
 
 Extensions are installed and configured through Pi. To load your own extension,
-pass `extra_args=["--extension", "/absolute/path/to/your-extension.ts"]` to either
-client. See [using your own extensions][extensions]
-for details and [extension UI][ui-example] for an interactive example.
+pass `extra_args=["--extension", "/absolute/path/to/your-extension.ts"]` to
+either client. See [using your own extensions][extensions] for details and
+[extension UI][ui-example] for an interactive example.
+
+</details>
 
 ## Models and thinking
 
@@ -170,19 +186,6 @@ Select a model at construction:
 from pi_agent import PiClient
 
 with PiClient(provider="openai", model="gpt-5") as pi:
-    print(pi.run("Summarise this repo without changing files.").text)
-```
-
-Or list what Pi knows about and switch after start:
-
-```python
-from pi_agent import PiClient
-
-with PiClient() as pi:
-    for model in pi.get_available_models():
-        print(model["provider"], model["id"])
-    selected = pi.set_model("openai", "gpt-5")
-    print("using", selected["provider"], selected["id"])
     print(pi.run("Summarise this repo without changing files.").text)
 ```
 
@@ -201,14 +204,37 @@ with PiClient() as pi:
     print(pi.run("Analyse this project's architecture without changing files.").text)
 ```
 
+Replace the example provider/model ids with ones from your Pi install
+(`pi --list-models` or `get_available_models()`).
+
+<details>
+<summary>List models and switch after start</summary>
+
+```python
+from pi_agent import PiClient
+
+with PiClient() as pi:
+    for model in pi.get_available_models():
+        print(model["provider"], model["id"])
+    selected = pi.set_model("openai", "gpt-5")
+    print("using", selected["provider"], selected["id"])
+    print(pi.run("Summarise this repo without changing files.").text)
+```
+
+</details>
+
+<details>
+<summary>Thinking output and effective level</summary>
+
 Pi may adjust unsupported thinking levels; trust `get_state()["thinkingLevel"]`
 for the effective value. Thinking **output** is separate from `result.text`:
 when Pi emits it, deltas appear in `event.raw` during streaming and finalized
 blocks in `result.messages`.
 
 See the [model and thinking commands][thinking-reference] for cycling levels and
-other controls. Replace the example provider/model ids with ones from your Pi
-install (`pi --list-models` or `get_available_models()`).
+other controls.
+
+</details>
 
 ## RPC access
 
@@ -221,7 +247,18 @@ Your Python application
             Models · tools · extensions · sessions
 ```
 
-Choose the interface that fits the work:
+Inspect session state without starting a model run:
+
+```python
+from pi_agent import PiClient
+
+with PiClient() as pi:
+    state = pi.get_state()
+    print(state["sessionId"])
+```
+
+<details>
+<summary>Which interface to use</summary>
 
 | You need | Use |
 | --- | --- |
@@ -232,16 +269,6 @@ Choose the interface that fits the work:
 | Every event without retaining history | `on_event(callback)` |
 | A specific Pi operation | `get_state()`, `set_model()`, `fork()`, and other command methods |
 | A raw command response envelope | `request()` |
-
-For example, inspect session state without starting a model run:
-
-```python
-from pi_agent import PiClient
-
-with PiClient() as pi:
-    state = pi.get_state()
-    print(state["sessionId"])
-```
 
 Python arguments use `snake_case`; wire dictionaries retain Pi's `camelCase`
 fields. `prompt()` acknowledges submission, which may be handled entirely by an
@@ -254,6 +281,8 @@ wait for each `run()` or stream to finish before starting the next. After using
 
 See [RPC structure][rpc] for the protocol mapping and module layout, and
 the [command reference][commands] for every method.
+
+</details>
 
 ## Documentation
 
