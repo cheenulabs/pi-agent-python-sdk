@@ -12,9 +12,6 @@ runs in your terminal. This unofficial community SDK launches the Pi CLI in RPC
 mode and exposes prompts, streaming events, and sessions through typed
 synchronous and asynchronous Python APIs.
 
-It does not reimplement Pi, bundle the CLI, or attach to an already-running
-interactive Pi terminal session.
-
 ```python
 from pi_agent import PiClient
 
@@ -38,12 +35,6 @@ Requires an installed, configured Pi CLI — see [Prerequisites](#prerequisites)
 | Node.js **22.19.0+** | Required by Pi 0.86.0 |
 | Pi **0.85.1+** | Minimum accepted version; **0.86.0** is the tested baseline |
 | Model provider | Required; configure with the Pi CLI (see Quick start) |
-
-Pi may run tools, execute commands, and modify files according to its
-configuration and your prompt. Model calls may incur provider charges. The SDK
-does not add its own sandboxing or approval layer — tool permissions are
-whatever your Pi configuration allows. Review that configuration before running
-unattended.
 
 ## What you can do
 
