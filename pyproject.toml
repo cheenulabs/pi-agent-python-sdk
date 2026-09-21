@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pi-agent-python-sdk"
-version = "0.2.1"
+version = "0.2.2"
 description = "Typed async and synchronous Python clients for Pi's agent RPC runtime"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -26,9 +26,9 @@ dependencies = []
 
 [project.urls]
 Homepage = "https://github.com/cheenulabs/pi-agent-python-sdk"
-Documentation = "https://github.com/cheenulabs/pi-agent-python-sdk/tree/v0.2.1/docs"
+Documentation = "https://github.com/cheenulabs/pi-agent-python-sdk/tree/v0.2.2/docs"
 Issues = "https://github.com/cheenulabs/pi-agent-python-sdk/issues"
-Changelog = "https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.1/CHANGELOG.md"
+Changelog = "https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.2/CHANGELOG.md"
 
 [dependency-groups]
 dev = [

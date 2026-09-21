@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.2
+
 ### Changed
 
 - Update the tested Pi runtime to 0.86.1, retaining 0.85.1 as the minimum.
