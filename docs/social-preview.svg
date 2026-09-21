@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="1280" height="640" viewBox="0 0 1280 640" role="img"
+     aria-label="Pi Agent Python SDK social preview">
+  <title>Pi Agent Python SDK — social preview</title>
+  <!--
+    GitHub Social preview template
+    - Canvas: 1280×640 (PNG/JPG/GIF, under 1 MB)
+    - Safe zone: center 1000×500 (x=140..1140, y=70..570) — keep title/logo here
+    - Upload: repo Settings → General → Social preview (no public API)
+    - Edit this SVG, then re-export PNG (or regenerate via the Pillow script).
+  -->
+  <rect width="1280" height="640" fill="#0F172A"/>
+  <!-- safe zone outline for editing (comment out / delete for export):
+  <rect x="140" y="70" width="1000" height="500" fill="none" stroke="#334155" stroke-dasharray="8 8"/>
+  -->
+  <image href="logo.svg" x="168" y="150" width="340" height="340"/>
+  <g font-family="DejaVu Sans, Liberation Sans, Helvetica, Arial, sans-serif">
+    <text x="548" y="268" font-size="48" font-weight="700" fill="#F8FAFC">Pi Agent Python SDK</text>
+    <rect x="548" y="286" width="180" height="6" rx="3" fill="#3776AB"/>
+    <rect x="736" y="286" width="64" height="6" rx="3" fill="#FFD43B"/>
+    <text x="548" y="340" font-size="32" font-weight="700" fill="#E2E8F0">Your terminal agent.</text>
+    <text x="548" y="380" font-size="32" font-weight="700" fill="#E2E8F0">Your Python API.</text>
+    <text x="548" y="440" font-size="24" fill="#94A3B8">cheenulabs/pi-agent-python-sdk</text>
+    <text x="548" y="474" font-size="24" fill="#94A3B8">unofficial community SDK</text>
+  </g>
+</svg>
