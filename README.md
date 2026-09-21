@@ -33,37 +33,22 @@ Pi may run tools, execute commands, and modify files according to its
 configuration and your prompt. Model calls may incur provider charges. Each
 client starts its own Pi subprocess.
 
-## Is this for me?
+## When to use this
 
-| Use this SDK when… | Prefer something else when… |
-| --- | --- |
-| You want Pi-powered automation from Python | You only need interactive terminal use → use the Pi CLI |
-| You need typed streaming, sessions, and RPC control | You need a hosted HTTP API or no Node.js dependency |
-| You already (or can) install and configure Pi | You need to attach to an existing Pi terminal session |
+Use this when you want Pi from Python—scripts, apps, or services—with typed
+streaming, sessions, and RPC control, while reusing your existing Pi
+configuration, models, tools, and extensions.
 
-## Why use this?
+- Run a prompt to completion, or stream text, thinking, and tool events.
+- Continue, resume, fork, or clone conversations.
+- Select models, adjust thinking, steer work, compact context, and call Pi RPC
+  commands.
+- Integrate with sync or async clients, typed results, and extension UI
+  callbacks.
 
-If you already use Pi from the terminal, this SDK lets you use the same agent
-from Python code. Instead of managing a separate implementation, you can start Pi
-in RPC mode and call it as a programmatic API from scripts, apps, services, or
-background jobs.
-
-This is useful when you want to:
-
-- Add Pi-powered coding or reasoning to a Python application.
-- Automate project analysis, refactors, or repository workflows.
-- Build a service or CLI around Pi without reimplementing the agent runtime.
-- Stream text, thinking, tool, and session events in Python.
-- Reuse your existing Pi configuration, models, tools, and extensions.
-
-## What you can do
-
-- **Run and stream:** get a final answer or consume text, thinking, and tool events.
-- **Keep a conversation:** send follow-up prompts, resume sessions, fork, or clone.
-- **Control Pi:** select models, adjust thinking, steer work, compact context, and
-  call Pi's RPC command surface.
-- **Integrate with your application:** use sync or async clients, typed results,
-  raw event dictionaries, and extension UI callbacks.
+Prefer the Pi CLI for interactive terminal use. This SDK needs Node.js and a
+configured Pi install; it is not a hosted HTTP API and cannot attach to an
+existing Pi terminal session.
 
 ## Quick start
 
