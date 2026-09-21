@@ -44,9 +44,6 @@ Requires an installed, configured Pi CLI — see [Prerequisites](#prerequisites)
 - Select models, adjust thinking, steer work, compact context, and call Pi RPC
   commands — reusing your existing Pi configuration, tools, and extensions.
 
-Prefer the Pi CLI for interactive terminal use. This SDK needs Node.js and a
-configured Pi install; it is not a hosted HTTP API.
-
 ## Quick start
 
 Install Pi with Node.js **22.19.0 or newer** (pin matches the tested baseline):
