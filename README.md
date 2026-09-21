@@ -318,7 +318,6 @@ setup and validation commands.
 [ui-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.1/examples/ui.py
 [rpc]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.1/docs/rpc.md
 [commands]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.1/docs/api.md#all-33-rpc-commands
-[thinking-reference]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.1/docs/api.md#models-state-and-compaction
 [usage]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.1/docs/usage.md
 [api]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.1/docs/api.md
 [examples]: https://github.com/cheenulabs/pi-agent-python-sdk/tree/v0.2.1/examples
