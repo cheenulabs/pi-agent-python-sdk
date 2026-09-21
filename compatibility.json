@@ -1,7 +1,7 @@
 {
   "minimumVersion": "0.85.1",
-  "testedVersion": "0.86.0",
-  "upstreamCommit": "ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc",
+  "testedVersion": "0.86.1",
+  "upstreamCommit": "13cbf77df2396303013a41646bcfa77b4271ae56",
   "sourceSha256": {
     "packages/coding-agent/src/modes/rpc/rpc-types.ts": "34057257456fd5f935587a0e9650fb5777738674e491a68fd037425703c45e26",
     "packages/coding-agent/src/modes/rpc/rpc-mode.ts": "7d4bf1e4291a5320a1ce27504c488622c9a7307ce9e7c2d973f9d95f18a8b2bc",
@@ -17,11 +17,11 @@
     "packages/coding-agent/src/core/compaction/index.ts": "f82bde781410ae1a638989ff91bde9cc7045341a76bb9757de2ea6beea4c077d",
     "packages/coding-agent/src/core/extensions/types.ts": "292cc98f1dfb5010b6cef2ff6944c4a72741b824c47cccac645b7b35e0d8a026",
     "packages/coding-agent/src/core/agent-session-runtime.ts": "5b348a4db837a2564367dd93b343c67f3b0c28a2f753ff71adcb48d08b5644e7",
-    "packages/coding-agent/src/cli/args.ts": "f8ba813e8acb43d33b42dff087b05fa3784fc24e6428026d13abe007993bab73",
-    "packages/coding-agent/package.json": "0ff20059e51f954e820153774b4ece6a8562b244fb4994c1dfd7f07563ab218a",
+    "packages/coding-agent/src/cli/args.ts": "de0b21efa0cca60cd012547b3f187f2cabb6c8e8eb62c4f0e01153351b6be973",
+    "packages/coding-agent/package.json": "8e8e5cf99a033e9aae1db15e8455f819e1921b7c8351b1044acdab9525c14fd7",
     "packages/agent/src/types.ts": "b39a716944e8eee79562354e0c1a6a96dd5fb364078084cc6903fbcd61ed3d5a",
     "packages/agent/src/agent-loop.ts": "2f4e228055729f684e01349813a6ab903b0f646f6320d5f892ef77303561b82e",
-    "packages/ai/src/types.ts": "419d28638be0c6e33e7bd2f8daf2194f4339875f6551349d3c0fa8b431cc6011",
-    "packages/coding-agent/CHANGELOG.md": "7058a10e3edc4a86ab620e5ff7b7a613caef446167b9c61ad8c84c38c72d4c34"
+    "packages/ai/src/types.ts": "35920286c874651f34a6060f5ea75fc0a104a3abf9d7411cd37878af493533e6",
+    "packages/coding-agent/CHANGELOG.md": "c2b8540ee9f553c0be37c4b22a4bc41cc4956246d89f3cdcc71b106daa6c91e9"
   }
 }
