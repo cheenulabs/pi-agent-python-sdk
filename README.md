@@ -148,9 +148,10 @@ with PiClient(cwd=".", no_session=True) as pi:
 ```
 
 Leave `no_session` unset to preserve Pi's normal session persistence. Use
-`provider=` and `model=` to override Pi's configured model, or `session=` to open
-an existing session. See [constructor options][constructor-options]
-for environment overrides, executable paths, and deadlines.
+`session=` to open an existing session. For model overrides, see
+[Models and thinking](#models-and-thinking). See
+[constructor options][constructor-options] for environment overrides, executable
+paths, and deadlines.
 
 Extensions are installed and configured through Pi. To load your own extension,
 pass `extra_args=["--extension", "/absolute/path/to/your-extension.ts"]` to either
@@ -159,26 +160,55 @@ for details and [extension UI][ui-example] for an interactive example.
 
 ## Models and thinking
 
-The SDK uses Pi's configured model unless you pass `provider=` and `model=`.
-Query supported thinking levels before setting one:
+By default the SDK uses whatever model you already configured in the Pi CLI.
+Override it when you construct the client, or switch later on the same client.
+Set the model and thinking level **before** `run()` or `stream()`.
+
+Select a model at construction:
+
+```python
+from pi_agent import PiClient
+
+with PiClient(provider="openai", model="gpt-5") as pi:
+    print(pi.run("Summarise this repo without changing files.").text)
+```
+
+Or list what Pi knows about and switch after start:
+
+```python
+from pi_agent import PiClient
+
+with PiClient() as pi:
+    for model in pi.get_available_models():
+        print(model["provider"], model["id"])
+    selected = pi.set_model("openai", "gpt-5")
+    print("using", selected["provider"], selected["id"])
+    print(pi.run("Summarise this repo without changing files.").text)
+```
+
+Thinking levels depend on the current model. Query them, set one, then confirm
+what Pi actually applied:
 
 ```python
 from pi_agent import PiClient
 
 with PiClient() as pi:
     levels = pi.get_available_thinking_levels()
+    print("available:", levels)
     if "high" in levels:
         pi.set_thinking_level("high")
+    print("effective:", pi.get_state()["thinkingLevel"])
     print(pi.run("Analyse this project's architecture without changing files.").text)
 ```
 
-Set the model and thinking level before `run()` or `stream()`. Pi may adjust
-unsupported levels; read `get_state()["thinkingLevel"]` for the effective value.
-Thinking **output** is separate from `result.text`: when Pi emits it, deltas
-appear in `event.raw` during streaming and finalized blocks in `result.messages`.
+Pi may adjust unsupported thinking levels; trust `get_state()["thinkingLevel"]`
+for the effective value. Thinking **output** is separate from `result.text`:
+when Pi emits it, deltas appear in `event.raw` during streaming and finalized
+blocks in `result.messages`.
 
 See the [model and thinking commands][thinking-reference] for cycling levels and
-other controls.
+other controls. Replace the example provider/model ids with ones from your Pi
+install (`pi --list-models` or `get_available_models()`).
 
 ## RPC access
 
