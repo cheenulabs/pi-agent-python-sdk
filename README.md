@@ -27,15 +27,6 @@ Requires an installed, configured Pi CLI — see [Prerequisites](#prerequisites)
 [RPC](#rpc-access) · [Documentation](#documentation) ·
 [Troubleshooting](#troubleshooting) · [Support](#support)
 
-## Prerequisites
-
-| Requirement | Notes |
-| --- | --- |
-| Python **3.11+** | Package metadata requires 3.11 or newer |
-| Node.js **22.19.0+** | Required by Pi 0.86.0 |
-| Pi **0.85.1+** | Minimum accepted version; **0.86.0** is the tested baseline |
-| Model provider | Required; configure with the Pi CLI (see Quick start) |
-
 ## What you can do
 
 - **Run prompts from Python** — get a final answer, or stream text, thinking, and
@@ -46,6 +37,15 @@ Requires an installed, configured Pi CLI — see [Prerequisites](#prerequisites)
   compact context.
 - **Reuse your Pi setup** — same configuration, tools, and extensions as the CLI,
   with sync or async clients.
+
+## Prerequisites
+
+| Requirement | Notes |
+| --- | --- |
+| Python **3.11+** | Package metadata requires 3.11 or newer |
+| Node.js **22.19.0+** | Required by Pi 0.86.0 |
+| Pi **0.85.1+** | Minimum accepted version; **0.86.0** is the tested baseline |
+| Model provider | Required; configure with the Pi CLI (see Quick start) |
 
 ## Quick start
 
