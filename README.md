@@ -38,11 +38,14 @@ Requires an installed, configured Pi CLI — see [Prerequisites](#prerequisites)
 
 ## What you can do
 
-- Automate coding or analysis from Python scripts, apps, or services.
-- Stream text, thinking, and tool events, or wait for a completed result.
-- Continue, resume, fork, or clone conversations across calls.
-- Select models, adjust thinking, steer work, compact context, and call Pi RPC
-  commands — reusing your existing Pi configuration, tools, and extensions.
+- **Run prompts from Python** — get a final answer, or stream text, thinking, and
+  tool events as they happen.
+- **Keep conversations going** — send follow-ups on the same client, or resume,
+  fork, and clone sessions.
+- **Control the agent** — switch models, set thinking level, steer mid-run, and
+  compact context.
+- **Reuse your Pi setup** — same configuration, tools, and extensions as the CLI,
+  with sync or async clients.
 
 ## Quick start
 
