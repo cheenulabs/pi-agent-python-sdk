@@ -10,21 +10,16 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)][metadata]
 [![MIT license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)][license]
 
-**Use your installed Pi coding agent as a Python API. Stream responses,
-continue conversations, and control sessions from Python.**
+**Your terminal agent. Your Python API.**
 
-[Pi](https://github.com/earendil-works/pi) is an open-source coding agent that
-runs in your terminal. This unofficial community SDK launches the Pi CLI in RPC
-mode and exposes prompts, streaming events, and sessions through typed
-synchronous and asynchronous Python APIs.
+[Pi](https://github.com/earendil-works/pi) is the coding agent that runs in your
+terminal. This unofficial community SDK puts *your* Pi behind a typed sync and
+async Python API — run prompts, stream events, and keep sessions going without
+leaving Python.
 
 <!-- Inline player: GitHub only auto-embeds bare user-attachments URLs
      (repo-relative / raw / release URLs are stripped or become download links). -->
 https://github.com/user-attachments/assets/c64dde3a-e812-42d4-a005-aa60df861e92
-
-<p align="center">
-  <em>Pi in the terminal → typed Python API. Unofficial community SDK.</em>
-</p>
 
 ```python
 from pi_agent import PiClient
