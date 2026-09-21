@@ -18,17 +18,12 @@ runs in your terminal. This unofficial community SDK launches the Pi CLI in RPC
 mode and exposes prompts, streaming events, and sessions through typed
 synchronous and asynchronous Python APIs.
 
-<!-- GitHub only inlines <video> for user-attachments CDN URLs; repo-relative
-     mp4 paths are stripped. Show the brag poster and link to the file player. -->
-<p align="center">
-  <a href="docs/brag.mp4" title="Watch the 18s launch video">
-    <img src="docs/brag.jpg" alt="Launch video poster — click to play" width="720">
-  </a>
-</p>
+<!-- Inline player: GitHub only auto-embeds bare user-attachments URLs
+     (repo-relative / raw / release URLs are stripped or become download links). -->
+https://github.com/user-attachments/assets/c64dde3a-e812-42d4-a005-aa60df861e92
 
 <p align="center">
-  <a href="docs/brag.mp4"><strong>▶ Watch the 18s launch video</strong></a>
-  · Pi in the terminal → typed Python API
+  <em>Pi in the terminal → typed Python API. Unofficial community SDK.</em>
 </p>
 
 ```python
