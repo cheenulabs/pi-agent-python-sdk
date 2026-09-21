@@ -25,7 +25,7 @@ Requires an installed, configured Pi CLI — see [Prerequisites](#prerequisites)
 [Streaming](#streaming) · [Async](#async-usage) ·
 [Configuration](#configuration) · [Thinking](#models-and-thinking) ·
 [RPC](#rpc-access) · [Documentation](#documentation) ·
-[Support](#support)
+[Troubleshooting](#troubleshooting) · [Support](#support)
 
 ## Prerequisites
 
@@ -92,15 +92,6 @@ with PiClient() as pi:
 
 Pi keeps the conversation context. Each result contains only the messages and
 answer from that call; a call with no assistant output has empty text.
-
-### Troubleshooting
-
-| Symptom | What to check |
-| --- | --- |
-| `pi` not found / launch fails | Ensure the Pi CLI is on `PATH`, or pass `executable=` to the client |
-| Version rejected | Upgrade to Pi **0.85.1+**; prefer the tested baseline **0.86.0** |
-| No model / auth errors | Run `pi` once and complete provider setup |
-| Unexpected file or command changes | Review Pi tool/extension settings before automation |
 
 ## Streaming
 
@@ -249,6 +240,15 @@ the [command reference][commands] for every method.
 Examples use your configured Pi and may make provider calls. Development checks
 use an isolated local test provider; see [CONTRIBUTING.md][contributing] for
 setup and validation commands.
+
+## Troubleshooting
+
+| Symptom | What to check |
+| --- | --- |
+| `pi` not found / launch fails | Ensure the Pi CLI is on `PATH`, or pass `executable=` to the client |
+| Version rejected | Upgrade to Pi **0.85.1+**; prefer the tested baseline **0.86.0** |
+| No model / auth errors | Run `pi` once and complete provider setup |
+| Unexpected file or command changes | Review Pi tool/extension settings before automation |
 
 ## Support
 
