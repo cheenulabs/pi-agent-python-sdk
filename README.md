@@ -7,17 +7,44 @@
 **Use your installed Pi coding agent as a Python API. Stream responses,
 continue conversations, and control sessions from Python.**
 
-A community Python SDK for [Pi coding agent](https://github.com/earendil-works/pi).
-It starts Pi as a subprocess and exposes the same agent runtime through a typed
-Python interface for RPC commands, streaming, and session control.
+[Pi](https://github.com/earendil-works/pi) is an open-source coding agent that
+runs in your terminal. This unofficial community SDK launches the Pi CLI in RPC
+mode and exposes prompts, streaming events, and sessions through typed
+synchronous and asynchronous Python APIs.
 
-> Requires Python **3.11+** and a separate Pi installation. The tested protocol
-> baseline is **Pi 0.86.0**; see [compatibility][compatibility] for version and
-> platform scope.
+It does not reimplement Pi, bundle the CLI, or attach to an already-running
+interactive Pi terminal session.
+
+> **Status:** Community-maintained and pre-1.0. Not an official upstream Pi
+> package. Compatibility is tested against **Pi 0.86.0**; newer Pi versions are
+> allowed but may expose untested protocol changes. See
+> [compatibility][compatibility].
 
 [Quick start](#quick-start) · [Streaming](#streaming) · [Async](#async-usage) ·
 [Configuration](#configuration) · [Thinking](#models-and-thinking) ·
-[RPC](#rpc-access) · [Documentation](#documentation)
+[RPC](#rpc-access) · [Documentation](#documentation) ·
+[Support](#support)
+
+## Prerequisites
+
+| Requirement | Notes |
+| --- | --- |
+| Python **3.11+** | Package metadata requires 3.11 or newer |
+| Node.js **22.19.0+** | Required by Pi 0.86.0 |
+| Pi **0.85.1+** | Minimum accepted version; **0.86.0** is the tested baseline |
+| Model provider | Configure once with the Pi CLI before using the SDK |
+
+Pi may run tools, execute commands, and modify files according to its
+configuration and your prompt. Model calls may incur provider charges. Each
+client starts its own Pi subprocess.
+
+## Is this for me?
+
+| Use this SDK when… | Prefer something else when… |
+| --- | --- |
+| You want Pi-powered automation from Python | You only need interactive terminal use → use the Pi CLI |
+| You need typed streaming, sessions, and RPC control | You need a hosted HTTP API or no Node.js dependency |
+| You already (or can) install and configure Pi | You need to attach to an existing Pi terminal session |
 
 ## Why use this?
 
@@ -34,17 +61,12 @@ This is useful when you want to:
 - Stream text, thinking, tool, and session events in Python.
 - Reuse your existing Pi configuration, models, tools, and extensions.
 
-The SDK keeps Pi's usual setup and model selection, while exposing a typed Python
-interface for prompts, follow-ups, model control, and RPC access. It launches Pi
-as a subprocess and communicates over its JSONL protocol; it does not attach to
-an already-running interactive Pi terminal session.
-
 ## What you can do
 
 - **Run and stream:** get a final answer or consume text, thinking, and tool events.
 - **Keep a conversation:** send follow-up prompts, resume sessions, fork, or clone.
 - **Control Pi:** select models, adjust thinking, steer work, compact context, and
-  call all 33 RPC commands in the pinned baseline.
+  call Pi's RPC command surface.
 - **Integrate with your application:** use sync or async clients, typed results,
   raw event dictionaries, and extension UI callbacks.
 
@@ -78,8 +100,8 @@ with PiClient() as pi:
 ```
 
 The context manager starts and closes Pi. `run()` waits for the conversation to
-settle, including retries and queued follow-ups. The result includes finalized
-messages, session identity, elapsed time, and observed assistant usage.
+settle. The result includes finalized messages, session identity, elapsed time,
+and observed assistant usage.
 
 Continue the conversation with another call on the same client:
 
@@ -93,6 +115,15 @@ with PiClient() as pi:
 
 Pi keeps the conversation context. Each result contains only the messages and
 answer from that call; a call with no assistant output has empty text.
+
+### Troubleshooting
+
+| Symptom | What to check |
+| --- | --- |
+| `pi` not found / launch fails | Ensure the Pi CLI is on `PATH`, or pass `executable=` to the client |
+| Version rejected | Upgrade to Pi **0.85.1+**; prefer the tested baseline **0.86.0** |
+| No model / auth errors | Run `pi` once and complete provider setup |
+| Unexpected file or command changes | Review the prompt and Pi tool/extension settings before automation |
 
 ## Streaming
 
@@ -109,8 +140,9 @@ with PiClient() as pi:
 ```
 
 `event.raw` contains the full Pi event, including fields the SDK does not yet
-recognize. Keep the stream inside its context: leaving early cleans up unfinished work. See [errors and cancellation][errors] for
-handling timeouts and partial results.
+recognize. Keep the stream inside its context: leaving early cleans up unfinished
+work. See [errors and cancellation][errors] for handling timeouts and partial
+results.
 
 ## Async usage
 
@@ -160,34 +192,25 @@ for details and [extension UI][ui-example] for an interactive example.
 ## Models and thinking
 
 The SDK uses Pi's configured model unless you pass `provider=` and `model=`.
-Pi determines which thinking levels that model supports; query them before
-choosing a level:
+Query supported thinking levels before setting one:
 
 ```python
 from pi_agent import PiClient
 
 with PiClient() as pi:
     levels = pi.get_available_thinking_levels()
-    print("Supported thinking levels:", levels)
     if "high" in levels:
         pi.set_thinking_level("high")
-    print("Effective thinking level:", pi.get_state()["thinkingLevel"])
-
-    result = pi.run("Analyse this project's architecture without changing files.")
-    print(result.text)
+    print(pi.run("Analyse this project's architecture without changing files.").text)
 ```
 
-Set the model and thinking level before starting `run()` or `stream()`. Pi can
-adjust unsupported level requests, so read `get_state()["thinkingLevel"]` for the
-effective value. The setting applies to subsequent prompts in the current
-session without changing global defaults. With `AsyncPiClient`, await the same
-methods. See the [model and thinking commands][thinking-reference] for cycling
-levels and other controls.
+Set the model and thinking level before `run()` or `stream()`. Pi may adjust
+unsupported levels; read `get_state()["thinkingLevel"]` for the effective value.
+Thinking **output** is separate from `result.text`: when Pi emits it, deltas
+appear in `event.raw` during streaming and finalized blocks in `result.messages`.
 
-The thinking level controls Pi's reasoning setting. Thinking **output** is
-separate: when Pi emits it, deltas are available in `event.raw` during streaming
-and finalized thinking blocks in `result.messages`. `result.text` contains the
-final assistant text, not thinking.
+See the [model and thinking commands][thinking-reference] for cycling levels and
+other controls.
 
 ## RPC access
 
@@ -229,8 +252,7 @@ extension. It does not wait for a completed answer.
 Use one client per conversation and wait for each `run()` or stream to finish
 before starting the next. After using `prompt()` for your own event handling,
 use a fresh client for `run()` or `stream()` so results cannot include delayed
-events from earlier work. The SDK launches a new process and cannot attach to an existing
-Pi terminal session.
+events from earlier work.
 
 See [RPC structure][rpc] for the protocol mapping and module layout, and
 the [command reference][commands] for every method.
@@ -251,8 +273,12 @@ Examples use your configured Pi and may make provider calls. Development checks
 use an isolated local test provider; see [CONTRIBUTING.md][contributing] for
 setup and validation commands.
 
-Maintainers: [protocol discovery][discovery] ·
-[maintenance][maintenance] · [release checklist][releasing].
+## Support
+
+- [Open an issue][issues] for bugs, questions, or compatibility reports.
+- See [CONTRIBUTING.md][contributing] for local setup and pull requests.
+- For security reports, open a [private security advisory][security] if available,
+  or contact the repository maintainers through GitHub.
 
 ## License
 
@@ -275,6 +301,5 @@ Maintainers: [protocol discovery][discovery] ·
 [api]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.1/docs/api.md
 [examples]: https://github.com/cheenulabs/pi-agent-python-sdk/tree/v0.2.1/examples
 [contributing]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.1/CONTRIBUTING.md
-[discovery]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.1/docs/discovery.md
-[maintenance]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.1/docs/maintenance.md
-[releasing]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.1/docs/releasing.md
+[issues]: https://github.com/cheenulabs/pi-agent-python-sdk/issues
+[security]: https://github.com/cheenulabs/pi-agent-python-sdk/security/advisories/new
