@@ -223,19 +223,6 @@ with PiClient() as pi:
 
 </details>
 
-<details>
-<summary>Thinking output and effective level</summary>
-
-Pi may adjust unsupported thinking levels; trust `get_state()["thinkingLevel"]`
-for the effective value. Thinking **output** is separate from `result.text`:
-when Pi emits it, deltas appear in `event.raw` during streaming and finalized
-blocks in `result.messages`.
-
-See the [model and thinking commands][thinking-reference] for cycling levels and
-other controls.
-
-</details>
-
 ## RPC access
 
 The SDK speaks Pi's existing JSONL protocol over stdin/stdout:
