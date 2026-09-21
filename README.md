@@ -1,6 +1,6 @@
 # Pi Agent Python SDK
 
-[![PyPI](https://badge.fury.io/py/pi-agent-python-sdk.svg)][pypi]
+[![PyPI](https://img.shields.io/pypi/v/pi-agent-python-sdk.svg?style=flat-square)][pypi]
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)][metadata]
 [![MIT license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)][license]
 
@@ -15,7 +15,17 @@ synchronous and asynchronous Python APIs.
 It does not reimplement Pi, bundle the CLI, or attach to an already-running
 interactive Pi terminal session.
 
-[Quick start](#quick-start) · [Streaming](#streaming) · [Async](#async-usage) ·
+```python
+from pi_agent import PiClient
+
+with PiClient() as pi:
+    print(pi.run("Explain the current project without changing files.").text)
+```
+
+Requires an installed, configured Pi CLI — see [Prerequisites](#prerequisites).
+
+[Prerequisites](#prerequisites) · [Quick start](#quick-start) ·
+[Streaming](#streaming) · [Async](#async-usage) ·
 [Configuration](#configuration) · [Thinking](#models-and-thinking) ·
 [RPC](#rpc-access) · [Documentation](#documentation) ·
 [Support](#support)
@@ -27,45 +37,41 @@ interactive Pi terminal session.
 | Python **3.11+** | Package metadata requires 3.11 or newer |
 | Node.js **22.19.0+** | Required by Pi 0.86.0 |
 | Pi **0.85.1+** | Minimum accepted version; **0.86.0** is the tested baseline |
-| Model provider | Configure once with the Pi CLI before using the SDK |
+| Model provider | Required; configure with the Pi CLI (see Quick start) |
 
 Pi may run tools, execute commands, and modify files according to its
-configuration and your prompt. Model calls may incur provider charges. Each
-client starts its own Pi subprocess.
+configuration and your prompt. Model calls may incur provider charges. The SDK
+does not add its own sandboxing or approval layer — tool permissions are
+whatever your Pi configuration allows. Review that configuration before running
+unattended.
 
-## When to use this
+## What you can do
 
-Use this when you want Pi from Python—scripts, apps, or services—with typed
-streaming, sessions, and RPC control, while reusing your existing Pi
-configuration, models, tools, and extensions.
-
-- Run a prompt to completion, or stream text, thinking, and tool events.
-- Continue, resume, fork, or clone conversations.
+- Automate coding or analysis from Python scripts, apps, or services.
+- Stream text, thinking, and tool events, or wait for a completed result.
+- Continue, resume, fork, or clone conversations across calls.
 - Select models, adjust thinking, steer work, compact context, and call Pi RPC
-  commands.
-- Integrate with sync or async clients, typed results, and extension UI
-  callbacks.
+  commands — reusing your existing Pi configuration, tools, and extensions.
 
 Prefer the Pi CLI for interactive terminal use. This SDK needs Node.js and a
-configured Pi install; it is not a hosted HTTP API and cannot attach to an
-existing Pi terminal session.
+configured Pi install; it is not a hosted HTTP API.
 
 ## Quick start
 
-Install Pi with Node.js **22.19.0 or newer**:
+Install Pi with Node.js **22.19.0 or newer** (pin matches the tested baseline):
 
 ```sh
 npm install -g @earendil-works/pi-coding-agent@0.86.0
 pi --version
 ```
 
-Run `pi` once to configure your provider and model using Pi's normal setup.
-The SDK uses that configuration when it starts Pi.
+Run `pi` once to configure your provider and model. The SDK uses that
+configuration when it starts Pi.
 
 Install the Python package from [PyPI][pypi]:
 
 ```sh
-python -m pip install pi-agent-python-sdk==0.2.1
+python -m pip install pi-agent-python-sdk
 ```
 
 The distribution is named `pi-agent-python-sdk`; import it as
@@ -103,7 +109,7 @@ answer from that call; a call with no assistant output has empty text.
 | `pi` not found / launch fails | Ensure the Pi CLI is on `PATH`, or pass `executable=` to the client |
 | Version rejected | Upgrade to Pi **0.85.1+**; prefer the tested baseline **0.86.0** |
 | No model / auth errors | Run `pi` once and complete provider setup |
-| Unexpected file or command changes | Review the prompt and Pi tool/extension settings before automation |
+| Unexpected file or command changes | Review Pi tool/extension settings before automation |
 
 ## Streaming
 
@@ -229,10 +235,10 @@ Python arguments use `snake_case`; wire dictionaries retain Pi's `camelCase`
 fields. `prompt()` acknowledges submission, which may be handled entirely by an
 extension. It does not wait for a completed answer.
 
-Use one client per conversation and wait for each `run()` or stream to finish
-before starting the next. After using `prompt()` for your own event handling,
-use a fresh client for `run()` or `stream()` so results cannot include delayed
-events from earlier work.
+Each client starts its own Pi subprocess. Use one client per conversation and
+wait for each `run()` or stream to finish before starting the next. After using
+`prompt()` for your own event handling, use a fresh client for `run()` or
+`stream()` so results cannot include delayed events from earlier work.
 
 See [RPC structure][rpc] for the protocol mapping and module layout, and
 the [command reference][commands] for every method.
@@ -257,8 +263,7 @@ setup and validation commands.
 
 - [Open an issue][issues] for bugs, questions, or compatibility reports.
 - See [CONTRIBUTING.md][contributing] for local setup and pull requests.
-- For security reports, open a [private security advisory][security] if available,
-  or contact the repository maintainers through GitHub.
+- For security reports, open a [private security advisory][security].
 
 ## License
 
