@@ -15,11 +15,6 @@ synchronous and asynchronous Python APIs.
 It does not reimplement Pi, bundle the CLI, or attach to an already-running
 interactive Pi terminal session.
 
-> **Status:** Community-maintained and pre-1.0. Not an official upstream Pi
-> package. Compatibility is tested against **Pi 0.86.0**; newer Pi versions are
-> allowed but may expose untested protocol changes. See
-> [compatibility][compatibility].
-
 [Quick start](#quick-start) · [Streaming](#streaming) · [Async](#async-usage) ·
 [Configuration](#configuration) · [Thinking](#models-and-thinking) ·
 [RPC](#rpc-access) · [Documentation](#documentation) ·
