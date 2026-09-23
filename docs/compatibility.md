@@ -10,8 +10,8 @@ Check the proposed commit's CI results before relying on platform support.
 | Component | Policy |
 |---|---|
 | Python | Package requires 3.11 or newer; Linux CI targets 3.11, 3.12, 3.13, and 3.14 |
-| Pi | Minimum **0.85.1**; recorded tested protocol version **0.86.1** |
-| Node.js | Pi 0.86.1 requires **22.19.0 or newer** |
+| Pi | Minimum **0.85.1**; recorded tested protocol version **0.87.0** |
+| Node.js | Pi 0.87.0 requires **22.19.0 or newer** |
 | Python runtime dependencies | None beyond the standard library |
 | Platforms | CI targets Linux with Python 3.11–3.14; macOS and Windows with Python 3.14 |
 
@@ -20,7 +20,7 @@ version has passed tests. Similarly, successfully launching an untested Pi
 version is not a compatibility certification.
 
 The pinned Pi source is commit
-[`13cbf77df2396303013a41646bcfa77b4271ae56`](https://github.com/earendil-works/pi/tree/13cbf77df2396303013a41646bcfa77b4271ae56).
+[`16787ad5b2dc748047f314ca1bfe7708f30f54f3`](https://github.com/earendil-works/pi/tree/16787ad5b2dc748047f314ca1bfe7708f30f54f3).
 The [discovery document](discovery.md) records the upstream types, serializer,
 implementation, and observed runtime behavior used to build the client. The
 package wraps Pi's RPC protocol and is not an official upstream Python SDK.
@@ -31,7 +31,12 @@ Python does not replay system messages or implement cache warming. The optional
 `addedToolNames` annotation remains for Pi 0.85.1 tool results. Session statistics
 may include cache-warming usage; `RunResult.usage` still summarizes only observed
 assistant messages. Pi 0.86.1 adds a Meta Muse provider surface without changing
-the RPC command or event vocabulary. CI also exercises the minimum version on Linux.
+the RPC command or event vocabulary. Pi 0.87.0 adds append-only context edits
+to session entries and image input limits to model metadata. Its new actionable
+extension boundaries change Pi's internal context and continuation handling;
+the RPC command and event discriminators remain unchanged. The Python SDK
+passes through new entry and model fields. CI also exercises the minimum version
+on Linux.
 
 ## Startup version policy
 
@@ -41,7 +46,7 @@ PyPI, GitHub, or another version service. After startup:
 | Selected executable | Behavior |
 |---|---|
 | Recognized version below 0.85.1 | Reject with `PiVersionError` |
-| Exactly 0.86.1 | `pi_version="0.86.1"`, `compatibility="tested"` |
+| Exactly 0.87.0 | `pi_version="0.87.0"`, `compatibility="tested"` |
 | Other recognized version at or above the minimum | Allow by default, with `compatibility="untested"` |
 | Recognized untested version and `strict_version=True` | Reject with `PiVersionError` |
 | Unparseable/custom version output | Reject unless `allow_unknown_version=True` |
@@ -196,7 +201,7 @@ This checks the installed Pi version and embedded TS source hashes against
 `compatibility.json`, then runs the actual TS client and both Python clients
 against the same synthetic subprocess. It compares 42 cases spanning all 33
 commands, including null cycles, omitted arguments, empty values, and false
-flags. A 39-record corpus covers all 25 declared session/extension event types,
+flags. A 41-record corpus covers all 25 declared session/extension event types,
 the nine serialized assistant update variants, and unknown metadata. Returned
 payloads, request sequences, event order, and both listeners must match.
 No client methods are patched, and no provider or live Pi configuration is used.
