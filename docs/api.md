@@ -294,6 +294,11 @@ Known wire annotations include `RpcCommand`, `RpcResponse`, `RpcEvent`,
 dictionaries, not recursively validating models. Unknown future records remain
 available through raw access.
 
+The Pi 0.87.0 annotations include `SessionEntry` values with
+`type="context_edit"` and optional `Model.inputLimits` metadata. These fields
+pass through the same command results and event records as earlier entry and
+model fields.
+
 These wire annotations and `RunResult` do not validate an assistant's answer
 against a Pydantic model or JSON schema. `RunResult.text` is ordinary text; parse
 and validate structured answers in your application when needed. The SDK adds

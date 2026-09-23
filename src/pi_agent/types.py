@@ -1,4 +1,4 @@
-"""Pi 0.86.1 wire annotations and small Python conveniences.
+"""Pi 0.87.0 wire annotations and small Python conveniences.
 
 Wire fields retain Pi's spelling and remain ordinary dictionaries. These
 annotations describe known shapes, not a recursive runtime validator: extensions
@@ -221,6 +221,24 @@ class ModelPromptCache(TypedDict, total=False):
     long: float
 
 
+class ModelImageResizeOptions(TypedDict, total=False):
+    maxWidth: float
+    maxHeight: float
+    maxBytes: float
+    jpegQuality: float
+
+
+class ModelImageInputLimits(TypedDict, total=False):
+    resize: ModelImageResizeOptions
+    maxPerMessage: float
+    maxPerRequest: float
+
+
+class ModelInputLimits(TypedDict, total=False):
+    maxRequestBytes: float
+    images: ModelImageInputLimits
+
+
 class Model(TypedDict):
     id: str
     name: str
@@ -230,6 +248,7 @@ class Model(TypedDict):
     reasoning: bool
     thinkingLevelMap: NotRequired[dict[ThinkingLevel, str | None]]
     input: list[Literal["text", "image"]]
+    inputLimits: NotRequired[ModelInputLimits]
     cost: ModelCost
     contextWindow: float
     maxTokens: float
@@ -378,6 +397,16 @@ class CustomMessageEntry(_EntryBase):
     display: bool
 
 
+class ContextEditReplacement(TypedDict):
+    content: str | list[TextContent | ThinkingContent | ToolCall | ImageContent]
+
+
+class ContextEditEntry(_EntryBase):
+    type: Literal["context_edit"]
+    targetId: str
+    replacement: ContextEditReplacement | None
+
+
 class LabelEntry(_EntryBase):
     type: Literal["label"]
     targetId: str
@@ -398,6 +427,7 @@ SessionEntry: TypeAlias = (
     | BranchSummaryEntry
     | CustomEntry
     | CustomMessageEntry
+    | ContextEditEntry
     | LabelEntry
     | SessionInfoEntry
 )

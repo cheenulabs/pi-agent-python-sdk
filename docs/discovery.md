@@ -1,9 +1,31 @@
 # Discovery: Pi coding agent Python client
 
 Original protocol snapshot: 2026-09-15, Pi 0.85.1. Reviewed update: 2026-09-20,
-Pi 0.86.0. Reviewed patch: 2026-09-22, Pi 0.86.1. Historical observations below
+Pi 0.86.0. Reviewed patch: 2026-09-22, Pi 0.86.1. Reviewed update: 2026-09-23,
+Pi 0.87.0. Historical observations below
 retain their original version/source; the coverage inventory includes the
 additions described here.
+
+## Pi 0.87.0 update
+
+The published npm release identifies commit
+[`16787ad5b2dc748047f314ca1bfe7708f30f54f3`](https://github.com/earendil-works/pi/tree/16787ad5b2dc748047f314ca1bfe7708f30f54f3).
+Ten fingerprinted source files changed. The RPC command declarations, runtime
+dispatch, TypeScript client, JSONL framing, and event serializer did not change:
+there are still 33 commands and 25 output event types. The agent loop and session
+manager now derive model context from canonical session entries. Append-only
+`context_edit` entries can omit or replace the content of an earlier message for
+future provider requests while preserving raw history. `get_entries`, `get_tree`,
+and `entry_appended` can expose those entries. The new `context_with_system`
+event and actionable `turn_end` and `agent_before_settle` extension boundaries
+remain Pi-owned;
+`agent_before_settle` is not a new RPC output event. RPC `turn_end` keeps its
+existing wire fields. Models can expose `inputLimits` with request and image
+limits; Pi applies image preprocessing to attachments, image reads, and tool
+results before provider requests.
+
+The shared synthetic corpus now covers a `context_edit` entry and model input
+limits. The tested baseline is 0.87.0; the minimum remains 0.85.1.
 
 ## Pi 0.86.1 update
 
@@ -37,9 +59,9 @@ remain upstream responsibilities. Cache-warming usage appears in session entries
 and session statistics, not in the assistant-only `RunResult.usage` summary.
 
 The minimum remains 0.85.1; the recorded tested baseline was 0.86.0 until the
-0.86.1 review above. The updated shared corpus checks 42 command cases and 39
-event records against both Python facades and the actual TypeScript client,
-including the new payload shapes.
+0.86.1 review above. As of 0.87.0, the shared corpus checks 42 command cases
+and 40 event records against both Python facades and the actual TypeScript
+client, including the new payload shapes.
 
 ## Original 0.85.1 findings that shape the package
 
@@ -277,7 +299,7 @@ Source: [content and message definitions](https://github.com/earendil-works/pi/b
 
 ### Session entries and tree
 
-[Authoritative session types](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/session-manager.ts#L46). With the 0.86.0 additions above, all ten entry variants have `type`, `id:string`, `parentId:string|null`, `timestamp:string` plus:
+[Authoritative session types](https://github.com/earendil-works/pi/blob/16787ad5b2dc748047f314ca1bfe7708f30f54f3/packages/coding-agent/src/core/session-manager.ts). With the 0.87.0 addition above, all eleven entry variants have `type`, `id:string`, `parentId:string|null`, `timestamp:string` plus:
 
 | Entry type | Additional fields |
 |---|---|
@@ -289,6 +311,7 @@ Source: [content and message definitions](https://github.com/earendil-works/pi/b
 | branch_summary | fromId:string; summary:string; details?:JSON; usage?:Usage; fromHook?:boolean |
 | custom | customType:string; data?:JSON |
 | custom_message | customType:string; content:string or (TextContent\|ImageContent)[]; details?:JSON; display:boolean |
+| context_edit | targetId:string; replacement:{content:string or content block array}\|null; null omits the target from model context |
 | label | targetId:string; label?:string |
 | session_info | name?:string |
 
@@ -297,7 +320,10 @@ Source: [content and message definitions](https://github.com/earendil-works/pi/b
 ### Model and provider metadata
 
 Pi 0.86.0 additionally exposes `promptCache?:{short?:number,long?:number}` in
-seconds. Missing tiers have unknown lifetimes. `compat` continues to preserve
+seconds. Pi 0.87.0 adds optional `inputLimits` with `maxRequestBytes`,
+`images.resize` (`maxWidth`, `maxHeight`, `maxBytes`, `jpegQuality`),
+`images.maxPerMessage`, and `images.maxPerRequest`. Missing limits remain
+unknown. `compat` continues to preserve
 all provider-specific JSON, including new mid-conversation capability fields.
 The detailed inventory below records the original 0.85.1 provider fields.
 
