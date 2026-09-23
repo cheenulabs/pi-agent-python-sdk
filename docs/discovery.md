@@ -2,9 +2,23 @@
 
 Original protocol snapshot: 2026-09-15, Pi 0.85.1. Reviewed update: 2026-09-20,
 Pi 0.86.0. Reviewed patch: 2026-09-22, Pi 0.86.1. Reviewed update: 2026-09-23,
-Pi 0.87.0. Historical observations below
+Pi 0.87.0. Reviewed patch: 2026-09-24, Pi 0.87.1. Historical observations below
 retain their original version/source; the coverage inventory includes the
 additions described here.
+
+## Pi 0.87.1 update
+
+The published npm release identifies commit
+[`f07218c4d4bbc12bef056a7058c3dd49dfe41abe`](https://github.com/earendil-works/pi/tree/f07218c4d4bbc12bef056a7058c3dd49dfe41abe).
+Four fingerprinted files changed: compaction prompt text, CLI `--mode` argument
+validation, package version pins, and the changelog. Invalid or missing `--mode`
+values now cause an error; the SDK still launches with the valid `--mode rpc`.
+Compaction summarization and new provider model choices remain Pi-owned. RPC
+command declarations, runtime dispatch, TypeScript client, JSONL framing,
+serializer, and the message, session, and model type definitions are unchanged.
+The coverage inventory remains 33 commands, 25 output event types, 41 shared
+event records, and 11 session entry variants. The tested baseline is now 0.87.1;
+the minimum remains 0.85.1.
 
 ## Pi 0.87.0 update
 
@@ -299,7 +313,7 @@ Source: [content and message definitions](https://github.com/earendil-works/pi/b
 
 ### Session entries and tree
 
-[Authoritative session types](https://github.com/earendil-works/pi/blob/16787ad5b2dc748047f314ca1bfe7708f30f54f3/packages/coding-agent/src/core/session-manager.ts). With the 0.87.0 addition above, all eleven entry variants have `type`, `id:string`, `parentId:string|null`, `timestamp:string` plus:
+[Authoritative session types](https://github.com/earendil-works/pi/blob/f07218c4d4bbc12bef056a7058c3dd49dfe41abe/packages/coding-agent/src/core/session-manager.ts). With the 0.87.0 addition above, all eleven entry variants have `type`, `id:string`, `parentId:string|null`, `timestamp:string` plus:
 
 | Entry type | Additional fields |
 |---|---|
@@ -334,7 +348,7 @@ seconds. Pi 0.87.0 adds optional `inputLimits` with `maxRequestBytes`,
 unknown. `compat` continues to preserve all provider-specific JSON, including
 new mid-conversation capability fields.
 
-[Current Model definition](https://github.com/earendil-works/pi/blob/16787ad5b2dc748047f314ca1bfe7708f30f54f3/packages/ai/src/types.ts):
+[Current Model definition](https://github.com/earendil-works/pi/blob/f07218c4d4bbc12bef056a7058c3dd49dfe41abe/packages/ai/src/types.ts):
 id:string; name:string; api:string; provider:string; baseUrl:string;
 reasoning:boolean; thinkingLevelMap?:partial map of ThinkingLevel to string|null;
 input:("text"|"image")[]; inputLimits?:ModelInputLimits; cost:ModelCost;
