@@ -36,6 +36,7 @@ Requires an installed, configured Pi CLI — see [Prerequisites](#prerequisites)
 [Streaming](#streaming) · [Async](#async-usage) ·
 [Configuration](#configuration) · [Thinking](#models-and-thinking) ·
 [RPC](#rpc-access) · [Documentation](#documentation) ·
+[Further reading](#further-reading) ·
 [Troubleshooting](#troubleshooting) · [Support](#support)
 
 ## What you can do
@@ -297,6 +298,11 @@ the [command reference][commands] for every method.
 Examples use your configured Pi and may make provider calls. Development checks
 use an isolated local test provider; see [CONTRIBUTING.md][contributing] for
 setup and validation commands.
+
+## Further reading
+
+- [Pi Unchained](https://hasc.substack.com/p/pi-unchained) — why this SDK exists
+  and how Pi fits into Python workflows.
 
 ## Troubleshooting
 
