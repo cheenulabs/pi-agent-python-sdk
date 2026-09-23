@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.2.3
+
+### Added
+
+- Describe Pi 0.87.0 context-edit session entries and optional model image input
+  limits in the typed wire annotations. Both remain Pi-owned behavior; unknown
+  fields continue to pass through unchanged.
+
+### Changed
+
+- Update the tested Pi runtime to 0.87.0, retaining 0.85.1 as the minimum.
+- Refresh the README's quick start, branding, and demonstration video.
+
 ## 0.2.2
 
 ### Changed

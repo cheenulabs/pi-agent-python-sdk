@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/cheenulabs/pi-agent-python-sdk">
-    <img alt="Pi Agent Python SDK" src="docs/logo.svg" width="160">
+    <img alt="Pi Agent Python SDK" src="https://raw.githubusercontent.com/cheenulabs/pi-agent-python-sdk/v0.2.3/docs/logo.svg" width="160">
   </a>
 </p>
 
@@ -292,7 +292,7 @@ the [command reference][commands] for every method.
 | [RPC structure][rpc] | How the Python client maps to Pi's protocol |
 | [Compatibility][compatibility] | Runtime versions and platform validation |
 | [Examples][examples] | Runnable sync, async, streaming, sessions, steering, and UI examples |
-| [Release notes][release] | Changes included in 0.2.2 |
+| [Release notes][release] | Changes included in 0.2.3 |
 
 Examples use your configured Pi and may make provider calls. Development checks
 use an isolated local test provider; see [CONTRIBUTING.md][contributing] for
@@ -318,20 +318,20 @@ setup and validation commands.
 [MIT][license]
 
 [pypi]: https://pypi.org/project/pi-agent-python-sdk/
-[release]: https://github.com/cheenulabs/pi-agent-python-sdk/releases/tag/v0.2.2
-[metadata]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.2/pyproject.toml
-[license]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.2/LICENSE
-[compatibility]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.2/docs/compatibility.md
-[errors]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.2/docs/errors.md
-[stream-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.2/examples/stream.py
-[constructor-options]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.2/docs/api.md#constructor-options
-[extensions]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.2/docs/usage.md#using-your-own-extensions
-[ui-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.2/examples/ui.py
-[rpc]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.2/docs/rpc.md
-[commands]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.2/docs/api.md#all-33-rpc-commands
-[usage]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.2/docs/usage.md
-[api]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.2/docs/api.md
-[examples]: https://github.com/cheenulabs/pi-agent-python-sdk/tree/v0.2.2/examples
-[contributing]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.2/CONTRIBUTING.md
+[release]: https://github.com/cheenulabs/pi-agent-python-sdk/releases/tag/v0.2.3
+[metadata]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.3/pyproject.toml
+[license]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.3/LICENSE
+[compatibility]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.3/docs/compatibility.md
+[errors]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.3/docs/errors.md
+[stream-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.3/examples/stream.py
+[constructor-options]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.3/docs/api.md#constructor-options
+[extensions]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.3/docs/usage.md#using-your-own-extensions
+[ui-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.3/examples/ui.py
+[rpc]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.3/docs/rpc.md
+[commands]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.3/docs/api.md#all-33-rpc-commands
+[usage]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.3/docs/usage.md
+[api]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.3/docs/api.md
+[examples]: https://github.com/cheenulabs/pi-agent-python-sdk/tree/v0.2.3/examples
+[contributing]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.3/CONTRIBUTING.md
 [issues]: https://github.com/cheenulabs/pi-agent-python-sdk/issues
 [security]: https://github.com/cheenulabs/pi-agent-python-sdk/security/advisories/new
