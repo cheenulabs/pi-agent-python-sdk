@@ -397,6 +397,7 @@ class CustomMessageEntry(_EntryBase):
     display: bool
 
 
+# Keep the list arms separate so typing rejects mixed ToolCall and ImageContent lists.
 ContextEditableContent: TypeAlias = (
     str | list[TextContent | ImageContent] | list[TextContent | ThinkingContent | ToolCall]
 )
