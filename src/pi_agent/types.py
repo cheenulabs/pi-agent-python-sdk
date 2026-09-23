@@ -397,8 +397,13 @@ class CustomMessageEntry(_EntryBase):
     display: bool
 
 
+ContextEditableContent: TypeAlias = (
+    str | list[TextContent | ImageContent] | list[TextContent | ThinkingContent | ToolCall]
+)
+
+
 class ContextEditReplacement(TypedDict):
-    content: str | list[TextContent | ThinkingContent | ToolCall | ImageContent]
+    content: ContextEditableContent
 
 
 class ContextEditEntry(_EntryBase):

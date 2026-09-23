@@ -73,6 +73,7 @@
     {"type": "entry_appended", "entry": {"type": "usage", "id": "usage", "parentId": null, "timestamp": "2026-09-20T00:00:00Z", "kind": "cache_warm", "provider": "fixture", "model": "model", "usage": {"input": 1, "output": 0, "cacheRead": 0, "cacheWrite": 0, "totalTokens": 1, "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "total": 0}}, "futureMetadata": {"kept": [1, 2]}}},
     {"type": "entry_appended", "entry": {"type": "compaction", "id": "compact", "parentId": null, "timestamp": "2026-09-20T00:00:00Z", "summary": "synthetic", "firstKeptEntryId": "entry", "tokensBefore": 1, "systemMessage": {"role": "system", "content": "synthetic prompt", "timestamp": 1}}},
     {"type": "entry_appended", "entry": {"type": "context_edit", "id": "edit", "parentId": "entry", "timestamp": "2026-09-23T00:00:00Z", "targetId": "entry", "replacement": null, "futureMetadata": {"kept": [1, 2]}}},
+    {"type": "entry_appended", "entry": {"type": "context_edit", "id": "replacement", "parentId": "edit", "timestamp": "2026-09-23T00:00:01Z", "targetId": "entry", "replacement": {"content": [{"type": "text", "text": "synthetic replacement"}, {"type": "toolCall", "id": "call", "name": "fixture", "arguments": {}}]}, "futureMetadata": {"kept": [1, 2]}}},
     {"type": "agent_end", "futureMetadata": {"kept": true}},
     {"type": "auto_retry_end", "futureMetadata": {"kept": true}},
     {"type": "auto_retry_start", "futureMetadata": {"kept": true}},

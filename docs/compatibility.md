@@ -201,7 +201,7 @@ This checks the installed Pi version and embedded TS source hashes against
 `compatibility.json`, then runs the actual TS client and both Python clients
 against the same synthetic subprocess. It compares 42 cases spanning all 33
 commands, including null cycles, omitted arguments, empty values, and false
-flags. A 40-record corpus covers all 25 declared session/extension event types,
+flags. A 41-record corpus covers all 25 declared session/extension event types,
 the nine serialized assistant update variants, and unknown metadata. Returned
 payloads, request sequences, event order, and both listeners must match.
 No client methods are patched, and no provider or live Pi configuration is used.

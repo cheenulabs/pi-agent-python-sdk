@@ -18,14 +18,14 @@ manager now derive model context from canonical session entries. Append-only
 future provider requests while preserving raw history. `get_entries`, `get_tree`,
 and `entry_appended` can expose those entries. The new `context_with_system`
 event and actionable `turn_end` and `agent_before_settle` extension boundaries
-remain Pi-owned;
-`agent_before_settle` is not a new RPC output event. RPC `turn_end` keeps its
-existing wire fields. Models can expose `inputLimits` with request and image
-limits; Pi applies image preprocessing to attachments, image reads, and tool
-results before provider requests.
+remain Pi-owned; `agent_before_settle` is not a new RPC output event. RPC
+`turn_end` keeps its existing wire fields. Models can expose `inputLimits` with
+request and image limits; Pi applies image preprocessing to attachments, image
+reads, and tool results before provider requests.
 
-The shared synthetic corpus now covers a `context_edit` entry and model input
-limits. The tested baseline is 0.87.0; the minimum remains 0.85.1.
+The shared synthetic corpus now covers both omission and content replacement
+for `context_edit` entries, plus model input limits. The tested baseline is
+0.87.0; the minimum remains 0.85.1.
 
 ## Pi 0.86.1 update
 
@@ -60,7 +60,7 @@ and session statistics, not in the assistant-only `RunResult.usage` summary.
 
 The minimum remains 0.85.1; the recorded tested baseline was 0.86.0 until the
 0.86.1 review above. As of 0.87.0, the shared corpus checks 42 command cases
-and 40 event records against both Python facades and the actual TypeScript
+and 41 event records against both Python facades and the actual TypeScript
 client, including the new payload shapes.
 
 ## Original 0.85.1 findings that shape the package
@@ -311,11 +311,19 @@ Source: [content and message definitions](https://github.com/earendil-works/pi/b
 | branch_summary | fromId:string; summary:string; details?:JSON; usage?:Usage; fromHook?:boolean |
 | custom | customType:string; data?:JSON |
 | custom_message | customType:string; content:string or (TextContent\|ImageContent)[]; details?:JSON; display:boolean |
-| context_edit | targetId:string; replacement:{content:string or content block array}\|null; null omits the target from model context |
+| context_edit | targetId:string; replacement:{content:ContextEditableContent}\|null; null omits the target from model context |
 | label | targetId:string; label?:string |
 | session_info | name?:string |
 
 `SessionTreeNode`: entry:SessionEntry; children:SessionTreeNode[]; label?:string; labelTimestamp?:string. `get_entries` and `get_tree` expose entries, not raw session-file headers. The separate `SessionHeader` (`type:"session",version?:number,id:string,timestamp:string,cwd:string,parentSession?:string`) is not a returned SessionEntry. Do not accidentally require headers or build a session-file parser to satisfy RPC coverage.
+
+`ContextEditableContent` is the union of the existing message content shapes:
+user and custom messages accept `string` or `(TextContent|ImageContent)[]`;
+assistant messages accept `(TextContent|ThinkingContent|ToolCall)[]`; tool-result
+messages accept `(TextContent|ImageContent)[]`. The list alternatives remain
+separate, so a replacement cannot combine `ToolCall` and `ImageContent` in one
+list according to the declared types. Pi normalizes string replacements for
+assistant and tool-result targets into text blocks before storing them.
 
 ### Model and provider metadata
 
@@ -323,11 +331,19 @@ Pi 0.86.0 additionally exposes `promptCache?:{short?:number,long?:number}` in
 seconds. Pi 0.87.0 adds optional `inputLimits` with `maxRequestBytes`,
 `images.resize` (`maxWidth`, `maxHeight`, `maxBytes`, `jpegQuality`),
 `images.maxPerMessage`, and `images.maxPerRequest`. Missing limits remain
-unknown. `compat` continues to preserve
-all provider-specific JSON, including new mid-conversation capability fields.
-The detailed inventory below records the original 0.85.1 provider fields.
+unknown. `compat` continues to preserve all provider-specific JSON, including
+new mid-conversation capability fields.
 
-[Model definition](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/ai/src/types.ts#L825): id:string; name:string; api:string; provider:string; baseUrl:string; reasoning:boolean; thinkingLevelMap?:partial map of ThinkingLevel to string|null; input:("text"|"image")[]; cost:ModelCost; contextWindow:number; maxTokens:number; samplingParams?:object of JSON; headers?:map string→string; compat?:provider-specific JSON object.
+[Current Model definition](https://github.com/earendil-works/pi/blob/16787ad5b2dc748047f314ca1bfe7708f30f54f3/packages/ai/src/types.ts):
+id:string; name:string; api:string; provider:string; baseUrl:string;
+reasoning:boolean; thinkingLevelMap?:partial map of ThinkingLevel to string|null;
+input:("text"|"image")[]; inputLimits?:ModelInputLimits; cost:ModelCost;
+contextWindow:number; maxTokens:number; samplingParams?:object of JSON;
+headers?:map string→string; compat?:provider-specific JSON object;
+promptCache?:{short?:number,long?:number}. `ModelInputLimits` has optional
+`maxRequestBytes` and `images`; the latter has optional `resize`, `maxPerMessage`,
+and `maxPerRequest`. `resize` has optional `maxWidth`, `maxHeight`, `maxBytes`,
+and `jpegQuality`.
 
 `ModelCost`: input,output,cacheRead,cacheWrite:number (USD per million tokens); tiers?:[{inputTokensAbove:number,input:number,output:number,cacheRead:number,cacheWrite:number}]. `thinkingLevelMap` missing keys mean provider defaults; null marks unsupported levels. Keep both states distinct.
 
@@ -357,7 +373,11 @@ Raw Model metadata can contain configured headers; never use automatic repr/logg
 11. `get_last_assistant_text` declares required nullable text, but `getLastAssistantText()` returns undefined when there is no usable text; serialization emits `data:{}`. Accept both omission and null and normalize to Python None. Source and isolated probe agree. [Return implementation](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/agent-session.ts#L3473).
 12. `fork` declares required text, but a vetoed runtime fork returns no selectedText, so RPC omits text. Model `ForkResult.text` as optional; do not reject a valid veto response. Source and isolated probe agree. [Fork veto](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/agent-session-runtime.ts#L259).
 
-Completion counts to verify in implementation: 33 typed command methods; 23 session event discriminators; extension_error; 9 extension UI methods and 3 response variants; 12 accepted nested assistant variants; 7 known AgentMessage roles; 9 SessionEntry variants. A compact machine-checked coverage manifest is sufficient; no schema-generation framework is needed.
+Current coverage counts: 33 typed command methods; 23 session event
+discriminators plus `extension_error` and `extension_ui_request`; 9 extension UI
+methods and 3 response variants; 12 accepted nested assistant variants; 8 known
+AgentMessage roles; 11 SessionEntry variants. The test suite checks the command,
+event, UI, message-role, and entry inventories against the tables above.
 
 
 ## Lifecycle findings and proposed behavior contract
