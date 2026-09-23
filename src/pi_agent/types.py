@@ -1,4 +1,4 @@
-"""Pi 0.87.0 wire annotations and small Python conveniences.
+"""Pi 0.87.1 wire annotations and small Python conveniences.
 
 Wire fields retain Pi's spelling and remain ordinary dictionaries. These
 annotations describe known shapes, not a recursive runtime validator: extensions

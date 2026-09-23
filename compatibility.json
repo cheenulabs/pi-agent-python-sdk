@@ -1,7 +1,7 @@
 {
   "minimumVersion": "0.85.1",
-  "testedVersion": "0.87.0",
-  "upstreamCommit": "16787ad5b2dc748047f314ca1bfe7708f30f54f3",
+  "testedVersion": "0.87.1",
+  "upstreamCommit": "f07218c4d4bbc12bef056a7058c3dd49dfe41abe",
   "sourceSha256": {
     "packages/coding-agent/src/modes/rpc/rpc-types.ts": "34057257456fd5f935587a0e9650fb5777738674e491a68fd037425703c45e26",
     "packages/coding-agent/src/modes/rpc/rpc-mode.ts": "7d4bf1e4291a5320a1ce27504c488622c9a7307ce9e7c2d973f9d95f18a8b2bc",
@@ -13,15 +13,15 @@
     "packages/coding-agent/src/core/messages.ts": "5397e3c96c9504266e4ee8b6e88d5098b3280ee7dbb0c687b74708c62a06c8d4",
     "packages/coding-agent/src/core/bash-executor.ts": "c0c3043846e107bbfcb236e28cc0505909bc476b67cd91f386a299ba83d08760",
     "packages/coding-agent/src/core/source-info.ts": "9736ba7876085249e036fdf5f4d3bba565b5bc11b832e200a0d3ba58743c747b",
-    "packages/coding-agent/src/core/compaction/compaction.ts": "16973a169a6f5dc1b7a35875d0c9a186da5bbf53dd850dd64fe292d34b50b8b0",
+    "packages/coding-agent/src/core/compaction/compaction.ts": "07c92263026e4c7792a64a1097246199dae70c8ecf3abc8ee55971cd1fcfc41b",
     "packages/coding-agent/src/core/compaction/index.ts": "f82bde781410ae1a638989ff91bde9cc7045341a76bb9757de2ea6beea4c077d",
     "packages/coding-agent/src/core/extensions/types.ts": "601261b3deee1d61f85c930efed2767d66fe6c8d9637e19f4f53135b5fecf4d1",
     "packages/coding-agent/src/core/agent-session-runtime.ts": "ee66f90f4774ace21290fc6a0ed0fc2065376b57af4223371f1d1680b302036d",
-    "packages/coding-agent/src/cli/args.ts": "de0b21efa0cca60cd012547b3f187f2cabb6c8e8eb62c4f0e01153351b6be973",
-    "packages/coding-agent/package.json": "9bb655451e850a8593ba87f563c26d3d2af2f503b76318e2f1bbe53eb28c9180",
+    "packages/coding-agent/src/cli/args.ts": "94d1490f9c0f66ae40482c8fec9a37ab541f92eb813ae859af66ed776da44315",
+    "packages/coding-agent/package.json": "627631b613ba4ca29eba8df793f5280fd20b19f01d73826e9ffda14c15def5dc",
     "packages/agent/src/types.ts": "bc8db50886cdf164c55d636f2755da22b2bf12d9172b1fb7383f37c2fe439fe7",
     "packages/agent/src/agent-loop.ts": "c3d99a5b0f24d1e7fde41cbeb2cd7a2f3559aa3e9c1df975abef21d7e0ecd189",
     "packages/ai/src/types.ts": "547080208799ae828adc64b1935138f04c0f5431638932ee282fd867f196e39b",
-    "packages/coding-agent/CHANGELOG.md": "2747c26565eca4c7e07aa5ed478c25801153965ad729dee392026c7c675d9ebf"
+    "packages/coding-agent/CHANGELOG.md": "baba87a4a1b4808abc22f9e80baa4ca5d6ad03495ec041ac6d4d4692448a29e5"
   }
 }

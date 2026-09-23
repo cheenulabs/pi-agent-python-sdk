@@ -10,8 +10,8 @@ Check the proposed commit's CI results before relying on platform support.
 | Component | Policy |
 |---|---|
 | Python | Package requires 3.11 or newer; Linux CI targets 3.11, 3.12, 3.13, and 3.14 |
-| Pi | Minimum **0.85.1**; recorded tested protocol version **0.87.0** |
-| Node.js | Pi 0.87.0 requires **22.19.0 or newer** |
+| Pi | Minimum **0.85.1**; recorded tested protocol version **0.87.1** |
+| Node.js | Pi 0.87.1 requires **22.19.0 or newer** |
 | Python runtime dependencies | None beyond the standard library |
 | Platforms | CI targets Linux with Python 3.11–3.14; macOS and Windows with Python 3.14 |
 
@@ -20,7 +20,7 @@ version has passed tests. Similarly, successfully launching an untested Pi
 version is not a compatibility certification.
 
 The pinned Pi source is commit
-[`16787ad5b2dc748047f314ca1bfe7708f30f54f3`](https://github.com/earendil-works/pi/tree/16787ad5b2dc748047f314ca1bfe7708f30f54f3).
+[`f07218c4d4bbc12bef056a7058c3dd49dfe41abe`](https://github.com/earendil-works/pi/tree/f07218c4d4bbc12bef056a7058c3dd49dfe41abe).
 The [discovery document](discovery.md) records the upstream types, serializer,
 implementation, and observed runtime behavior used to build the client. The
 package wraps Pi's RPC protocol and is not an official upstream Python SDK.
@@ -35,8 +35,9 @@ the RPC command or event vocabulary. Pi 0.87.0 adds append-only context edits
 to session entries and image input limits to model metadata. Its new actionable
 extension boundaries change Pi's internal context and continuation handling;
 the RPC command and event discriminators remain unchanged. The Python SDK
-passes through new entry and model fields. CI also exercises the minimum version
-on Linux.
+passes through new entry and model fields. Pi 0.87.1 changes compaction prompts
+and rejects invalid `--mode` arguments; the SDK's valid `--mode rpc` launch and
+RPC wire vocabulary are unchanged. CI also exercises the minimum version on Linux.
 
 ## Startup version policy
 
@@ -46,7 +47,7 @@ PyPI, GitHub, or another version service. After startup:
 | Selected executable | Behavior |
 |---|---|
 | Recognized version below 0.85.1 | Reject with `PiVersionError` |
-| Exactly 0.87.0 | `pi_version="0.87.0"`, `compatibility="tested"` |
+| Exactly 0.87.1 | `pi_version="0.87.1"`, `compatibility="tested"` |
 | Other recognized version at or above the minimum | Allow by default, with `compatibility="untested"` |
 | Recognized untested version and `strict_version=True` | Reject with `PiVersionError` |
 | Unparseable/custom version output | Reject unless `allow_unknown_version=True` |
@@ -146,7 +147,7 @@ result attribution without changing the shared command/event protocol.
 
 ## TypeScript behavior contract
 
-The [pinned TS client](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/modes/rpc/rpc-client.ts)
+The [pinned TS client](https://github.com/earendil-works/pi/blob/f07218c4d4bbc12bef056a7058c3dd49dfe41abe/packages/coding-agent/src/modes/rpc/rpc-client.ts)
 is the comparison reference. All 33 command wrappers have Python equivalents;
 the [command table](api.md#all-33-rpc-commands) records wire arguments and results.
 Current source matches TS object results for thinking-level cycling and HTML
@@ -183,8 +184,8 @@ those events to a particular prompt or produce provider traces Pi did not emit.
 Do not copy TS's mutable-listener-array bug: removing a collector during
 settlement dispatch can skip the next collector. Python intentionally lets
 independent collectors and idle waiters complete on the same settlement.
-The [TS dispatch/helpers](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/modes/rpc/rpc-client.ts#L464)
-and [JSONL implementation](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/modes/rpc/jsonl.ts)
+The [TS dispatch/helpers](https://github.com/earendil-works/pi/blob/f07218c4d4bbc12bef056a7058c3dd49dfe41abe/packages/coding-agent/src/modes/rpc/rpc-client.ts#L464)
+and [JSONL implementation](https://github.com/earendil-works/pi/blob/f07218c4d4bbc12bef056a7058c3dd49dfe41abe/packages/coding-agent/src/modes/rpc/jsonl.ts)
 are the source for these distinctions.
 
 ## Repeatable comparison and regression coverage
