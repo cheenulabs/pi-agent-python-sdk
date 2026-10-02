@@ -126,9 +126,17 @@ def main() -> None:
         }
         asynchronous = asyncio.run(check_async(fixture, options))
         blocking = check_sync(fixture, options)
+        ack_only = {"prompt", "steer", "follow_up"}
+        dispositions = {"handled", "queued", "started"}
         for case, ts, py_async, py_sync in zip(
             fixture["cases"], reference, asynchronous, blocking, strict=True
         ):
+            if case["py"] in ack_only:
+                # TS returns data.disposition from 1.0.0; Python keeps None and exposes
+                # the envelope through request().
+                assert ts["result"] in dispositions, case["py"]
+                assert py_async["result"] is None and py_sync["result"] is None, case["py"]
+                ts = {**ts, "result": None}
             assert ts == py_async == py_sync, f"Command parity mismatch: {case['py']}"
     print(
         f"PASS: 33 commands / {len(reference)} cases and {len(fixture['events'])} events "

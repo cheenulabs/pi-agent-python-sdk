@@ -122,8 +122,10 @@ as described below; application-specific responses remain the caller's choice.
 ## Acceptance, settlement, and results
 
 `prompt(message, ...)` returns `None` after checked acknowledgement. Use
-`request("prompt", message=...)` for the response envelope and ID. It does
-not assert that an agent started or produced a response. Slash commands and
+`request("prompt", message=...)` for the response envelope, ID, and (from Pi
+1.0.0) `data.disposition`. Acknowledgement still does not settle a run: a
+`handled` disposition means no agent start follows that acceptance, while
+`queued` or `started` means later session events may follow. Slash commands and
 extension input handlers can consume ordinary text without starting the agent.
 Use it when your application controls the event lifecycle or calls a command
 that is expected to be handled entirely by an extension.

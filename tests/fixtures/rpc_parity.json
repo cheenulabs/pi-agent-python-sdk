@@ -44,6 +44,9 @@
     {"py": "cycle_thinking_level", "ts": "cycleThinkingLevel", "args": [], "kwargs": {}, "ts_args": [], "nullable": true}
   ],
   "responses": {
+    "prompt": {"disposition": "started"},
+    "steer": {"disposition": "queued"},
+    "follow_up": {"disposition": "queued"},
     "clear_queue": {"steering": [], "followUp": [], "futureMetadata": {"kept": [1, 2]}},
     "new_session": {"cancelled": false, "futureMetadata": {"kept": [1, 2]}},
     "get_state": {"sessionId": "fixture", "isStreaming": false, "isCompacting": false, "pendingMessageCount": 0, "model": {"provider": "fixture", "id": "model", "futureMetadata": {"kept": [1, 2]}}, "futureMetadata": {"kept": [1, 2]}},

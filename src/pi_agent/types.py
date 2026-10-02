@@ -1,4 +1,4 @@
-"""Pi 0.87.1 wire annotations and small Python conveniences.
+"""Pi 1.0.0 wire annotations and small Python conveniences.
 
 Wire fields retain Pi's spelling and remain ordinary dictionaries. These
 annotations describe known shapes, not a recursive runtime validator: extensions
@@ -20,6 +20,8 @@ RawRecord: TypeAlias = dict[str, Any]
 ThinkingLevel: TypeAlias = Literal["off", "minimal", "low", "medium", "high", "xhigh", "max"]
 QueueMode: TypeAlias = Literal["all", "one-at-a-time"]
 StreamingBehavior: TypeAlias = Literal["steer", "followUp"]
+QueuedInputDisposition: TypeAlias = Literal["handled", "queued"]
+PromptDisposition: TypeAlias = Literal["handled", "queued", "started"]
 CompactionReason: TypeAlias = Literal["manual", "threshold", "overflow"]
 StopReason: TypeAlias = Literal[
     "pending", "stop", "length", "toolUse", "error", "aborted", "deferred"
@@ -449,6 +451,14 @@ class SessionTreeNode(TypedDict):
 class QueueState(TypedDict):
     steering: list[str]
     followUp: list[str]
+
+
+class PromptDispositionData(TypedDict):
+    disposition: PromptDisposition
+
+
+class QueuedInputDispositionData(TypedDict):
+    disposition: QueuedInputDisposition
 
 
 class SessionChangeResult(TypedDict):

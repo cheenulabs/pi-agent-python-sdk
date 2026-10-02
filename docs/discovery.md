@@ -2,9 +2,26 @@
 
 Original protocol snapshot: 2026-09-15, Pi 0.85.1. Reviewed update: 2026-09-20,
 Pi 0.86.0. Reviewed patch: 2026-09-22, Pi 0.86.1. Reviewed update: 2026-09-23,
-Pi 0.87.0. Reviewed patch: 2026-09-24, Pi 0.87.1. Historical observations below
-retain their original version/source; the coverage inventory includes the
-additions described here.
+Pi 0.87.0. Reviewed patch: 2026-09-24, Pi 0.87.1. Reviewed update: 2026-10-02,
+Pi 1.0.0. Historical observations below retain their original version/source;
+the coverage inventory includes the additions described here.
+
+## Pi 1.0.0 update
+
+The published npm release identifies commit
+[`a13d35a742c6ef8462812a28fbe1d8c8b7431c32`](https://github.com/earendil-works/pi/tree/a13d35a742c6ef8462812a28fbe1d8c8b7431c32).
+Fifteen fingerprinted surfaces changed. RPC command names and argument shapes
+remain the same 33 commands; JSONL framing and the output-event serializer are
+unchanged at 25 discriminators. Successful `prompt`, `steer`, and `follow_up`
+responses now include `data.disposition`: `PromptDisposition` is
+`handled|queued|started`, and queued-input responses use `handled|queued`.
+`handled` means no agent run starts for that acceptance; `started` or `queued`
+means later session events may follow. The TypeScript client returns those
+values from `prompt`/`steer`/`followUp`. Python keeps acknowledgement-only
+methods that return `None`; use `request(...)` for the envelope and disposition.
+Pi-owned TUI, codemode, MCP, provider, and extension surfaces outside the RPC
+output vocabulary remain out of SDK scope. The tested baseline is now 1.0.0;
+the minimum remains 0.85.1.
 
 ## Pi 0.87.1 update
 
@@ -126,15 +143,15 @@ Notation: `?` means the JSON property may be absent; `T|null` means explicit nul
 
 ## Complete command coverage
 
-Every row is first-release support. Response envelope: `{type:"response", id?:string, command:string, success:true, data?:…}`. Every command can instead produce `{type:"response", id?:string, command:string, success:false, error:string}`. “Absent” means no `data` key. The source-branch `prompt()` returns `None` after checked acknowledgement; `request("prompt", ...)` exposes the response envelope and assigned ID. Neither proves a run disposition. Python methods return data (or unwrap list/text fields as noted), raise on unsuccessful responses, and preserve raw responses through `request()`. The unreleased migration from 0.1.0 is recorded in the API reference.
+Every row is first-release support. Response envelope: `{type:"response", id?:string, command:string, success:true, data?:…}`. Every command can instead produce `{type:"response", id?:string, command:string, success:false, error:string}`. “Absent” means no `data` key. The source-branch `prompt()` returns `None` after checked acknowledgement; `request("prompt", ...)` exposes the response envelope, assigned ID, and (from 1.0.0) `data.disposition`. Python methods return data (or unwrap list/text fields as noted), raise on unsuccessful responses, and preserve raw responses through `request()`. The unreleased migration from 0.1.0 is recorded in the API reference.
 
-Authoritative [command declarations](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-types.ts#L20), [response declarations](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-types.ts#L108), and [runtime dispatch](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-mode.ts#L394).
+Authoritative [command declarations](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/rpc-types.ts#L20), [response declarations](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/rpc-types.ts#L117), and [runtime dispatch](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/rpc-mode.ts#L394).
 
 | Command | Arguments beyond type/id | Success `data` | Proposed Python method / return |
 |---|---|---|---|
-| prompt | message:string; images?:ImageContent[]; streamingBehavior?:"steer"/"followUp" | Absent | `prompt(message, *, images=None, streaming_behavior=None)` → None |
-| steer | message:string; images?:ImageContent[] | Absent | `steer(message, *, images=None)` → None |
-| follow_up | message:string; images?:ImageContent[] | Absent | `follow_up(message, *, images=None)` → None |
+| prompt | message:string; images?:ImageContent[]; streamingBehavior?:"steer"/"followUp" | {disposition:PromptDisposition} | `prompt(message, *, images=None, streaming_behavior=None)` → None; disposition via `request("prompt", ...)` |
+| steer | message:string; images?:ImageContent[] | {disposition:QueuedInputDisposition} | `steer(message, *, images=None)` → None; disposition via `request("steer", ...)` |
+| follow_up | message:string; images?:ImageContent[] | {disposition:QueuedInputDisposition} | `follow_up(message, *, images=None)` → None; disposition via `request("follow_up", ...)` |
 | abort | None | Absent | `abort()` → None |
 | clear_queue | None | {steering:string[], followUp:string[]} | `clear_queue()` → QueueState |
 | new_session | parentSession?:string | {cancelled:boolean} | `new_session(*, parent_session=None)` → SessionChangeResult |
@@ -166,7 +183,17 @@ Authoritative [command declarations](https://github.com/earendil-works/pi/blob/d
 | get_messages | None | {messages:AgentMessage[]} | `get_messages()` → list[AgentMessage] |
 | get_commands | None | {commands:RpcSlashCommand[]} | `get_commands()` → list[SlashCommand] |
 
-Behavior qualifiers: prompt success means preflight succeeded, including queueing or immediate extension handling; it does not carry a disposition telling the client whether a run will follow. Bash output has its own events, and an extension may provide the entire result immediately. `get_entries(since=...)` excludes the referenced entry and fails when that ID does not exist. `clone` fails when no leaf is selected. `set_session_name` trims and rejects empty names. `get_commands` enumerates registered extensions, prompt templates and skills, not built-in TUI slash commands. Runtime responses expose full Model values, despite the TS client's narrower ModelInfo return annotations.
+Behavior qualifiers: prompt success means preflight succeeded. From 1.0.0 the
+success envelope carries `data.disposition`: `handled` means no run starts for
+that acceptance; `queued` or `started` means later session events may follow.
+Python acknowledgement methods still return `None`; read disposition from
+`request(...)`. Bash output has its own events, and an extension may provide the
+entire result immediately. `get_entries(since=...)` excludes the referenced entry
+and fails when that ID does not exist. `clone` fails when no leaf is selected.
+`set_session_name` trims and rejects empty names. `get_commands` enumerates
+registered extensions, prompt templates and skills, not built-in TUI slash
+commands. Runtime responses expose full Model values, despite the TS client's
+narrower ModelInfo return annotations.
 
 
 ### Command-to-event relationships
@@ -281,7 +308,7 @@ Represent stable result/message shapes with modest dataclasses or typed mappings
 
 ### State, enums, results
 
-- `ThinkingLevel`: `off|minimal|low|medium|high|xhigh|max`. Do not confuse pi-ai's ThinkingLevel (excludes off) with agent-core's union (includes off). `QueueMode`: `all|one-at-a-time`. `CompactionReason`: `manual|threshold|overflow`.
+- `ThinkingLevel`: `off|minimal|low|medium|high|xhigh|max`. Do not confuse pi-ai's ThinkingLevel (excludes off) with agent-core's union (includes off). `QueueMode`: `all|one-at-a-time`. `QueuedInputDisposition`: `handled|queued`. `PromptDisposition`: `handled|queued|started`. `CompactionReason`: `manual|threshold|overflow`.
 - `RpcSessionState`: model?:Model; thinkingLevel:ThinkingLevel; isStreaming:boolean; isCompacting:boolean; steeringMode:QueueMode; followUpMode:QueueMode; sessionFile?:string; sessionId:string; sessionName?:string; autoCompactionEnabled:boolean; messageCount:number; pendingMessageCount:number. There is no auto-retry state or full idle/settled flag. [State](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-types.ts#L89).
 - `CompactionResult`: summary:string; firstKeptEntryId:string; tokensBefore:number; estimatedTokensAfter?:number; usage?:Usage; details?:JSON. [Source](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/compaction/compaction.ts#L88).
 - `BashResult`: output:string; exitCode?:number; cancelled:boolean; truncated:boolean; fullOutputPath?:string. Exit code is omitted if killed/cancelled, not guaranteed null. [Source](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/bash-executor.ts#L29).
@@ -381,7 +408,7 @@ Raw Model metadata can contain configured headers; never use automatic repr/logg
 5. Docs list only five stop reasons; source also declares `pending` and `deferred`. Example usage omits required `totalTokens`; do not infer schema from that example. The bash message example uses null for an optional path; actual undefined object fields are omitted by JSON serialization.
 6. TS client `prompt()` omits supported streamingBehavior; `bash()` omits excludeFromContext; ModelInfo narrows full model response data. Python should cover the actual RPC surface rather than inherit those omissions. [Client methods](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-client.ts#L198).
 7. TS event listener type excludes extension UI/error, but handleLine casts arbitrary non-response lines to that type. Python requires explicit UI/error/unknown event handling. [handleLine](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-client.ts#L516).
-8. Protocol has no request-ID linkage for agent events, no generic version/capabilities command, no run-disposition response, no session list/tree navigation RPC command, no arbitrary tool registration RPC, and no shutdown RPC. Avoid inventing any of these while claiming upstream parity. Extensions can perform some additional actions internally, but that does not make them generic RPC commands.
+8. Protocol has no request-ID linkage for agent events, no generic version/capabilities command, no session list/tree navigation RPC command, no arbitrary tool registration RPC, and no shutdown RPC. From 1.0.0, successful `prompt`/`steer`/`follow_up` responses carry `data.disposition`; that is not a settled-run proof and Python acknowledgement methods still return `None`. Avoid inventing other capability surfaces while claiming upstream parity. Extensions can perform some additional actions internally, but that does not make them generic RPC commands.
 9. The `get_commands` documentation examples use old `path`/`location` fields; runtime and declarations use required `sourceInfo`. The Python inventory follows sourceInfo. [Stale documentation section](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/docs/rpc.md#L816).
 10. `user_bash` and other extension hooks are internal extension events, not output RPC events. `bash_execution_update` is the streamed bash wire event. No Python `user_bash` subscription should be promised.
 11. `get_last_assistant_text` declares required nullable text, but `getLastAssistantText()` returns undefined when there is no usable text; serialization emits `data:{}`. Accept both omission and null and normalize to Python None. Source and isolated probe agree. [Return implementation](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/agent-session.ts#L3473).

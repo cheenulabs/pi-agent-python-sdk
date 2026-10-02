@@ -10,7 +10,7 @@ run results.
 Pi documents [RPC mode][upstream-rpc] for integrations in other languages and
 provides a [TypeScript RPC client][upstream-client]. This package follows the
 same subprocess model and command vocabulary. The references here are pinned
-to the source used for the **0.87.1** baseline; current upstream may differ.
+to the source used for the **1.0.0** baseline; current upstream may differ.
 
 | Pi protocol | Python interface |
 | --- | --- |
