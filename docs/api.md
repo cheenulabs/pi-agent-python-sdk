@@ -183,7 +183,7 @@ bounded. See [errors and deadlines](errors.md#deadlines).
 
 | Method | Return | Meaning |
 |---|---|---|
-| `prompt(message, *, images=None, streaming_behavior=None)` | `None` | Checked acknowledgement; not proof of an agent start; use `request("prompt", ...)` for the envelope |
+| `prompt(message, *, images=None, streaming_behavior=None)` | `None` | Checked acknowledgement; use `request("prompt", ...)` for the envelope and `data.disposition` (`handled`/`queued`/`started`) |
 | `steer(message, *, images=None)` | `None` | Queue input for Pi's next steering opportunity |
 | `follow_up(message, *, images=None)` | `None` | Queue input after the current response |
 | `abort()` | `None` | Abort using Pi semantics; does not implicitly clear queued input |
@@ -261,7 +261,7 @@ behavior from 0.1.0:
 
 | Previous use | Updated use |
 | --- | --- |
-| `receipt = pi.prompt(text)` | `pi.prompt(text)` returns `None`; use `pi.request("prompt", message=text)` when the response ID/envelope is needed |
+| `receipt = pi.prompt(text)` | `pi.prompt(text)` returns `None`; use `pi.request("prompt", message=text)` for the response ID/envelope/`data.disposition` |
 | `level = pi.cycle_thinking_level()` | Read `result["level"]` when the returned result is not `None` |
 | `path = pi.export_html()` | Read `result["path"]`; other returned metadata stays available |
 | Read cached session identity immediately after a mutation | Explicitly call `pi.get_state()` and read its returned dictionary |
