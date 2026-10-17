@@ -13,7 +13,7 @@ from ._transport import _close_process_pipes, _wait_for_exit
 from .errors import PiProcessError, PiVersionError
 
 MINIMUM_PI_VERSION = "0.85.1"
-TESTED_PI_VERSION = "1.0.0"
+TESTED_PI_VERSION = "1.3.0"
 
 # The client owns these options. In particular --print consumes an initial prompt.
 _RESERVED = {
@@ -59,6 +59,7 @@ _VALUES = {
     "--tui-mode",
 }
 _FLAGS = {
+    "--no-mcp",
     "--no-tools",
     "-nt",
     "--no-builtin-tools",

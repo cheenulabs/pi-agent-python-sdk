@@ -299,6 +299,12 @@ The Pi 0.87.0 annotations include `SessionEntry` values with
 pass through the same command results and event records as earlier entry and
 model fields.
 
+Pi 1.3.0 also adds `ToolCall.argumentsError`, optional `durationMs` on assistant
+and tool-result messages and `ToolExecutionEndEvent`, and optional
+`Model.samplingParamsByThinkingLevel`. `AgentSettledEvent` replaces the
+settlement arm of `EmptySessionEvent`; `aborted` is optional for older runtimes.
+These fields are preserved in raw results and events.
+
 These wire annotations and `RunResult` do not validate an assistant's answer
 against a Pydantic model or JSON schema. `RunResult.text` is ordinary text; parse
 and validate structured answers in your application when needed. The SDK adds

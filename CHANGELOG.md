@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Changed
+
+- Advance the reviewed Pi baseline from 1.0.0 to 1.3.0; keep the 0.85.1 minimum.
+  Strict-version users must align their separately installed runtime with 1.3.0.
+- Annotate Pi timing, malformed tool arguments, per-thinking-level sampling,
+  and settlement abort metadata. `AgentSettledEvent` now represents settlement
+  separately from `EmptySessionEvent`.
+- Resolve and validate the upstream version tag when npm omits `gitHead`, and
+  fingerprint the extracted model/provider schemas without approving source drift.
+- Recognize Pi's `--no-mcp` flag and document its changed tool-filtering and
+  Azure provider behavior.
+
 ## 0.2.4
 
 ### Added

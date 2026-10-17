@@ -3,6 +3,12 @@
 The library never upgrades the user's runtime. Maintain the test runtime in
 `tests/pi/package.json` and its npm lockfile. `compatibility.json` records the
 minimum/tested versions, source commit, and reviewed upstream fingerprints.
+The checker uses npm `gitHead` when present. If absent, it resolves the official
+`v<version>` tag to a commit and verifies the source package name and version.
+Only the immutable commit and hashes are recorded; a moved tag still fails
+normal checks. Invalid references or mismatched package metadata fail closed.
+Newly fingerprinted files are marked as having no previous fingerprint rather
+than fetched from a revision where they may not exist.
 
 Dependabot checks Pi daily with no configured cooldown. Python development
 and build dependencies use the **uv** ecosystem weekly, so `pyproject.toml`

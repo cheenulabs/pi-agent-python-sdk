@@ -21,6 +21,8 @@ from pi_agent.errors import PiVersionError
         ["--no-tools", "hello"],
         ["--extension"],
         ["--no-tools=true"],
+        ["--no-mcp=true"],
+        ["--no-mcp", "startup prompt"],
     ],
 )
 def test_no_startup_input(args):
@@ -30,7 +32,15 @@ def test_no_startup_input(args):
 
 def test_extension_options_and_explicit_defaults_are_allowed():
     validate_extra_args(
-        ["--no-tools", "--extension", "fixture.ts", "--custom=value", "--another", "value"]
+        [
+            "--no-mcp",
+            "--no-tools",
+            "--extension",
+            "fixture.ts",
+            "--custom=value",
+            "--another",
+            "value",
+        ]
     )
 
 
@@ -73,7 +83,8 @@ def test_explicit_command_argv():
         ("0.86.1", False, False, ("0.86.1", "untested")),
         ("0.87.0", False, False, ("0.87.0", "untested")),
         ("0.87.1", False, False, ("0.87.1", "untested")),
-        ("1.0.0", True, False, ("1.0.0", "tested")),
+        ("1.0.0", False, False, ("1.0.0", "untested")),
+        ("1.3.0", True, False, ("1.3.0", "tested")),
         ("custom", False, True, (None, "unknown")),
     ],
 )
@@ -91,7 +102,7 @@ async def test_version_status(version, strict, allow_unknown, expected):
 
 @pytest.mark.parametrize(
     "version,strict",
-    [("0.85.0", False), ("0.85.1", True), ("0.87.0", True), ("custom", False)],
+    [("0.85.0", False), ("0.85.1", True), ("0.87.0", True), ("1.0.0", True), ("custom", False)],
 )
 async def test_unsupported_version(version, strict):
     with pytest.raises(PiVersionError):

@@ -10,8 +10,8 @@ Check the proposed commit's CI results before relying on platform support.
 | Component | Policy |
 |---|---|
 | Python | Package requires 3.11 or newer; Linux CI targets 3.11, 3.12, 3.13, and 3.14 |
-| Pi | Minimum **0.85.1**; recorded tested protocol version **1.0.0** |
-| Node.js | Pi 1.0.0 requires **22.19.0 or newer** |
+| Pi | Minimum **0.85.1**; recorded tested protocol version **1.3.0** |
+| Node.js | Pi 1.3.0 requires **22.19.0 or newer** |
 | Python runtime dependencies | None beyond the standard library |
 | Platforms | CI targets Linux with Python 3.11–3.14; macOS and Windows with Python 3.14 |
 
@@ -20,7 +20,7 @@ version has passed tests. Similarly, successfully launching an untested Pi
 version is not a compatibility certification.
 
 The pinned Pi source is commit
-[`a13d35a742c6ef8462812a28fbe1d8c8b7431c32`](https://github.com/earendil-works/pi/tree/a13d35a742c6ef8462812a28fbe1d8c8b7431c32).
+[`71023aec1546d6d677a65669c5665c0927ce0dd0`](https://github.com/earendil-works/pi/tree/71023aec1546d6d677a65669c5665c0927ce0dd0).
 The [discovery document](discovery.md) records the upstream types, serializer,
 implementation, and observed runtime behavior used to build the client. The
 package wraps Pi's RPC protocol and is not an official upstream Python SDK.
@@ -43,6 +43,20 @@ output-event discriminators while adding `data.disposition` on successful
 still return `None`; use `request(...)` for the disposition. CI also exercises
 the minimum version on Linux.
 
+Pi 1.3.0 adds optional `durationMs` to assistant messages, tool results, and
+tool execution end events, `ToolCall.argumentsError`, model
+`samplingParamsByThinkingLevel`, and `agent_settled.aborted`. These remain
+wire metadata; the SDK neither calculates durations nor interprets malformed
+arguments. `AgentSettledEvent` describes settlement separately from
+`EmptySessionEvent`; its `aborted` field is optional for older runtimes.
+
+Pi also changes tool filtering: `--tools` keeps MCP tools unless the list
+includes an `mcp__` entry, and accepts wildcard patterns or default-tool
+modifiers such as `+codemode`. To disable MCP explicitly on Pi 1.3.0, pass
+`extra_args=["--no-mcp", ...]`. The SDK preserves these Pi-owned defaults.
+Azure users must rename their Pi provider from `azure-openai-responses` to
+`azure`; the SDK passes provider IDs through unchanged.
+
 ## Startup version policy
 
 Startup invokes the selected executable with `--version`; it does not contact npm,
@@ -51,7 +65,7 @@ PyPI, GitHub, or another version service. After startup:
 | Selected executable | Behavior |
 |---|---|
 | Recognized version below 0.85.1 | Reject with `PiVersionError` |
-| Exactly 1.0.0 | `pi_version="1.0.0"`, `compatibility="tested"` |
+| Exactly 1.3.0 | `pi_version="1.3.0"`, `compatibility="tested"` |
 | Other recognized version at or above the minimum | Allow by default, with `compatibility="untested"` |
 | Recognized untested version and `strict_version=True` | Reject with `PiVersionError` |
 | Unparseable/custom version output | Reject unless `allow_unknown_version=True` |
@@ -151,11 +165,11 @@ result attribution without changing the shared command/event protocol.
 
 ## TypeScript behavior contract
 
-The [pinned TS client](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/rpc-client.ts)
+The [pinned TS client](https://github.com/earendil-works/pi/blob/71023aec1546d6d677a65669c5665c0927ce0dd0/packages/coding-agent/src/modes/rpc/rpc-client.ts)
 is the comparison reference. All 33 command wrappers have Python equivalents;
 the [command table](api.md#all-33-rpc-commands) records wire arguments and results.
 Current source matches TS object results for thinking-level cycling and HTML
-export. TS 1.0.0 returns an input disposition from `prompt`, `steer`, and
+export. TS 1.3.0 returns an input disposition from `prompt`, `steer`, and
 `followUp`; Python keeps acknowledgement-only `None` results and exposes
 `data.disposition` through `request()`. Session mutation commands issue no
 implicit state refresh. The [migration guide](api.md#migrating-from-010) describes the changes from
@@ -188,12 +202,12 @@ those events to a particular prompt or produce provider traces Pi did not emit.
 | Diagnostics | Explicit output observation and opt-in bounded stderr tail; TS automatically forwards and accumulates stderr and embeds it in errors |
 | Generic UI | Python provides handler replies and default dialog cancellation. TS delivers UI requests without a reply policy. Extensions and application behavior remain outside the SDK |
 
-Both clients snapshot their listener list during dispatch at the 1.0.0
+Both clients snapshot their listener list during dispatch at the 1.3.0
 baseline. Keep the regression coverage for independent collectors and idle
 waiters completing on the same settlement; older TS versions could skip a
 listener when another listener removed itself during dispatch.
-The [TS dispatch/helpers](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/rpc-client.ts)
-and [JSONL implementation](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/jsonl.ts)
+The [TS dispatch/helpers](https://github.com/earendil-works/pi/blob/71023aec1546d6d677a65669c5665c0927ce0dd0/packages/coding-agent/src/modes/rpc/rpc-client.ts)
+and [JSONL implementation](https://github.com/earendil-works/pi/blob/71023aec1546d6d677a65669c5665c0927ce0dd0/packages/coding-agent/src/modes/rpc/jsonl.ts)
 are the source for these distinctions.
 
 ## Repeatable comparison and regression coverage
@@ -210,7 +224,7 @@ This checks the installed Pi version and embedded TS source hashes against
 `compatibility.json`, then runs the actual TS client and both Python clients
 against the same synthetic subprocess. It compares 44 cases spanning all 33
 commands, including null cycles, omitted arguments, empty values, and false
-flags. A 42-record corpus covers all 25 declared session/extension event types,
+flags. A 43-record corpus covers all 25 declared session/extension event types,
 the nine serialized assistant update variants, and unknown metadata. Returned
 payloads, request sequences, event order, and both listeners must match,
 except for the documented TS disposition versus Python `None` results.
