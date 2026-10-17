@@ -13,6 +13,7 @@ readline.createInterface({input: process.stdin}).on('line', line => {
   const response = {type: 'response', id, command: request.type, success: true};
   if (request.type === 'prompt' && request.message === 'emit-corpus') {
     // One unpaced write, with acknowledgement after all events and settlement.
+    response.data = {disposition: 'started'};
     fs.writeSync(1, [...fixture.events, response].map(r => JSON.stringify(r) + '\n').join(''));
     return;
   }

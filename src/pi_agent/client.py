@@ -759,7 +759,8 @@ class AsyncPiClient:
     ) -> None:
         """Return None after checked acceptance; handled commands may never start a run.
 
-        Raises PiCommandError on rejection. Use request() for the raw envelope.
+        Raises PiCommandError on rejection. Use request() for the raw envelope,
+        including data.disposition when Pi provides it.
         """
         fields: dict[str, Any] = {"message": message}
         if images is not None:

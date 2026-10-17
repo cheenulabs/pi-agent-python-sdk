@@ -72,7 +72,8 @@ def test_explicit_command_argv():
         ("0.86.0", False, False, ("0.86.0", "untested")),
         ("0.86.1", False, False, ("0.86.1", "untested")),
         ("0.87.0", False, False, ("0.87.0", "untested")),
-        ("0.87.1", True, False, ("0.87.1", "tested")),
+        ("0.87.1", False, False, ("0.87.1", "untested")),
+        ("1.0.0", True, False, ("1.0.0", "tested")),
         ("custom", False, True, (None, "unknown")),
     ],
 )
