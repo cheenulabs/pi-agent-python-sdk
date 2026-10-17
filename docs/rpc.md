@@ -166,8 +166,8 @@ and application-specific observability belong to callers. Changes to supported
 commands or payloads need matching types, fixtures, documentation, and coverage;
 see [maintenance](maintenance.md).
 
-[upstream-rpc]: https://github.com/earendil-works/pi/blob/f07218c4d4bbc12bef056a7058c3dd49dfe41abe/packages/coding-agent/docs/rpc.md
-[upstream-client]: https://github.com/earendil-works/pi/blob/f07218c4d4bbc12bef056a7058c3dd49dfe41abe/packages/coding-agent/src/modes/rpc/rpc-client.ts
+[upstream-rpc]: https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/docs/rpc.md
+[upstream-client]: https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/rpc-client.ts
 
 ## Settlement collection
 

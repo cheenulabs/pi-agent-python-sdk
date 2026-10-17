@@ -193,3 +193,18 @@ def test_annotations_preserve_runtime_omission_and_wire_serialization() -> None:
     assert "message" not in get_type_hints(types.MessageUpdateEvent)
     for variant in get_args(types.AssistantMessageEvent):
         assert "partial" not in get_type_hints(variant)
+
+
+@pytest.mark.parametrize(
+    ("wire_type", "field"),
+    [
+        (types.AssistantMessage, "thinkingLevel"),
+        (types.ToolResultMessage, "nestedCalls"),
+        (types.Model, "type"),
+        (types.ToolExecutionStartEvent, "parentToolCallId"),
+        (types.ToolExecutionUpdateEvent, "parentToolCallId"),
+        (types.ToolExecutionEndEvent, "parentToolCallId"),
+    ],
+)
+def test_pi_1_fields_allow_omission_from_minimum_runtime(wire_type: Any, field: str) -> None:
+    assert get_origin(get_type_hints(wire_type, include_extras=True)[field]) is NotRequired

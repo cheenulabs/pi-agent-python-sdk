@@ -235,9 +235,9 @@ Sources: [AgentEvent](https://github.com/earendil-works/pi/blob/d981de1229ef8999
 | message_start | message:AgentMessage |
 | message_update | usage:Usage; assistantMessageEvent:JsonAssistantMessageEvent |
 | message_end | message:AgentMessage |
-| tool_execution_start | toolCallId:string; toolName:string; args:JSON |
-| tool_execution_update | toolCallId:string; toolName:string; args:JSON; partialResult:JSON |
-| tool_execution_end | toolCallId:string; toolName:string; result:JSON; isError:boolean |
+| tool_execution_start | parentToolCallId?:string; toolCallId:string; toolName:string; args:JSON |
+| tool_execution_update | parentToolCallId?:string; toolCallId:string; toolName:string; args:JSON; partialResult:JSON |
+| tool_execution_end | parentToolCallId?:string; toolCallId:string; toolName:string; result:JSON; isError:boolean |
 | queue_update | steering:string[]; followUp:string[] |
 | compaction_start | reason:"manual"/"threshold"/"overflow" |
 | compaction_end | reason:CompactionReason; result?:CompactionResult; aborted:boolean; willRetry:boolean; errorMessage?:string |
@@ -253,7 +253,7 @@ Sources: [AgentEvent](https://github.com/earendil-works/pi/blob/d981de1229ef8999
 | extension_error | extensionPath:string; event:string; error:string |
 | extension_ui_request | id:string; method and fields in UI table below |
 
-Tool `args`, `partialResult`, and `result` are explicitly `any` upstream. Model them as JSON, retaining the whole payload. The normal AgentToolResult shape is `{content:(TextContent|ImageContent)[], details:JSON, usage?:Usage, addedToolNames?:string[], terminate?:boolean}`, but that must not become a mandatory schema for every extension result. [AgentToolResult](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/agent/src/types.ts#L362).
+Tool `args`, `partialResult`, and `result` are explicitly `any` upstream. Model them as JSON, retaining the whole payload. The normal AgentToolResult shape is `{content:(TextContent|ImageContent)[], details:JSON, usage?:Usage, structuredContent?:JSON, isError?:boolean, terminate?:boolean}`, but that must not become a mandatory schema for every extension result. [AgentToolResult](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/src/types.ts).
 
 `entry_appended` is declared with a general SessionEntry payload, but the
 pinned runtime emits it from the extension `appendEntry` action. It is not
@@ -317,7 +317,7 @@ Represent stable result/message shapes with modest dataclasses or typed mappings
 
 ### Content, usage, messages
 
-Source: [content and message definitions](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/ai/src/types.ts#L351), [coding-agent additions](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/messages.ts#L29), [diagnostics](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/ai/src/utils/diagnostics.ts#L1).
+Source: [content and message definitions](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/types.ts), [coding-agent additions](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/messages.ts#L29), [diagnostics](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/ai/src/utils/diagnostics.ts#L1).
 
 - `TextContent`: type:"text"; text:string; textSignature?:string.
 - `ThinkingContent`: type:"thinking"; thinking:string; thinkingSignature?:string; redacted?:boolean.
@@ -329,8 +329,10 @@ Source: [content and message definitions](https://github.com/earendil-works/pi/b
 - `AssistantMessageDiagnostic`: type:string; timestamp:number; error?:{name?:string,message:string,stack?:string,code?:string|number}; details?:object of JSON.
 - `SystemMessage` (0.86.0): role:"system"; content:string or TextContent[]; sections?:map string to string/null; toolsAdded?:ToolDefinition[]; toolsRemoved?:{name:string}[]; timestamp:number. Tool definitions carry name, description, parameters (JSON schema), and optional constrainedSampling (false or a JSON configuration).
 - `UserMessage`: role:"user"; content:string or (TextContent|ImageContent)[]; timestamp:number.
-- `AssistantMessage`: role:"assistant"; content:(TextContent|ThinkingContent|ToolCall)[]; api:string; provider:string; model:string; responseModel?:string; responseId?:string; providerThinkingLevel?:string; diagnostics?:AssistantMessageDiagnostic[]; usage:Usage; stopReason:StopReason; deferred?:DeferredHandle; errorMessage?:string; rawStopReason?:string; endTurn?:boolean; timestamp:number.
-- `ToolResultMessage`: role:"toolResult"; toolCallId:string; toolName:string; content:(TextContent|ImageContent)[]; details?:JSON; usage?:Usage; addedToolNames?:string[] (legacy 0.85.1); isError:boolean; timestamp:number.
+- `AssistantMessage`: role:"assistant"; content:(TextContent|ThinkingContent|ToolCall)[]; api:string; provider:string; model:string; responseModel?:string; responseId?:string; thinkingLevel?:ThinkingLevel; providerThinkingLevel?:string; diagnostics?:AssistantMessageDiagnostic[]; usage:Usage; stopReason:StopReason; deferred?:DeferredHandle; errorMessage?:string; rawStopReason?:string; endTurn?:boolean; timestamp:number.
+- `ToolResultMessage`: role:"toolResult"; toolCallId:string; toolName:string; content:(TextContent|ImageContent)[]; details?:JSON; usage?:Usage; nestedCalls?:NestedToolCalls; addedToolNames?:string[] (legacy 0.85.1); isError:boolean; timestamp:number.
+- `NestedToolCallRecord` (1.0.0): id:string; name:string; arguments?:object of JSON; argumentsBytes?:number; status:`ok|error|unfinished`; durationMs?:number; error?:string.
+- `NestedToolCalls` (1.0.0): calls:NestedToolCallRecord[]; complete:boolean. Preserve the recorded nested calls, including incomplete records; Python does not execute or reconstruct them.
 - `BashExecutionMessage`: role:"bashExecution"; command:string; output:string; exitCode?:number; cancelled:boolean; truncated:boolean; fullOutputPath?:string; timestamp:number; excludeFromContext?:boolean.
 - `CustomMessage`: role:"custom"; customType:string; content:string or (TextContent|ImageContent)[]; display:boolean; details?:JSON; timestamp:number.
 - `BranchSummaryMessage`: role:"branchSummary"; summary:string; fromId:string|null; timestamp:number.
@@ -375,8 +377,8 @@ seconds. Pi 0.87.0 adds optional `inputLimits` with `maxRequestBytes`,
 unknown. `compat` continues to preserve all provider-specific JSON, including
 new mid-conversation capability fields.
 
-[Current Model definition](https://github.com/earendil-works/pi/blob/f07218c4d4bbc12bef056a7058c3dd49dfe41abe/packages/ai/src/types.ts):
-id:string; name:string; api:string; provider:string; baseUrl:string;
+[Current Model definition](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/types.ts):
+type?:"chat"; id:string; name:string; api:string; provider:string; baseUrl:string;
 reasoning:boolean; thinkingLevelMap?:partial map of ThinkingLevel to string|null;
 input:("text"|"image")[]; inputLimits?:ModelInputLimits; cost:ModelCost;
 contextWindow:number; maxTokens:number; samplingParams?:object of JSON;
@@ -406,7 +408,7 @@ Raw Model metadata can contain configured headers; never use automatic repr/logg
 3. The docs' nested-delta table lists nine block events, whereas the declared union includes `start`, `done`, and `error`; the agent loop confirms the nine are the normal emitted subset, not a docs omission.
 4. The docs' UserMessage example contains `attachments` and an Attachment section, but current UserMessage and RpcCommand declarations use content blocks/images instead. No Attachment API is required by this pinned protocol. [Doc examples](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/docs/rpc.md#L1431).
 5. Docs list only five stop reasons; source also declares `pending` and `deferred`. Example usage omits required `totalTokens`; do not infer schema from that example. The bash message example uses null for an optional path; actual undefined object fields are omitted by JSON serialization.
-6. TS client `prompt()` omits supported streamingBehavior; `bash()` omits excludeFromContext; ModelInfo narrows full model response data. Python should cover the actual RPC surface rather than inherit those omissions. [Client methods](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-client.ts#L198).
+6. TS 1.0.0 `prompt()` now accepts streamingBehavior; `bash()` still omits excludeFromContext; ModelInfo narrows full model response data. Python should cover the actual RPC surface rather than inherit those omissions. [Client methods](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/rpc-client.ts).
 7. TS event listener type excludes extension UI/error, but handleLine casts arbitrary non-response lines to that type. Python requires explicit UI/error/unknown event handling. [handleLine](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-client.ts#L516).
 8. Protocol has no request-ID linkage for agent events, no generic version/capabilities command, no session list/tree navigation RPC command, no arbitrary tool registration RPC, and no shutdown RPC. From 1.0.0, successful `prompt`/`steer`/`follow_up` responses carry `data.disposition`; that is not a settled-run proof and Python acknowledgement methods still return `None`. Avoid inventing other capability surfaces while claiming upstream parity. Extensions can perform some additional actions internally, but that does not make them generic RPC commands.
 9. The `get_commands` documentation examples use old `path`/`location` fields; runtime and declarations use required `sourceInfo`. The Python inventory follows sourceInfo. [Stale documentation section](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/docs/rpc.md#L816).

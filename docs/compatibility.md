@@ -151,12 +151,14 @@ result attribution without changing the shared command/event protocol.
 
 ## TypeScript behavior contract
 
-The [pinned TS client](https://github.com/earendil-works/pi/blob/f07218c4d4bbc12bef056a7058c3dd49dfe41abe/packages/coding-agent/src/modes/rpc/rpc-client.ts)
+The [pinned TS client](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/rpc-client.ts)
 is the comparison reference. All 33 command wrappers have Python equivalents;
 the [command table](api.md#all-33-rpc-commands) records wire arguments and results.
 Current source matches TS object results for thinking-level cycling and HTML
-export, and its void prompt result. Session mutation commands issue no implicit
-state refresh. The [migration guide](api.md#migrating-from-010) describes the changes from
+export. TS 1.0.0 returns an input disposition from `prompt`, `steer`, and
+`followUp`; Python keeps acknowledgement-only `None` results and exposes
+`data.disposition` through `request()`. Session mutation commands issue no
+implicit state refresh. The [migration guide](api.md#migrating-from-010) describes the changes from
 0.1.0. The retained `run()`/`stream()` interface is additional Python
 behavior, assessed in [#50](https://github.com/cheenulabs/pi-agent-python-sdk/issues/50).
 
@@ -172,7 +174,8 @@ those events to a particular prompt or produce provider traces Pi did not emit.
 | Completed results | `run()` and `stream().result()` provide current-operation text, finalized messages, usage, and session identity; TS settlement helpers return events |
 | Owned-stream cleanup | Leaving a stream early clears/aborts accepted work or closes uncertain work. Observation-helper cancellation only stops local waiting; TS has no matching owned-stream API |
 | Event carrier | `Event.raw` retains the wire dictionary; no second event representation or derived run result is added by collection |
-| Command options | `streaming_behavior` and `exclude_from_context` expose existing RPC fields absent from TS convenience methods |
+| Command options | Both clients expose prompt streaming behavior; Python also exposes `exclude_from_context`, absent from TS bash convenience methods |
+| Input acknowledgement | Python `prompt`, `steer`, and `follow_up` return `None`; TS returns disposition. Python `request()` preserves the complete response envelope |
 | Failed acknowledgement | All Python commands raise on `success=False`, including void methods; TS only checks methods that extract response data |
 | Listener failure/mutation | Failures reach the loop exception handler without skipping other listeners; payload copies and defined add/remove ordering prevent mutation from changing another listener's delivery |
 | Retention | Record bytes, subscription backlog, collected history and optional stderr retention are bounded; TS collection/stderr histories are unbounded |
@@ -185,11 +188,12 @@ those events to a particular prompt or produce provider traces Pi did not emit.
 | Diagnostics | Explicit output observation and opt-in bounded stderr tail; TS automatically forwards and accumulates stderr and embeds it in errors |
 | Generic UI | Python provides handler replies and default dialog cancellation. TS delivers UI requests without a reply policy. Extensions and application behavior remain outside the SDK |
 
-Do not copy TS's mutable-listener-array bug: removing a collector during
-settlement dispatch can skip the next collector. Python intentionally lets
-independent collectors and idle waiters complete on the same settlement.
-The [TS dispatch/helpers](https://github.com/earendil-works/pi/blob/f07218c4d4bbc12bef056a7058c3dd49dfe41abe/packages/coding-agent/src/modes/rpc/rpc-client.ts#L464)
-and [JSONL implementation](https://github.com/earendil-works/pi/blob/f07218c4d4bbc12bef056a7058c3dd49dfe41abe/packages/coding-agent/src/modes/rpc/jsonl.ts)
+Both clients snapshot their listener list during dispatch at the 1.0.0
+baseline. Keep the regression coverage for independent collectors and idle
+waiters completing on the same settlement; older TS versions could skip a
+listener when another listener removed itself during dispatch.
+The [TS dispatch/helpers](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/rpc-client.ts)
+and [JSONL implementation](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/jsonl.ts)
 are the source for these distinctions.
 
 ## Repeatable comparison and regression coverage
@@ -204,11 +208,12 @@ uv run python scripts/check_distribution.py --parity
 
 This checks the installed Pi version and embedded TS source hashes against
 `compatibility.json`, then runs the actual TS client and both Python clients
-against the same synthetic subprocess. It compares 42 cases spanning all 33
+against the same synthetic subprocess. It compares 44 cases spanning all 33
 commands, including null cycles, omitted arguments, empty values, and false
-flags. A 41-record corpus covers all 25 declared session/extension event types,
+flags. A 42-record corpus covers all 25 declared session/extension event types,
 the nine serialized assistant update variants, and unknown metadata. Returned
-payloads, request sequences, event order, and both listeners must match.
+payloads, request sequences, event order, and both listeners must match,
+except for the documented TS disposition versus Python `None` results.
 No client methods are patched, and no provider or live Pi configuration is used.
 The command cases exercise wire construction/results, not a real model's command
 semantics; isolated real-Pi integration supplies that complementary coverage.
