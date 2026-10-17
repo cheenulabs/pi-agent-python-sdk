@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 0.2.4
+
+### Added
+
+- Describe Pi 1.0.0 input dispositions, assistant thinking levels, nested tool
+  call records, parent tool-call IDs and model type in the typed wire annotations.
+  New fields remain optional where older supported runtimes omit them.
+
+### Changed
+
+- Update the tested Pi runtime from 0.87.0 to 1.0.0, retaining 0.85.1 as the minimum.
+  Python `prompt`, `steer` and `follow_up` still return `None`; use `request()`
+  for the response envelope and `data.disposition`.
+- Refresh the TypeScript behavior contract and extend parity coverage for
+  prompt streaming behavior and Pi 1.0.0 metadata.
+- Update development tools and pinned CI actions.
+
 ## 0.2.3
 
 ### Added
