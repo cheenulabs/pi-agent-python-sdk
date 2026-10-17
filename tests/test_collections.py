@@ -204,13 +204,17 @@ async def test_async_listener_is_rejected():
     await client.aclose()
 
 
-async def test_listener_mutation_does_not_change_other_listeners_or_collections():
+@pytest.mark.parametrize("settled", [{}, {"aborted": False}, {"aborted": True}])
+async def test_listener_mutation_does_not_change_other_listeners_or_collections(settled):
     async with AsyncPiClient(executable=FAKE) as client:
         seen = []
         client.on_event(lambda event: event.raw.clear())
         client.on_event(lambda event: seen.append(event.raw))
         pending = client.collect_events()
-        records = [{"type": "future", "unknown": {"nested": [1, 2]}}, {"type": "agent_settled"}]
+        records = [
+            {"type": "future", "unknown": {"nested": [1, 2]}},
+            {"type": "agent_settled", **settled},
+        ]
         await client.request("emit", records=records)
         assert [event.raw for event in await pending] == records == seen
 

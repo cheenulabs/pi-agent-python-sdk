@@ -38,6 +38,8 @@ FILES = (
     "packages/agent/src/types.ts",
     "packages/agent/src/agent-loop.ts",
     "packages/ai/src/types.ts",
+    "packages/ai/src/providers/model-schema.ts",
+    "packages/ai/src/providers/compat-schema.ts",
     "packages/coding-agent/CHANGELOG.md",
 )
 
@@ -49,6 +51,26 @@ def fetch(url: str) -> bytes:
 
 def source(commit: str, path: str) -> bytes:
     return fetch(f"https://raw.githubusercontent.com/earendil-works/pi/{commit}/{path}")
+
+
+def source_commit(metadata: dict[str, str]) -> str:
+    """Resolve an immutable source revision when npm omits gitHead (Pi 1.3.0)."""
+    version = metadata["version"]
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+        raise ValueError("Registry metadata does not identify a stable version")
+    commit = metadata.get("gitHead")
+    if "gitHead" not in metadata:
+        tag = json.loads(
+            fetch(f"https://api.github.com/repos/earendil-works/pi/commits/v{version}")
+        )
+        commit = tag["sha"]
+    if not isinstance(commit, str) or not re.fullmatch(r"[a-f0-9]{40}", commit):
+        raise ValueError("Source reference does not identify a valid commit")
+    if "gitHead" not in metadata:
+        package = json.loads(source(commit, "packages/coding-agent/package.json"))
+        if package.get("name") != PACKAGE or package.get("version") != version:
+            raise ValueError("Source tag package does not match the npm package and version")
+    return commit
 
 
 def main() -> int:
@@ -66,9 +88,7 @@ def main() -> int:
         parser.error("version must be a stable x.y.z release or latest")
     metadata = json.loads(fetch(f"https://registry.npmjs.org/{quote(PACKAGE, safe='')}/{version}"))
     exact = metadata["version"]
-    commit = metadata["gitHead"]
-    if not re.fullmatch(r"\d+\.\d+\.\d+", exact) or not re.fullmatch(r"[a-f0-9]{40}", commit):
-        raise ValueError("Registry metadata does not identify a stable version and source commit")
+    commit = source_commit(metadata)
     old = json.loads(BASELINE.read_text()) if BASELINE.exists() else {}
     current_sources = {path: source(commit, path) for path in FILES}
     fingerprints = {
@@ -96,7 +116,7 @@ def main() -> int:
                 "",
             ]
         )
-        if "upstreamCommit" in old:
+        if "upstreamCommit" in old and path in old.get("sourceSha256", {}):
             previous = source(old["upstreamCommit"], path).decode().splitlines()
             diff = difflib.unified_diff(
                 previous,

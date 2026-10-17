@@ -1,4 +1,4 @@
-"""Pi 1.0.0 wire annotations and small Python conveniences.
+"""Pi 1.3.0 wire annotations and small Python conveniences.
 
 Wire fields retain Pi's spelling and remain ordinary dictionaries. These
 annotations describe known shapes, not a recursive runtime validator: extensions
@@ -54,6 +54,7 @@ class ToolCall(TypedDict):
     arguments: JSONObject
     thoughtSignature: NotRequired[str]
     namespace: NotRequired[str]
+    argumentsError: NotRequired[str]
 
 
 class UsageCost(TypedDict):
@@ -143,6 +144,7 @@ class AssistantMessage(TypedDict):
     rawStopReason: NotRequired[str]
     endTurn: NotRequired[bool]
     timestamp: float
+    durationMs: NotRequired[float]
 
 
 class NestedToolCallRecord(TypedDict):
@@ -171,6 +173,7 @@ class ToolResultMessage(TypedDict):
     addedToolNames: NotRequired[list[str]]  # Legacy Pi 0.85.1 field.
     isError: bool
     timestamp: float
+    durationMs: NotRequired[float]
 
 
 class BashExecutionMessage(TypedDict):
@@ -273,6 +276,7 @@ class Model(TypedDict):
     contextWindow: float
     maxTokens: float
     samplingParams: NotRequired[JSONObject]
+    samplingParamsByThinkingLevel: NotRequired[dict[ThinkingLevel, JSONObject]]
     headers: NotRequired[dict[str, str]]
     compat: NotRequired[JSONObject]
     promptCache: NotRequired[ModelPromptCache]
@@ -716,7 +720,12 @@ AssistantMessageEvent: TypeAlias = (
 
 
 class EmptySessionEvent(TypedDict):
-    type: Literal["agent_start", "agent_settled", "turn_start", "summarization_retry_finished"]
+    type: Literal["agent_start", "turn_start", "summarization_retry_finished"]
+
+
+class AgentSettledEvent(TypedDict):
+    type: Literal["agent_settled"]
+    aborted: NotRequired[bool]  # Absent on older supported runtimes.
 
 
 class AgentEndEvent(TypedDict):
@@ -767,6 +776,7 @@ class ToolExecutionEndEvent(TypedDict):
     toolName: str
     result: JSONValue
     isError: bool
+    durationMs: NotRequired[float]
     parentToolCallId: NotRequired[str]
 
 
@@ -837,6 +847,7 @@ class BashExecutionUpdateEvent(TypedDict):
 
 SessionEvent: TypeAlias = (
     EmptySessionEvent
+    | AgentSettledEvent
     | AgentEndEvent
     | TurnEndEvent
     | MessageBoundaryEvent

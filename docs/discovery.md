@@ -3,8 +3,46 @@
 Original protocol snapshot: 2026-09-15, Pi 0.85.1. Reviewed update: 2026-09-20,
 Pi 0.86.0. Reviewed patch: 2026-09-22, Pi 0.86.1. Reviewed update: 2026-09-23,
 Pi 0.87.0. Reviewed patch: 2026-09-24, Pi 0.87.1. Reviewed update: 2026-10-02,
-Pi 1.0.0. Historical observations below retain their original version/source;
+Pi 1.0.0. Reviewed update: 2026-10-17, Pi 1.3.0. Historical observations below retain their original version/source;
 the coverage inventory includes the additions described here.
+
+## Pi 1.3.0 update
+
+Reviewed source is commit
+[`71023aec1546d6d677a65669c5665c0927ce0dd0`](https://github.com/earendil-works/pi/tree/71023aec1546d6d677a65669c5665c0927ce0dd0),
+resolved from the upstream `v1.3.0` tag because npm omits `gitHead`. The source
+package name and version match the registry release. Nine of the previous
+20 fingerprinted files changed; model and compatibility definitions moved to
+`packages/ai/src/providers/model-schema.ts` and `compat-schema.ts`, which are
+now fingerprinted too. Their model input modalities, cost tiers, input limits,
+and thinking levels retain the same wire shapes. Provider compatibility stays
+opaque JSON, including the new Responses `supportsMidConvoEffort` setting.
+
+RPC commands, dispatch, the TypeScript client, JSONL framing, and event
+serialization are unchanged: 33 commands, 25 event discriminators, and 11
+session-entry variants. The new payload fields are:
+
+- `ToolCall.argumentsError`: malformed complete arguments, with `arguments={}`.
+- `durationMs` on assistant messages, tool-result messages, and
+  `tool_execution_end`: Pi-measured durations; absent for legacy records and
+  when no execution was measured.
+- `Model.samplingParamsByThinkingLevel`: optional per-level sampling overrides.
+- `agent_settled.aborted`: whether Pi aborted the run. Python exposes a separate
+  `AgentSettledEvent` annotation with optional `aborted` for older runtimes.
+
+The shared corpus covers 44 command cases and 43 event records, including
+settlement abort metadata, timing metadata, malformed arguments, and per-level
+sampling. Collection tests also check `aborted` true, false, or absent. Python preserves these dictionaries; it
+does not implement provider sampling, argument validation, or execution timing.
+
+Other reviewed changes remain Pi-owned: prompt setup now includes custom-message
+runs, bash output handles split ANSI sequences, tools accept wildcard filters
+and default modifiers, MCP tools survive an allowlist without `mcp__` entries,
+and `--no-mcp` explicitly disables MCP. Azure's provider ID is now `azure`.
+Extension rendering, hooks, classifier APIs, catalog updates, and TUI changes
+add no RPC command or discriminator. The npm package drops shrinkwrap and pins
+its Pi dependencies to 1.3.0; our test lockfile records resolved dependencies.
+The tested baseline is 1.3.0; the minimum stays 0.85.1.
 
 ## Pi 1.0.0 update
 
@@ -145,7 +183,7 @@ Notation: `?` means the JSON property may be absent; `T|null` means explicit nul
 
 Every row is first-release support. Response envelope: `{type:"response", id?:string, command:string, success:true, data?:…}`. Every command can instead produce `{type:"response", id?:string, command:string, success:false, error:string}`. “Absent” means no `data` key. The source-branch `prompt()` returns `None` after checked acknowledgement; `request("prompt", ...)` exposes the response envelope, assigned ID, and (from 1.0.0) `data.disposition`. Python methods return data (or unwrap list/text fields as noted), raise on unsuccessful responses, and preserve raw responses through `request()`. The unreleased migration from 0.1.0 is recorded in the API reference.
 
-Authoritative [command declarations](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/rpc-types.ts#L20), [response declarations](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/rpc-types.ts#L117), and [runtime dispatch](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/rpc-mode.ts#L394).
+Authoritative [command declarations](https://github.com/earendil-works/pi/blob/71023aec1546d6d677a65669c5665c0927ce0dd0/packages/coding-agent/src/modes/rpc/rpc-types.ts#L20), [response declarations](https://github.com/earendil-works/pi/blob/71023aec1546d6d677a65669c5665c0927ce0dd0/packages/coding-agent/src/modes/rpc/rpc-types.ts#L117), and [runtime dispatch](https://github.com/earendil-works/pi/blob/71023aec1546d6d677a65669c5665c0927ce0dd0/packages/coding-agent/src/modes/rpc/rpc-mode.ts#L394).
 
 | Command | Arguments beyond type/id | Success `data` | Proposed Python method / return |
 |---|---|---|---|
@@ -229,7 +267,7 @@ Sources: [AgentEvent](https://github.com/earendil-works/pi/blob/d981de1229ef8999
 |---|---|
 | agent_start | None |
 | agent_end | messages:AgentMessage[]; willRetry:boolean |
-| agent_settled | None |
+| agent_settled | aborted:boolean (optional before the current baseline) |
 | turn_start | None |
 | turn_end | message:AgentMessage; toolResults:ToolResultMessage[] |
 | message_start | message:AgentMessage |
@@ -237,7 +275,7 @@ Sources: [AgentEvent](https://github.com/earendil-works/pi/blob/d981de1229ef8999
 | message_end | message:AgentMessage |
 | tool_execution_start | parentToolCallId?:string; toolCallId:string; toolName:string; args:JSON |
 | tool_execution_update | parentToolCallId?:string; toolCallId:string; toolName:string; args:JSON; partialResult:JSON |
-| tool_execution_end | parentToolCallId?:string; toolCallId:string; toolName:string; result:JSON; isError:boolean |
+| tool_execution_end | parentToolCallId?:string; toolCallId:string; toolName:string; result:JSON; isError:boolean; durationMs?:number |
 | queue_update | steering:string[]; followUp:string[] |
 | compaction_start | reason:"manual"/"threshold"/"overflow" |
 | compaction_end | reason:CompactionReason; result?:CompactionResult; aborted:boolean; willRetry:boolean; errorMessage?:string |
@@ -253,7 +291,7 @@ Sources: [AgentEvent](https://github.com/earendil-works/pi/blob/d981de1229ef8999
 | extension_error | extensionPath:string; event:string; error:string |
 | extension_ui_request | id:string; method and fields in UI table below |
 
-Tool `args`, `partialResult`, and `result` are explicitly `any` upstream. Model them as JSON, retaining the whole payload. The normal AgentToolResult shape is `{content:(TextContent|ImageContent)[], details:JSON, usage?:Usage, structuredContent?:JSON, isError?:boolean, terminate?:boolean}`, but that must not become a mandatory schema for every extension result. [AgentToolResult](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/agent/src/types.ts).
+Tool `args`, `partialResult`, and `result` are explicitly `any` upstream. Model them as JSON, retaining the whole payload. The normal AgentToolResult shape is `{content:(TextContent|ImageContent)[], details:JSON, usage?:Usage, structuredContent?:JSON, isError?:boolean, terminate?:boolean}`, but that must not become a mandatory schema for every extension result. [AgentToolResult](https://github.com/earendil-works/pi/blob/71023aec1546d6d677a65669c5665c0927ce0dd0/packages/agent/src/types.ts).
 
 `entry_appended` is declared with a general SessionEntry payload, but the
 pinned runtime emits it from the extension `appendEntry` action. It is not
@@ -317,20 +355,20 @@ Represent stable result/message shapes with modest dataclasses or typed mappings
 
 ### Content, usage, messages
 
-Source: [content and message definitions](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/types.ts), [coding-agent additions](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/messages.ts#L29), [diagnostics](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/ai/src/utils/diagnostics.ts#L1).
+Source: [content and message definitions](https://github.com/earendil-works/pi/blob/71023aec1546d6d677a65669c5665c0927ce0dd0/packages/ai/src/types.ts), [coding-agent additions](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/messages.ts#L29), [diagnostics](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/ai/src/utils/diagnostics.ts#L1).
 
 - `TextContent`: type:"text"; text:string; textSignature?:string.
 - `ThinkingContent`: type:"thinking"; thinking:string; thinkingSignature?:string; redacted?:boolean.
 - `ImageContent`: type:"image"; data:string (base64); mimeType:string.
-- `ToolCall`: type:"toolCall"; id:string; name:string; arguments:object of JSON; thoughtSignature?:string; namespace?:string.
+- `ToolCall`: type:"toolCall"; id:string; name:string; arguments:object of JSON; thoughtSignature?:string; namespace?:string; argumentsError?:string.
 - `Usage`: input:number; output:number; cacheRead:number; cacheWrite:number; cacheWrite1h?:number; reasoning?:number; totalTokens:number; cost:{input,output,cacheRead,cacheWrite,total:number}. Reasoning is already included in output; don't double count.
 - `StopReason`: `pending|stop|length|toolUse|error|aborted|deferred`.
 - `DeferredHandle`: provider:string; modelId:string; api:string; id:string; expiresAt?:number; pollAfterMs?:number; data?:JSON.
 - `AssistantMessageDiagnostic`: type:string; timestamp:number; error?:{name?:string,message:string,stack?:string,code?:string|number}; details?:object of JSON.
 - `SystemMessage` (0.86.0): role:"system"; content:string or TextContent[]; sections?:map string to string/null; toolsAdded?:ToolDefinition[]; toolsRemoved?:{name:string}[]; timestamp:number. Tool definitions carry name, description, parameters (JSON schema), and optional constrainedSampling (false or a JSON configuration).
 - `UserMessage`: role:"user"; content:string or (TextContent|ImageContent)[]; timestamp:number.
-- `AssistantMessage`: role:"assistant"; content:(TextContent|ThinkingContent|ToolCall)[]; api:string; provider:string; model:string; responseModel?:string; responseId?:string; thinkingLevel?:ThinkingLevel; providerThinkingLevel?:string; diagnostics?:AssistantMessageDiagnostic[]; usage:Usage; stopReason:StopReason; deferred?:DeferredHandle; errorMessage?:string; rawStopReason?:string; endTurn?:boolean; timestamp:number.
-- `ToolResultMessage`: role:"toolResult"; toolCallId:string; toolName:string; content:(TextContent|ImageContent)[]; details?:JSON; usage?:Usage; nestedCalls?:NestedToolCalls; addedToolNames?:string[] (legacy 0.85.1); isError:boolean; timestamp:number.
+- `AssistantMessage`: role:"assistant"; content:(TextContent|ThinkingContent|ToolCall)[]; api:string; provider:string; model:string; responseModel?:string; responseId?:string; thinkingLevel?:ThinkingLevel; providerThinkingLevel?:string; diagnostics?:AssistantMessageDiagnostic[]; usage:Usage; stopReason:StopReason; deferred?:DeferredHandle; errorMessage?:string; rawStopReason?:string; endTurn?:boolean; timestamp:number; durationMs?:number.
+- `ToolResultMessage`: role:"toolResult"; toolCallId:string; toolName:string; content:(TextContent|ImageContent)[]; details?:JSON; usage?:Usage; nestedCalls?:NestedToolCalls; addedToolNames?:string[] (legacy 0.85.1); isError:boolean; timestamp:number; durationMs?:number.
 - `NestedToolCallRecord` (1.0.0): id:string; name:string; arguments?:object of JSON; argumentsBytes?:number; status:`ok|error|unfinished`; durationMs?:number; error?:string.
 - `NestedToolCalls` (1.0.0): calls:NestedToolCallRecord[]; complete:boolean. Preserve the recorded nested calls, including incomplete records; Python does not execute or reconstruct them.
 - `BashExecutionMessage`: role:"bashExecution"; command:string; output:string; exitCode?:number; cancelled:boolean; truncated:boolean; fullOutputPath?:string; timestamp:number; excludeFromContext?:boolean.
@@ -377,11 +415,12 @@ seconds. Pi 0.87.0 adds optional `inputLimits` with `maxRequestBytes`,
 unknown. `compat` continues to preserve all provider-specific JSON, including
 new mid-conversation capability fields.
 
-[Current Model definition](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/ai/src/types.ts):
+[Current Model definition](https://github.com/earendil-works/pi/blob/71023aec1546d6d677a65669c5665c0927ce0dd0/packages/ai/src/types.ts):
 type?:"chat"; id:string; name:string; api:string; provider:string; baseUrl:string;
 reasoning:boolean; thinkingLevelMap?:partial map of ThinkingLevel to string|null;
 input:("text"|"image")[]; inputLimits?:ModelInputLimits; cost:ModelCost;
 contextWindow:number; maxTokens:number; samplingParams?:object of JSON;
+samplingParamsByThinkingLevel?:partial map of ThinkingLevel to object of JSON;
 headers?:map string→string; compat?:provider-specific JSON object;
 promptCache?:{short?:number,long?:number}. `ModelInputLimits` has optional
 `maxRequestBytes` and `images`; the latter has optional `resize`, `maxPerMessage`,
@@ -390,12 +429,13 @@ and `jpegQuality`.
 
 `ModelCost`: input,output,cacheRead,cacheWrite:number (USD per million tokens); tiers?:[{inputTokensAbove:number,input:number,output:number,cacheRead:number,cacheWrite:number}]. `thinkingLevelMap` missing keys mean provider defaults; null marks unsupported levels. Keep both states distinct.
 
-The complete provider compatibility object should remain accessible as a typed JSON mapping, rather than duplicating Pi's provider implementation. Current declared field inventory follows; every listed field is optional. [Provider compatibility definitions](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/ai/src/types.ts#L568).
+The complete provider compatibility object should remain accessible as a typed JSON mapping, rather than duplicating Pi's provider implementation. Current declared field inventory follows; every listed field is optional. [Provider compatibility definitions](https://github.com/earendil-works/pi/blob/71023aec1546d6d677a65669c5665c0927ce0dd0/packages/ai/src/providers/compat-schema.ts).
 
-- OpenAI completions boolean fields: supportsStore, supportsDeveloperRole, supportsReasoningEffort, supportsUsageInStreaming, supportsFinishReason, requiresToolResultName, requiresAssistantAfterToolResult, requiresThinkingAsText, requiresReasoningContentOnAssistantMessages, zaiToolStream, supportsThinkingTokenBudget, supportsOpenAIGrammarTools, supportsStrictMode, sendSessionAffinityHeaders, supportsLongCacheRetention. Other fields: maxTokensField:`max_completion_tokens|max_tokens`; thinkingFormat:`openai|openrouter|deepseek|together|baseten|zai|qwen|chat-template|qwen-chat-template|string-thinking|ant-ling`; chatTemplateKwargs/chatTemplateArgs: maps of string/number/boolean/null or {$var:`thinking.enabled|thinking.effort|thinking.budget`,omitWhenOff?:boolean}; openRouterRouting:OpenRouterRouting; vercelGatewayRouting:VercelGatewayRouting; thinkingTokenBudgetField:`thinking_token_budget|thinking_budget|thinking_budget_tokens`; cacheControlFormat:"anthropic"; deferredToolsMode:"kimi"; sessionAffinityFormat:`openai|openai-nosession|openrouter`; vllmPriority:number.
-- OpenAI responses boolean fields: supportsDeveloperRole, supportsLongCacheRetention, supportsStrictMode, supportsOpenAIGrammarTools, supportsAdditionalTools, supportsToolSearch, supportsExplicitPromptCacheMode, supportsMaxOutputTokens; plus sessionAffinityFormat as above.
-- Anthropic boolean fields: supportsEagerToolInputStreaming, supportsLongCacheRetention, sendSessionAffinityHeaders, supportsCacheControlOnTools, supportsTemperature, forceAdaptiveThinking, allowEmptySignature, supportsStrictTools, supportsMidConvoEffort, supportsToolReferences; allowedFallbackModels?:[{provider:string,model:string,cost:ModelCost}] (retain raw JSON; no Python provider logic).
+- OpenAI completions boolean fields: supportsStore, supportsDeveloperRole, supportsReasoningEffort, supportsUsageInStreaming, supportsFinishReason, requiresToolResultName, requiresAssistantAfterToolResult, requiresThinkingAsText, requiresReasoningContentOnAssistantMessages, zaiToolStream, supportsThinkingTokenBudget, supportsOpenAIGrammarTools, supportsMidConvoSystemMessages, supportsMidConvoToolAdditions, supportsStrictMode, sendSessionAffinityHeaders, supportsLongCacheRetention. Other fields: maxTokensField:`max_completion_tokens|max_tokens`; thinkingFormat:`openai|openrouter|deepseek|together|baseten|zai|qwen|chat-template|qwen-chat-template|string-thinking|ant-ling`; chatTemplateKwargs/chatTemplateArgs: maps of string/number/boolean/null or {$var:`thinking.enabled|thinking.effort|thinking.budget`,omitWhenOff?:boolean}; openRouterRouting:OpenRouterRouting; vercelGatewayRouting:VercelGatewayRouting; thinkingTokenBudgetField:`thinking_token_budget|thinking_budget|thinking_budget_tokens`; cacheControlFormat:"anthropic"; sessionAffinityFormat:`openai|openai-nosession|openrouter`; vllmPriority:number.
+- OpenAI responses boolean fields: supportsDeveloperRole, supportsLongCacheRetention, supportsStrictMode, supportsOpenAIGrammarTools, supportsAdditionalTools, supportsToolSearch, supportsExplicitPromptCacheMode, supportsMidConvoSystemMessages, supportsMidConvoEffort, supportsMaxOutputTokens; plus sessionAffinityFormat as above.
+- Anthropic boolean fields: supportsEagerToolInputStreaming, supportsLongCacheRetention, sendSessionAffinityHeaders, supportsCacheControlOnTools, supportsTemperature, forceAdaptiveThinking, allowEmptySignature, supportsStrictTools, supportsMidConvoEffort, supportsMidConvoSystemMessages, supportsMidConvoToolChanges; sessionAffinityFormat?:"openrouter"; allowedFallbackModels?:[{provider:string,model:string,cost:ModelCost}] (retain raw JSON; no Python provider logic).
 - Bedrock: supportsStrictMode?:boolean.
+- Mistral conversations: supportsMidConvoSystemMessages?:boolean.
 - OpenRouterRouting: allow_fallbacks?,require_parameters?,zdr?,enforce_distillable_text?:boolean; data_collection?:`deny|allow`; order?,only?,ignore?,quantizations?:string[]; sort?:string or {by?:string,partition?:string|null}; max_price?:{prompt?,completion?,image?,audio?,request?:number|string}; preferred_min_throughput?,preferred_max_latency?:number or {p50?,p75?,p90?,p99?:number}.
 - VercelGatewayRouting: only?:string[]; order?:string[].
 
@@ -408,7 +448,7 @@ Raw Model metadata can contain configured headers; never use automatic repr/logg
 3. The docs' nested-delta table lists nine block events, whereas the declared union includes `start`, `done`, and `error`; the agent loop confirms the nine are the normal emitted subset, not a docs omission.
 4. The docs' UserMessage example contains `attachments` and an Attachment section, but current UserMessage and RpcCommand declarations use content blocks/images instead. No Attachment API is required by this pinned protocol. [Doc examples](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/docs/rpc.md#L1431).
 5. Docs list only five stop reasons; source also declares `pending` and `deferred`. Example usage omits required `totalTokens`; do not infer schema from that example. The bash message example uses null for an optional path; actual undefined object fields are omitted by JSON serialization.
-6. TS 1.0.0 `prompt()` now accepts streamingBehavior; `bash()` still omits excludeFromContext; ModelInfo narrows full model response data. Python should cover the actual RPC surface rather than inherit those omissions. [Client methods](https://github.com/earendil-works/pi/blob/a13d35a742c6ef8462812a28fbe1d8c8b7431c32/packages/coding-agent/src/modes/rpc/rpc-client.ts).
+6. TS 1.0.0 `prompt()` now accepts streamingBehavior; `bash()` still omits excludeFromContext; ModelInfo narrows full model response data. Python should cover the actual RPC surface rather than inherit those omissions. [Client methods](https://github.com/earendil-works/pi/blob/71023aec1546d6d677a65669c5665c0927ce0dd0/packages/coding-agent/src/modes/rpc/rpc-client.ts).
 7. TS event listener type excludes extension UI/error, but handleLine casts arbitrary non-response lines to that type. Python requires explicit UI/error/unknown event handling. [handleLine](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/modes/rpc/rpc-client.ts#L516).
 8. Protocol has no request-ID linkage for agent events, no generic version/capabilities command, no session list/tree navigation RPC command, no arbitrary tool registration RPC, and no shutdown RPC. From 1.0.0, successful `prompt`/`steer`/`follow_up` responses carry `data.disposition`; that is not a settled-run proof and Python acknowledgement methods still return `None`. Avoid inventing other capability surfaces while claiming upstream parity. Extensions can perform some additional actions internally, but that does not make them generic RPC commands.
 9. The `get_commands` documentation examples use old `path`/`location` fields; runtime and declarations use required `sourceInfo`. The Python inventory follows sourceInfo. [Stale documentation section](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/docs/rpc.md#L816).
