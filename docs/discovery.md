@@ -3,8 +3,51 @@
 Original protocol snapshot: 2026-09-15, Pi 0.85.1. Reviewed update: 2026-09-20,
 Pi 0.86.0. Reviewed patch: 2026-09-22, Pi 0.86.1. Reviewed update: 2026-09-23,
 Pi 0.87.0. Reviewed patch: 2026-09-24, Pi 0.87.1. Reviewed update: 2026-10-02,
-Pi 1.0.0. Reviewed update: 2026-10-17, Pi 1.3.0. Historical observations below retain their original version/source;
+Pi 1.0.0. Reviewed update: 2026-10-17, Pi 1.3.0. Reviewed update: 2026-10-23,
+Pi 1.4.0. Historical observations below retain their original version/source;
 the coverage inventory includes the additions described here.
+
+## Pi 1.4.0 update
+
+Reviewed source is commit
+[`4a080252f06caf63a525d7873c5d94d3c23887e0`](https://github.com/earendil-works/pi/tree/4a080252f06caf63a525d7873c5d94d3c23887e0).
+Eight of 22 fingerprinted files changed. The RPC declarations, dispatcher,
+TypeScript client, JSONL framing, event serializer, session-entry definitions,
+and CLI arguments are unchanged. The installed package's embedded TypeScript
+client and JSONL source hashes also match the previous baseline. Coverage stays
+at 33 commands, 25 event discriminators, 11 session-entry variants, 44 shared
+command cases, and 43 event records; no new Python wire fields are required.
+
+Reviewed changes and ownership:
+
+- `agent-session.ts`: recovery omits failed assistant attempts together with
+  matching tool results from projected context, including resumed sessions;
+  tool restoration replays branch system messages and activates newly
+  registered extension tools unless explicitly inactive. Python continues to
+  expose raw history and session events rather than rebuilding model context.
+- `compaction/compaction.ts`: summaries use the model's output limit instead of
+  a fixed cap derived from reserved tokens, and split-turn summaries receive
+  custom instructions. These are Pi-owned summarization policies; the RPC
+  `compact` arguments and result are unchanged.
+- `agent/agent-loop.ts` and `ai/types.ts`: provider requests gain client identity
+  and use a telemetry span instead of a telemetry context. These are internal
+  provider options, not RPC fields or Python constructor options.
+- `ai/providers/model-schema.ts`: descriptions clarify thinking-level fallback
+  and prompt-cache lifetime semantics without changing field shapes.
+- `ai/providers/compat-schema.ts` and `ai/types.ts`: System One classifiers gain
+  `imageInput` and `sendImageOptInHeader` compatibility settings; additional API
+  aliases share existing compatibility schemas. Provider metadata stays opaque
+  JSON; classifier execution remains outside this RPC SDK.
+- Package metadata pins the Pi packages to 1.4.0 and adds a reference-generation
+  script. The changelog also describes provider, codemode, MCP, and TUI fixes;
+  none adds a new RPC command or output-event discriminator.
+
+Advance the offline tested-version constant and reviewed source fingerprints
+together, retaining the 0.85.1 minimum and existing parity guards. Version tests
+cover accepting 1.4.0 in strict mode and allowing 1.3.0 only as untested in
+non-strict mode. Existing isolated integration covers streaming, retries,
+compaction recovery, sessions, cancellation, and extension interaction; live
+provider behavior is not certified by those tests.
 
 ## Pi 1.3.0 update
 

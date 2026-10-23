@@ -10,7 +10,7 @@ run results.
 Pi documents [RPC mode][upstream-rpc] for integrations in other languages and
 provides a [TypeScript RPC client][upstream-client]. This package follows the
 same subprocess model and command vocabulary. The references here are pinned
-to the source used for the **1.3.0** baseline; current upstream may differ.
+to the source used for the **1.4.0** baseline; current upstream may differ.
 
 | Pi protocol | Python interface |
 | --- | --- |
@@ -166,8 +166,8 @@ and application-specific observability belong to callers. Changes to supported
 commands or payloads need matching types, fixtures, documentation, and coverage;
 see [maintenance](maintenance.md).
 
-[upstream-rpc]: https://github.com/earendil-works/pi/blob/71023aec1546d6d677a65669c5665c0927ce0dd0/packages/coding-agent/docs/rpc.md
-[upstream-client]: https://github.com/earendil-works/pi/blob/71023aec1546d6d677a65669c5665c0927ce0dd0/packages/coding-agent/src/modes/rpc/rpc-client.ts
+[upstream-rpc]: https://github.com/earendil-works/pi/blob/4a080252f06caf63a525d7873c5d94d3c23887e0/packages/coding-agent/docs/rpc.md
+[upstream-client]: https://github.com/earendil-works/pi/blob/4a080252f06caf63a525d7873c5d94d3c23887e0/packages/coding-agent/src/modes/rpc/rpc-client.ts
 
 ## Settlement collection
 

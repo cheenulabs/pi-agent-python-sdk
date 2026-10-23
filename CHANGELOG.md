@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed
+
+- Advance the reviewed Pi baseline from 1.3.0 to 1.4.0; keep the 0.85.1 minimum.
+  Strict-version users must align their separately installed runtime with 1.4.0.
+  RPC commands and wire shapes are unchanged; compaction, recovery, tool
+  restoration, provider identity, and classifier behavior remain Pi-owned.
+
 ## 0.2.5
 
 ### Changed
