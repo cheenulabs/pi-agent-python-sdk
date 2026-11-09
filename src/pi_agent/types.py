@@ -1,4 +1,4 @@
-"""Pi 1.4.0 wire annotations and small Python conveniences.
+"""Pi 1.5.0 wire annotations and small Python conveniences.
 
 Wire fields retain Pi's spelling and remain ordinary dictionaries. These
 annotations describe known shapes, not a recursive runtime validator: extensions
@@ -63,6 +63,7 @@ class UsageCost(TypedDict):
     cacheRead: float
     cacheWrite: float
     total: float
+    totalFromProvider: NotRequired[bool]
 
 
 class Usage(TypedDict):
@@ -347,6 +348,7 @@ class SourceInfo(TypedDict):
     scope: Literal["user", "project", "temporary"]
     origin: Literal["package", "top-level"]
     baseDir: NotRequired[str]
+    changelogPath: NotRequired[str]
 
 
 class SlashCommand(TypedDict):

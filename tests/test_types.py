@@ -98,6 +98,30 @@ def test_usage_defaults_are_unknown_and_snapshot_fields_are_frozen() -> None:
         summary.cost = 0.0  # type: ignore[misc]
 
 
+def test_pi_15_metadata_annotations_remain_optional_for_older_runtimes() -> None:
+    cost = get_type_hints(types.UsageCost, include_extras=True)["totalFromProvider"]
+    source = get_type_hints(types.SourceInfo, include_extras=True)["changelogPath"]
+    assert get_origin(cost) is NotRequired and get_args(cost) == (bool,)
+    assert get_origin(source) is NotRequired and get_args(source) == (str,)
+
+
+@pytest.mark.parametrize("reported", [True, False])
+def test_provider_billing_flag_is_preserved_as_wire_metadata(reported: bool) -> None:
+    cost = {
+        "input": 0.001,
+        "output": 0.002,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "total": 0.004,
+        "totalFromProvider": reported,
+    }
+    event = Event({"type": "message_update", "usage": {"cost": cost}})
+    assert event.raw["usage"]["cost"] == cost
+    # Component estimates need not sum to a provider's billed total. Python must not
+    # recalculate that total or turn an absent/false billing flag into a positive claim.
+    assert event.raw["usage"]["cost"]["totalFromProvider"] is reported
+
+
 def test_timeout_retains_uncertainty_metadata() -> None:
     error = PiTimeoutError("Deadline", "prompt", "request-1")
     assert isinstance(error, TimeoutError)
