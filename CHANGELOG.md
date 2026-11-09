@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.7
+
 ### Changed
 
 - Advance the reviewed Pi baseline from 1.4.0 to 1.5.0, retaining the 0.85.1 minimum.
