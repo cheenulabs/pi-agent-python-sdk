@@ -4,6 +4,16 @@ Local build validation is separate from a TestPyPI rehearsal, GitHub CI, and a
 public PyPI release. For each release, validate the reviewed commit and built artifacts before
 publication, then verify the copies downloaded from both indexes.
 
+## 0.2.7 release verification
+
+The 0.2.7 metadata and [release notes](releases/0.2.7.md) describe the patch
+candidate for the reviewed Pi 1.5.0 baseline. Preparing or merging the release
+PR does not authorize publication. After separate explicit approval, confirm
+the `v0.2.7` GitHub release and successful TestPyPI/PyPI verification jobs before
+recording 0.2.7 as released or updating deployed consumers. Check the proposed
+tag-pinned documentation links against the source now and the actual tag after
+publication. Strict-version users must install Pi 1.5.0 separately.
+
 ## 0.2.2 release verification
 
 The 0.2.2 metadata and release notes describe the reviewed patch candidate.
