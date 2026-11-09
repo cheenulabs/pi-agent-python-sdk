@@ -4,8 +4,55 @@ Original protocol snapshot: 2026-09-15, Pi 0.85.1. Reviewed update: 2026-09-20,
 Pi 0.86.0. Reviewed patch: 2026-09-22, Pi 0.86.1. Reviewed update: 2026-09-23,
 Pi 0.87.0. Reviewed patch: 2026-09-24, Pi 0.87.1. Reviewed update: 2026-10-02,
 Pi 1.0.0. Reviewed update: 2026-10-17, Pi 1.3.0. Reviewed update: 2026-10-23,
-Pi 1.4.0. Historical observations below retain their original version/source;
-the coverage inventory includes the additions described here.
+Pi 1.4.0. Reviewed update: 2026-11-09, Pi 1.5.0. Historical observations below
+retain their original version/source; the coverage inventory includes the additions described here.
+
+## Pi 1.5.0 update
+
+Reviewed source is commit
+[`f9a26365568127461c47a07a37dcb42c140a3ac5`](https://github.com/earendil-works/pi/tree/f9a26365568127461c47a07a37dcb42c140a3ac5).
+Twelve of 22 fingerprinted files changed. RPC declarations, dispatch, TypeScript
+client, JSONL framing and event serializer are unchanged: 33 commands, 25 event
+discriminators, 11 session-entry variants, 44 shared command cases and 43 event
+records. Two additive optional wire annotations are required:
+
+- `SourceInfo.changelogPath`: package changelog location, exposed by `get_commands`.
+- `Usage.cost.totalFromProvider`: true identifies a provider-reported billed `total`;
+  false or absent means a catalog estimate. Component costs remain catalog estimates
+  and need not sum to the billed total. Python preserves the flag and supplied total;
+  the existing usage summary is not a complete billing ledger.
+
+The shared parity fixture covers both additions and concrete `responseModel`
+metadata. `responseModel` was already optional in Python; upstream now clarifies
+that it can equal the requested model as well as differ from it.
+
+Reviewed changes and ownership:
+
+- `agent-session.ts`: summary requests avoid converting stored OAuth auth to an
+  explicit API key when the stream function owns auth resolution; active tool
+  ordering remains stable when the same set is reordered. These are Pi policies.
+- `session-manager.ts` and `agent-session-runtime.ts`: platform-aware path equality,
+  one-handle session fork writes, rollback of in-memory entries after failed
+  persistence, and exported context-edit projection. No session-entry wire shape changes.
+- `source-info.ts`: changelog metadata and package/path deduplication helpers.
+- `extensions/types.ts`: keybinding helpers, persisted rendering metadata and blocked
+  custom UI indicators. These are extension/TUI APIs, not new RPC UI methods.
+- `cli/args.ts`: help text and a documented self-update environment variable;
+  the SDK still preserves Pi defaults and never invokes self-update.
+- `agent/types.ts`, `ai/types.ts`, `model-schema.ts` and `compat-schema.ts`:
+  tool/model schema builders move from TypeBox to `pi-schema`, preserving the
+  modeled JSON field vocabulary. Tool coercion and validation-error wording change
+  inside Pi; the RPC SDK neither validates tool arguments nor parses those errors.
+- Package metadata pins Pi dependencies to 1.5.0, replaces build-only shell helpers,
+  and updates minimatch/undici for security advisories. The changelog records
+  provider, streaming, MCP, session, TUI and other runtime fixes; no additional RPC
+  command or output-event discriminator is introduced.
+
+Advance the offline tested-version constant and reviewed fingerprints together.
+Keep the 0.85.1 minimum; 1.4.0 remains available as untested/non-strict, and strict
+mode rejects it. No provider authentication or live model behavior is certified
+by synthetic integration tests. This source change does not publish an SDK
+release or upgrade installed applications.
 
 ## Pi 1.4.0 update
 
@@ -394,7 +441,7 @@ Represent stable result/message shapes with modest dataclasses or typed mappings
 - `CompactionResult`: summary:string; firstKeptEntryId:string; tokensBefore:number; estimatedTokensAfter?:number; usage?:Usage; details?:JSON. [Source](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/compaction/compaction.ts#L88).
 - `BashResult`: output:string; exitCode?:number; cancelled:boolean; truncated:boolean; fullOutputPath?:string. Exit code is omitted if killed/cancelled, not guaranteed null. [Source](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/bash-executor.ts#L29).
 - `SessionStats`: sessionFile?:string; sessionId:string; userMessages:number; assistantMessages:number; toolCalls:number; toolResults:number; totalMessages:number; tokens:{input,output,cacheRead,cacheWrite,total:number}; cost:number; contextUsage?:ContextUsage. `ContextUsage`: tokens:number|null; contextWindow:number; percent:number|null. [Stats](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/agent-session.ts#L270), [ContextUsage](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/extensions/types.ts#L290).
-- `RpcSlashCommand`: name:string; description?:string; source:`extension|prompt|skill`; sourceInfo:SourceInfo. `SourceInfo`: path:string; source:string; scope:`user|project|temporary`; origin:`package|top-level`; baseDir?:string. Skill names have `skill:` prefix. [Source metadata](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/source-info.ts#L1).
+- `RpcSlashCommand`: name:string; description?:string; source:`extension|prompt|skill`; sourceInfo:SourceInfo. `SourceInfo`: path:string; source:string; scope:`user|project|temporary`; origin:`package|top-level`; baseDir?:string; changelogPath?:string (1.5.0). Skill names have `skill:` prefix. [Source metadata](https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/coding-agent/src/core/source-info.ts#L1).
 
 ### Content, usage, messages
 
@@ -404,7 +451,7 @@ Source: [content and message definitions](https://github.com/earendil-works/pi/b
 - `ThinkingContent`: type:"thinking"; thinking:string; thinkingSignature?:string; redacted?:boolean.
 - `ImageContent`: type:"image"; data:string (base64); mimeType:string.
 - `ToolCall`: type:"toolCall"; id:string; name:string; arguments:object of JSON; thoughtSignature?:string; namespace?:string; argumentsError?:string.
-- `Usage`: input:number; output:number; cacheRead:number; cacheWrite:number; cacheWrite1h?:number; reasoning?:number; totalTokens:number; cost:{input,output,cacheRead,cacheWrite,total:number}. Reasoning is already included in output; don't double count.
+- `Usage`: input:number; output:number; cacheRead:number; cacheWrite:number; cacheWrite1h?:number; reasoning?:number; totalTokens:number; cost:{input,output,cacheRead,cacheWrite,total:number,totalFromProvider?:boolean}. Reasoning is already included in output; don't double count.
 - `StopReason`: `pending|stop|length|toolUse|error|aborted|deferred`.
 - `DeferredHandle`: provider:string; modelId:string; api:string; id:string; expiresAt?:number; pollAfterMs?:number; data?:JSON.
 - `AssistantMessageDiagnostic`: type:string; timestamp:number; error?:{name?:string,message:string,stack?:string,code?:string|number}; details?:object of JSON.

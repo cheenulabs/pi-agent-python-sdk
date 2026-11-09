@@ -305,6 +305,12 @@ and tool-result messages and `ToolExecutionEndEvent`, and optional
 settlement arm of `EmptySessionEvent`; `aborted` is optional for older runtimes.
 These fields are preserved in raw results and events.
 
+Pi 1.5.0 adds optional `SourceInfo.changelogPath` and `Usage.cost.totalFromProvider`.
+A true billing flag identifies a provider-reported total; false or absent means
+an estimate. Components remain estimates even when the total is billed. These
+fields remain ordinary wire metadata; the SDK does not infer billing provenance
+or replace the supplied total with a sum of components.
+
 These wire annotations and `RunResult` do not validate an assistant's answer
 against a Pydantic model or JSON schema. `RunResult.text` is ordinary text; parse
 and validate structured answers in your application when needed. The SDK adds

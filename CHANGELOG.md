@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Changed
+
+- Advance the reviewed Pi baseline from 1.4.0 to 1.5.0, retaining the 0.85.1 minimum.
+  Strict-version users must align their separately installed runtime with 1.5.0.
+- Annotate optional package changelog paths and provider-reported cost provenance.
+  Preserve supplied cost totals and raw metadata; tool schema/coercion, provider auth,
+  session persistence and rendering behavior remain Pi-owned. RPC commands and event
+  discriminators are unchanged.
+
 ## 0.2.6
 
 ### Changed
