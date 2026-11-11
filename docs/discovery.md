@@ -4,8 +4,47 @@ Original protocol snapshot: 2026-09-15, Pi 0.85.1. Reviewed update: 2026-09-20,
 Pi 0.86.0. Reviewed patch: 2026-09-22, Pi 0.86.1. Reviewed update: 2026-09-23,
 Pi 0.87.0. Reviewed patch: 2026-09-24, Pi 0.87.1. Reviewed update: 2026-10-02,
 Pi 1.0.0. Reviewed update: 2026-10-17, Pi 1.3.0. Reviewed update: 2026-10-23,
-Pi 1.4.0. Reviewed update: 2026-11-09, Pi 1.5.0. Historical observations below
+Pi 1.4.0. Reviewed update: 2026-11-09, Pi 1.5.0. Reviewed patch: 2026-11-11,
+Pi 1.5.1. Historical observations below
 retain their original version/source; the coverage inventory includes the additions described here.
+
+## Pi 1.5.1 update
+
+Reviewed source is commit
+[`dd30101cfc5b0609411dd80b6f93adbc14db14cf`](https://github.com/earendil-works/pi/tree/dd30101cfc5b0609411dd80b6f93adbc14db14cf).
+Ten of 22 fingerprinted files changed. RPC declarations, TypeScript client,
+JSONL framing, event serializer, session-entry definitions and message types
+are unchanged: 33 commands, 25 event discriminators, 11 session-entry variants,
+44 shared command cases and 43 event records. No new Python wire fields are needed.
+
+Reviewed changes and ownership:
+
+- `rpc-mode.ts`: extension-requested shutdown now runs while idle and waits for
+  command responses and prompt settlement. EOF and a single termination signal
+  no longer interrupt disposal; repeated signals still force exit.
+- `agent-session-runtime.ts`: disposal aborts active work before tearing down
+  extensions and waits for credential writes. Python retains its bounded child
+  shutdown policy; it does not manage Pi's OAuth state.
+- `agent-session.ts`: prompt preflight and branch summaries guard context mutation;
+  reload rejects active responses/compaction. Queued images are normalized on
+  delivery, image-only queues clear correctly, out-of-scope model cycling selects
+  the correct entry, and thinking-level changes persist on the selected branch.
+- `bash-executor.ts`: discarded output chunks correctly set the existing
+  `truncated` flag. No result shape changes.
+- `extensions/types.ts`: Markdown transformer surface selection and overlay
+  blocked-status semantics are interactive extension APIs, not RPC UI additions.
+- `ai/types.ts` and `compat-schema.ts`: a new provider ID, internal request
+  continuation control, and provider compatibility options for message threads,
+  tool history, null assistant content, and prompt cache keys. Provider IDs are
+  strings and model `compat` is an opaque JSON dictionary in Python.
+- `cli/args.ts`, package metadata and changelog: auth help, 1.5.1 dependency pins,
+  Mermaid replacement, and provider/tool/MCP/TUI fixes. Authentication, default
+  model choices, and idle cache warming remain Pi-owned behavior.
+
+Advance the reviewed fingerprints and offline tested version together, preserving
+minimum 0.85.1. Pi 1.5.0 remains allowed as untested in non-strict mode and is
+rejected in strict mode. Synthetic checks do not certify live provider behavior
+or publish an SDK release.
 
 ## Pi 1.5.0 update
 
