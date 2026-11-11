@@ -10,8 +10,8 @@ Check the proposed commit's CI results before relying on platform support.
 | Component | Policy |
 |---|---|
 | Python | Package requires 3.11 or newer; Linux CI targets 3.11, 3.12, 3.13, and 3.14 |
-| Pi | Minimum **0.85.1**; recorded tested protocol version **1.5.0** |
-| Node.js | Pi 1.5.0 requires **22.19.0 or newer** |
+| Pi | Minimum **0.85.1**; recorded tested protocol version **1.5.1** |
+| Node.js | Pi 1.5.1 requires **22.19.0 or newer** |
 | Python runtime dependencies | None beyond the standard library |
 | Platforms | CI targets Linux with Python 3.11–3.14; macOS and Windows with Python 3.14 |
 
@@ -20,7 +20,7 @@ version has passed tests. Similarly, successfully launching an untested Pi
 version is not a compatibility certification.
 
 The pinned Pi source is commit
-[`f9a26365568127461c47a07a37dcb42c140a3ac5`](https://github.com/earendil-works/pi/tree/f9a26365568127461c47a07a37dcb42c140a3ac5).
+[`dd30101cfc5b0609411dd80b6f93adbc14db14cf`](https://github.com/earendil-works/pi/tree/dd30101cfc5b0609411dd80b6f93adbc14db14cf).
 The [discovery document](discovery.md) records the upstream types, serializer,
 implementation, and observed runtime behavior used to build the client. The
 package wraps Pi's RPC protocol and is not an official upstream Python SDK.
@@ -73,6 +73,12 @@ total. Tool argument coercion/validation now uses `pi-schema`; errors and result
 remain opaque wire payloads, not Python validation policy. See the
 [source review](discovery.md#pi-150-update).
 
+Pi 1.5.1 keeps the RPC wire vocabulary unchanged. It fixes extension-requested
+shutdown and cleanup, queued-image normalization, model cycling, and session
+mutation guards. New provider compatibility options remain opaque model metadata;
+Python preserves Pi's provider, cache-warming, and authentication defaults. See the
+[source review](discovery.md#pi-151-update).
+
 ## Startup version policy
 
 Startup invokes the selected executable with `--version`; it does not contact npm,
@@ -81,7 +87,7 @@ PyPI, GitHub, or another version service. After startup:
 | Selected executable | Behavior |
 |---|---|
 | Recognized version below 0.85.1 | Reject with `PiVersionError` |
-| Exactly 1.5.0 | `pi_version="1.5.0"`, `compatibility="tested"` |
+| Exactly 1.5.1 | `pi_version="1.5.1"`, `compatibility="tested"` |
 | Other recognized version at or above the minimum | Allow by default, with `compatibility="untested"` |
 | Recognized untested version and `strict_version=True` | Reject with `PiVersionError` |
 | Unparseable/custom version output | Reject unless `allow_unknown_version=True` |
