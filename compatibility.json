@@ -1,7 +1,7 @@
 {
   "minimumVersion": "0.85.1",
-  "testedVersion": "1.5.1",
-  "upstreamCommit": "dd30101cfc5b0609411dd80b6f93adbc14db14cf",
+  "testedVersion": "1.5.2",
+  "upstreamCommit": "b4afdddf44e059c67ccf5097e5317d913521b470",
   "sourceSha256": {
     "packages/coding-agent/src/modes/rpc/rpc-types.ts": "be06a1d53916e03e9274cce9e4833692b235494e4047f1f7139d7f0147daae1a",
     "packages/coding-agent/src/modes/rpc/rpc-mode.ts": "55198996b60700df79efe499f2d951466588271ddbc25e81aa85d0479d57d648",
@@ -16,14 +16,14 @@
     "packages/coding-agent/src/core/compaction/compaction.ts": "32714966eb644da31cd84e8eb172965256160626b3d26ae9752c3894300f2b0b",
     "packages/coding-agent/src/core/compaction/index.ts": "f82bde781410ae1a638989ff91bde9cc7045341a76bb9757de2ea6beea4c077d",
     "packages/coding-agent/src/core/extensions/types.ts": "174549078f95dddd70e656c4eb54f73e0f75782af6a971cf6dc2ee622fa0917c",
-    "packages/coding-agent/src/core/agent-session-runtime.ts": "2c317b7e36965a35aaf8e2a468db317dcfd6e94bf970a042ed7ad09d2ee5aee8",
+    "packages/coding-agent/src/core/agent-session-runtime.ts": "c00359bc246aca8ae265c4a29e89af098391a086ba2ef6b0425425b149f557e2",
     "packages/coding-agent/src/cli/args.ts": "7db79597928e0ae100fdcaf41d6fbd9c5b841744a9f87c4745e3ad0863435e29",
-    "packages/coding-agent/package.json": "58b1ebce6c1a5d63614279bac55c1117ed6015707d09a8d963ad0dad0dcc805c",
+    "packages/coding-agent/package.json": "18b422b7d80f2caa2551d253c0a8409e1caa54b954bfb7d18252e507bb8a0318",
     "packages/agent/src/types.ts": "6ad1a3e1ea6cfa0770421aca9a23726061d8d31fdeb5c17c8acd5d7cea0e74b1",
     "packages/agent/src/agent-loop.ts": "9d7589b5071ea3b8b3e3c624f9cfc09a976ebf7436024a58213837de4645167d",
     "packages/ai/src/types.ts": "8f6b4b9f443708c567dea650d40d247c547e5f3a36481d86acbee545cd038f22",
     "packages/ai/src/providers/model-schema.ts": "446f06d10c8a60be5749bfad79fb36c70401c2d746448fa915ade9be82b827b0",
     "packages/ai/src/providers/compat-schema.ts": "722032d2b934b3730e0bf063f0fd8edb1a401bf050a4aef2888ef0186ff6f5d1",
-    "packages/coding-agent/CHANGELOG.md": "ab582f8f94f1c294d92c1980cfe2a2023da643ab6647bb03af99877e59194070"
+    "packages/coding-agent/CHANGELOG.md": "0234d4b3c078dedc752cc05e39c703222704b5a8424f190ee8afec194020d0bb"
   }
 }

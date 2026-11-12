@@ -5,8 +5,33 @@ Pi 0.86.0. Reviewed patch: 2026-09-22, Pi 0.86.1. Reviewed update: 2026-09-23,
 Pi 0.87.0. Reviewed patch: 2026-09-24, Pi 0.87.1. Reviewed update: 2026-10-02,
 Pi 1.0.0. Reviewed update: 2026-10-17, Pi 1.3.0. Reviewed update: 2026-10-23,
 Pi 1.4.0. Reviewed update: 2026-11-09, Pi 1.5.0. Reviewed patch: 2026-11-11,
-Pi 1.5.1. Historical observations below
+Pi 1.5.1. Reviewed patch: 2026-11-12, Pi 1.5.2. Historical observations below
 retain their original version/source; the coverage inventory includes the additions described here.
+
+## Pi 1.5.2 update
+
+Reviewed source is commit
+[`b4afdddf44e059c67ccf5097e5317d913521b470`](https://github.com/earendil-works/pi/tree/b4afdddf44e059c67ccf5097e5317d913521b470).
+Three of 22 fingerprinted files changed: `agent-session-runtime.ts`, package
+metadata, and the changelog. RPC declarations, dispatch, TypeScript client,
+JSONL framing, serializer, message/session types and model metadata are unchanged:
+33 commands, 25 event discriminators, 11 session-entry variants, 44 shared command
+cases and 43 event records. No Python wire fields or parity fixtures need changes.
+
+Reviewed changes and ownership:
+
+- `agent-session-runtime.ts`: an import rejected because its working directory
+  is missing removes the newly copied session file before rethrowing, but keeps
+  a source already in session storage. Python does not duplicate this cleanup.
+- Package metadata pins Pi dependencies to 1.5.2. The changelog describes interactive
+  Continue/Fork/Cancel choices for missing session directories and an Anthropic
+  OAuth client-version fix. Interactive recovery and authentication remain Pi-owned;
+  non-interactive startup still rejects a missing session directory.
+
+Advance the reviewed fingerprints, offline tested version, version-policy tests
+and installation guidance together. Keep minimum 0.85.1; 1.5.1 remains allowed as
+untested in non-strict mode and rejected in strict mode. Credential-free checks
+neither certify live provider behavior nor publish an SDK release.
 
 ## Pi 1.5.1 update
 
