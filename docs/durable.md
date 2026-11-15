@@ -4,7 +4,8 @@
 **M2 adds the coding namespace, error codes, and shared child environment helper.**
 **M3 adds `pi_agent.durable.AsyncDurableClient`** with async lifecycle, root,
 submit, wait, entries, and abort, built on the shared transport and limits.
-Watch and the synchronous client remain planned APIs from sections 5, 6, 8,
+**M4 extracts the shared synchronous lifecycle and subscription bridge** without
+changing coding-agent behavior. Watch and the synchronous Durable client remain planned APIs from sections 5, 6, 8,
 and 9 of [#116]. The milestone plan and acceptance
 criteria remain in that issue. Each milestone is a separate PR; start the next
 only after the previous PR is approved and merged, unless explicitly requested

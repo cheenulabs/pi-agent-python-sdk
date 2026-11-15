@@ -159,7 +159,8 @@ The Python implementation keeps process I/O separate from conversation behavior:
 | [`_observation.py`](../src/pi_agent/_observation.py) | Process output records and delivery status |
 | [`_runs.py`](../src/pi_agent/_runs.py) | Run ownership, settlement, result collection, and cancellation |
 | [`_usage.py`](../src/pi_agent/_usage.py) | Usage accumulation from observed assistant messages |
-| [`sync.py`](../src/pi_agent/sync.py) | Synchronous calls through the same async client on one background event loop |
+| [`sync.py`](../src/pi_agent/sync.py) | Coding-agent synchronous methods delegated to the async client |
+| [`_sync_bridge.py`](../src/pi_agent/_sync_bridge.py) | Shared blocking lifecycle, loop thread, interrupt handling, and subscriptions |
 | [`types.py`](../src/pi_agent/types.py), [`errors.py`](../src/pi_agent/errors.py) | Typed wire dictionaries, Python results, and explicit failures |
 
 Underscored modules are private implementation details. Applications import
