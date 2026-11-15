@@ -14,6 +14,10 @@ wire when unset; explicitly supplied `False`, empty strings, and empty lists
 remain meaningful values. The client checks response success even for commands
 whose Python return value is `None`.
 
+The experimental `pi_agent.durable.AsyncDurableClient` drives the separate
+Durable Harness through an explicit `host_command`. It is not a coding-agent
+RPC client; see [Durable API and failure semantics](durable.md#python-api).
+
 ## Command errors
 
 `PiCommandError(command, error, request_id=None, code=None)` exposes the rejected
