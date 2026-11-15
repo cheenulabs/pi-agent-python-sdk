@@ -1,6 +1,8 @@
 # API reference
 
-Import `PiClient` or `AsyncPiClient` from `pi_agent`. Both expose
+Import `PiClient` or `AsyncPiClient` from `pi_agent.coding` (the coding-agent
+namespace) or from `pi_agent`. These are the same classes; top-level imports
+remain supported and are not deprecated. Both expose
 the same command arguments and return values. Await command methods on the async
 client; call them directly on the synchronous client. Types named below are
 defined in `pi_agent.types`, except `ProcessOutput` and `ObservationStatus`,
@@ -11,6 +13,14 @@ Python method arguments use snake_case. Optional arguments are omitted from the
 wire when unset; explicitly supplied `False`, empty strings, and empty lists
 remain meaningful values. The client checks response success even for commands
 whose Python return value is `None`.
+
+## Command errors
+
+`PiCommandError(command, error, request_id=None, code=None)` exposes the rejected
+command, explicit error text, request ID, and optional string `.code`. A response
+with no `code` or a non-string `code` produces `code=None`. Existing positional
+construction remains supported. Error text and codes are not automatically
+included in exception messages. See [errors](errors.md).
 
 ## Constructor options
 

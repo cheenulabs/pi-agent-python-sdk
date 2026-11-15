@@ -1,18 +1,21 @@
 # Experimental Pi Durable backend design
 
 **M1 implements the experimental Node host's core protocol** in `host/`.
+**M2 adds the coding namespace, error codes, and shared child environment helper.**
 There is no importable Python Durable backend yet. This document also records
 planned shared-core, watch, and Python APIs from sections 5, 6, 8, and 9 of
 [#116]; those parts are not implemented by M1. The milestone plan and acceptance
 criteria remain in that issue. Each milestone is a separate PR; start the next
 only after the previous PR is approved and merged, unless explicitly requested
 as a stacked PR targeting the previous milestone's branch. Before a stack merges,
-restack onto `main` after its base merges and rerun checks. Nothing past M0 merges
-without owner approval of Q1 (scope, including M2's small core changes). Q2 separately gates
-the sync refactor: without approval, skip M4/M5 and ship async-only, including
-async-only watch in M6. Q3 (host distribution) and Q4 (Windows) can wait until
-M9/M8; their defaults are caller-supplied `host_command` and Linux/macOS only.
-This document grants none of those approvals. Publishing requires separate approval.
+restack onto `main` after its base merges and rerun checks. The owner approved Q1 (scope, including M2) and Q2 (shared sync bridge and sync
+Durable client) in [the updated instruction][owner-decisions]. Q3 uses
+caller-supplied `host_command` (skip M9); Q4 is Linux/macOS only, Windows
+unsupported, with `durable` left out of `required.needs`. The current delivery
+is an unmerged stack followed by one combined PR for owner review. Nothing is
+to be merged, auto-merged, published, or released by this work.
+
+[owner-decisions]: https://github.com/cheenulabs/pi-agent-python-sdk/issues/116#issuecomment-6902908994
 
 For local host development (Node ≥ 22.19):
 

@@ -15,10 +15,17 @@ class PiError(Exception):
 class PiCommandError(PiError):
     """Pi rejected a command. The original error is available explicitly."""
 
-    def __init__(self, command: str, error: str, request_id: str | None = None) -> None:
+    def __init__(
+        self,
+        command: str,
+        error: str,
+        request_id: str | None = None,
+        code: str | None = None,
+    ) -> None:
         self.command = command
         self.error = error
         self.request_id = request_id
+        self.code = code
         # Extension errors can contain prompt text or provider diagnostics.
         super().__init__(f"Pi rejected command {command!r}; inspect .error for details")
 

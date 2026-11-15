@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, Self, cast
 
 from ._collections import deadline, start_collection
 from ._events import EventSubscription
-from ._launch import check_version, executable_argv, validate_extra_args
+from ._launch import check_version, child_env, executable_argv, validate_extra_args
 from ._observation import ObservationStatus, OutputSource, ProcessObservation, ProcessOutput
 from ._transport import Transport
 from .errors import (
@@ -230,19 +230,14 @@ class AsyncPiClient:
         self._starting = True
         self._startup_task = asyncio.current_task()
         self._startup_done.clear()
-        child_env = dict(os.environ) if self._inherit_env else {}
-        for name, value in self._env_overrides.items():
-            if value is None:
-                child_env.pop(name, None)
-            else:
-                child_env[name] = value
+        environment = child_env(self._inherit_env, self._env_overrides)
         try:
             async with asyncio.timeout(self.limits.startup_timeout):
-                argv = executable_argv(self._executable, child_env)
+                argv = executable_argv(self._executable, environment)
                 self.pi_version, self.compatibility = await check_version(
                     argv,
                     cwd=self._cwd,
-                    env=child_env,
+                    env=environment,
                     timeout=self.limits.startup_timeout,
                     allow_unknown=self._allow_unknown_version,
                     strict=self._strict_version,
@@ -261,7 +256,7 @@ class AsyncPiClient:
                     observer._status = replace(
                         observer.status, started_at_ns=self._process_started_at_ns
                     )
-                await self._transport.start([*argv, *self._args], cwd=self._cwd, env=child_env)
+                await self._transport.start([*argv, *self._args], cwd=self._cwd, env=environment)
                 response = await self._transport.request(
                     "get_state", timeout=self.limits.startup_timeout
                 )
