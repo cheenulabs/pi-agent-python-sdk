@@ -12,7 +12,8 @@ The proposed experimental [`pi_agent.durable` backend](durable.md) instead drive
 the real upstream Harness through a thin Node host, reusing core private modules.
 The host uses the SDK transport envelope (JSONL requests, correlated responses,
 and events), but is not a Pi RPC server and implements none of Pi's RPC commands.
-M0 documents this design only; no Durable backend is implemented yet.
+M1 implements the Node host's core protocol only; Python Durable clients and
+watch support remain later milestones.
 
 ## Relationship to Pi
 
