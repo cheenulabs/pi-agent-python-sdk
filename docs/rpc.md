@@ -13,7 +13,7 @@ the real upstream Harness through a thin Node host, reusing core private modules
 The host uses the SDK transport envelope (JSONL requests, correlated responses,
 and events), but is not a Pi RPC server and implements none of Pi's RPC commands.
 The Node host, `AsyncDurableClient`, and its blocking `DurableClient` facade
-implement the core Durable flow; watch remains a later milestone.
+implement the core Durable flow and bounded watch subscriptions.
 
 ## Relationship to Pi
 

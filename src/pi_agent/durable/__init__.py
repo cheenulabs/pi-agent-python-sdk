@@ -3,6 +3,7 @@
 from .client import AsyncDurableClient
 from .sync import DurableClient
 from .types import ConversationId, SettledSubmission, SubmissionId, WatchUpdate
+from .watch import WatchSubscription
 
 __all__ = [
     "AsyncDurableClient",
@@ -10,5 +11,6 @@ __all__ = [
     "DurableClient",
     "SettledSubmission",
     "SubmissionId",
+    "WatchSubscription",
     "WatchUpdate",
 ]

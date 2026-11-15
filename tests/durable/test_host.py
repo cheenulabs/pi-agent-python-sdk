@@ -287,9 +287,9 @@ async def test_lifecycle(durable_host_command: list[str], tmp_path: Path) -> Non
         assert by_id["early"]["code"] == "not_open"
         await host.error("open", "already_open")
         await host.error("unknown", "unknown_command")
-        # watch/unwatch are intentionally M6, not part of M1.
-        await host.error("watch", "unknown_command")
-        await host.error("unwatch", "unknown_command")
+        # Watch commands now exist (M6), but still validate their required fields.
+        await host.error("watch", "bad_params")
+        await host.error("unwatch", "bad_params")
         assert await host.eof() == (0, [])
 
 

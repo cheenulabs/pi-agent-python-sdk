@@ -6,11 +6,11 @@ import os
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from .._sync_bridge import _SyncBridge
+from .._sync_bridge import _SyncBridge, _SyncSubscription
 from ..client import DEFAULT_TIMEOUT, Timeout
 from ..types import Limits
 from .client import AsyncDurableClient
-from .types import ConversationId, SettledSubmission, SubmissionId, WhenBusy
+from .types import ConversationId, SettledSubmission, SubmissionId, WatchUpdate, WhenBusy
 
 
 class DurableClient(_SyncBridge[AsyncDurableClient]):
@@ -121,6 +121,10 @@ class DurableClient(_SyncBridge[AsyncDurableClient]):
         return self._call(
             lambda: self._client.entries(conversation_id, limit=limit, timeout=timeout)
         )
+
+    def watch(self, conversation_id: ConversationId) -> _SyncSubscription[WatchUpdate]:
+        """Return a blocking bounded update context; rewatch after overflow."""
+        return _SyncSubscription(self, lambda: self._client.watch(conversation_id))
 
     def abort(self, conversation_id: ConversationId, *, timeout: Timeout = DEFAULT_TIMEOUT) -> None:
         """Abort upstream work and block until the conversation is idle."""

@@ -17,6 +17,7 @@ import {
 import type {
   AgentChange,
   ConversationId,
+  ConversationWatch,
   HarnessSettings,
   JsonObject,
   Storage,
@@ -25,12 +26,15 @@ import type {
 import { NodeExecutionEnv } from "@earendil-works/pi-durable/env/node";
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node";
 import { CodingTools } from "@earendil-works/pi-durable/tools";
+import { nextWatchUpdate } from "./watch-window.ts";
 
 type ObjectRecord = Record<string, unknown>;
 type Request = ObjectRecord & { id: string; type: string };
 let state: "not_open" | "opening" | "open" | "closing" = "not_open";
 let harness: Harness | undefined;
 let maxRecordBytes = 16777216;
+type WatchState = { handle?: ConversationWatch; lastSentId?: number };
+const watches = new Map<string, WatchState>();
 const version: string = JSON.parse(
   readFileSync(
     new URL(import.meta.resolve("@earendil-works/pi-durable/package.json")),
@@ -65,16 +69,20 @@ function write(record: ObjectRecord): void {
   if (state === "closing") return;
   let line = JSON.stringify(record);
   if (Buffer.byteLength(line, "utf8") > maxRecordBytes) {
-    // M1's non-response events are diagnostics, not required replies.
-    if (record.type !== "response") return;
-    line = JSON.stringify({
-      type: "response",
-      id: record.id,
-      command: record.command,
-      success: false,
-      error: "Response exceeds maxRecordBytes",
-      code: "too_large",
-    });
+    if (record.type === "durable_watch") {
+      line = JSON.stringify({ ...record, entries: [], live: null, gap: true });
+    } else if (record.type === "response") {
+      line = JSON.stringify({
+        type: "response",
+        id: record.id,
+        command: record.command,
+        success: false,
+        error: "Response exceeds maxRecordBytes",
+        code: "too_large",
+      });
+    } else {
+      return; // Oversized diagnostics carry no required data.
+    }
     if (Buffer.byteLength(line, "utf8") > maxRecordBytes) return exit(1);
   }
   process.stdout.write(line + "\n");
@@ -245,12 +253,63 @@ function isClosing(): boolean {
   return state === "closing";
 }
 
-async function command(request: Request): Promise<ObjectRecord> {
+function watchUpdate(watchId: string, watch: WatchState, snapshot: boolean): void {
+  if (!watch.handle || watches.get(watchId) !== watch) return;
+  const view = watch.handle.value;
+  const update = nextWatchUpdate(watch.lastSentId, view.entries);
+  if (view.entries.length) watch.lastSentId = view.entries.at(-1)!.id;
+  // Advance even when write replaces the payload with a gap event.
+  write({
+    type: "durable_watch", watchId, ...update,
+    live: view.docs["pi.live"] ?? null, snapshot,
+  });
+}
+
+async function command(request: Request): Promise<ObjectRecord | (() => void)> {
   if (request.type === "hello")
     return { protocol: 0, piDurable: version, pid: process.pid };
   if (request.type === "open") return open(request);
   if (state !== "open" || !harness) reject("not_open", "Harness is not open");
   switch (request.type) {
+    case "watch": {
+      const id = integer(request.conversationId) as ConversationId;
+      const watchId = string(request.watchId);
+      if (watches.has(watchId)) reject("bad_params", "Duplicate watchId");
+      const watch: WatchState = {};
+      watches.set(watchId, watch); // Reserve before any await; concurrent IDs cannot collide.
+      try {
+        const conversation = await harness.conversation(id, ctx);
+        if (!conversation) reject("not_found", "Conversation not found");
+        const handle = await conversation.watch(ctx);
+        watch.handle = handle;
+        if (isClosing() || watches.get(watchId) !== watch) {
+          await handle.stop();
+          return {};
+        }
+        // The dispatcher writes the ACK before calling this continuation.
+        return () => {
+          watchUpdate(watchId, watch, true);
+          handle.start(async (call) => {
+            if (call.kind === "value") watchUpdate(watchId, watch, false);
+          });
+          void handle.closed.then((end) => {
+            if (watches.get(watchId) !== watch) return;
+            watches.delete(watchId);
+            write({ type: "durable_watch_end", watchId, kind: end.kind });
+          }).catch(() => exit(1));
+        };
+      } catch (error) {
+        if (watches.get(watchId) === watch) watches.delete(watchId);
+        throw error;
+      }
+    }
+    case "unwatch": {
+      const watchId = string(request.watchId);
+      const watch = watches.get(watchId);
+      watches.delete(watchId);
+      await watch?.handle?.stop();
+      return {};
+    }
     case "root": {
       let agent: AgentChange | undefined;
       if (request.agent !== undefined) {
@@ -365,14 +424,16 @@ input.on("line", (line) => {
   // Deliberately do not await: a long wait must not block control requests.
   void command(request)
     .then(
-      (data) =>
+      (data) => {
         write({
           type: "response",
           id: request.id,
           command: request.type,
           success: true,
-          data,
-        }),
+          data: typeof data === "function" ? {} : data,
+        });
+        if (!isClosing() && typeof data === "function") data();
+      },
       (error: unknown) => {
         const failureError =
           error instanceof Error ? error : new Error(String(error));
@@ -395,6 +456,9 @@ input.on("close", () => {
   if (wasOpening) return; // The open continuation owns cleanup in this case.
   void (async () => {
     try {
+      const active = [...watches.values()];
+      watches.clear();
+      await Promise.all(active.map((watch) => watch.handle?.stop()));
       await harness?.close(ctx);
       exit(0);
     } catch {
