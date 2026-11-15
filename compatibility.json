@@ -1,4 +1,8 @@
 {
+  "durable": {
+    "testedVersion": "1.5.2",
+    "upstreamCommit": "b4afdddf44e059c67ccf5097e5317d913521b470"
+  },
   "minimumVersion": "0.85.1",
   "testedVersion": "1.5.2",
   "upstreamCommit": "b4afdddf44e059c67ccf5097e5317d913521b470",

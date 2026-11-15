@@ -35,7 +35,13 @@ The host accepts JSONL on stdin and shuts down on EOF. M1 supports `hello`,
 `open`, `root`, `submit`, `wait`, `entries`, and `abort`, with memory or SQLite
 storage and pinned upstream 1.5.2. M6 adds `watch`/`unwatch` and their events. The host is not bundled in
 the Python wheel or sdist. The separate `durable` CI matrix covers Linux/macOS
-and Python 3.11/3.14 on Node 22, and is not a required merge gate.
+and Python 3.11/3.14 on Node 22, and is not a required merge gate. The owner
+explicitly chose to leave it out of `required.needs` (Q4); Windows Durable v0 is
+unsupported. `TESTED_PI_DURABLE_VERSION` and `compatibility.json` record 1.5.2.
+M8's `scripts/check_durable.py` checks all three manifest/lock pins and that
+constant; coding-agent `--record` preserves the independent Durable record.
+The Latest Pi workflow uploads a non-blocking npm-latest drift report, and
+Dependabot groups the three `/host` upstream packages.
 
 The experimental `pi_agent.durable` drives the real upstream
 [`@earendil-works/pi-durable` Harness][upstream], not a port. Python and the host

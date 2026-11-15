@@ -39,8 +39,17 @@ jobs:
         env:
           PI_VERSION: ${{ steps.latest.outputs.version }}
         run: uv run --no-sync python scripts/check_upstream.py --version "$PI_VERSION"
+      - name: Report Pi Durable version drift (non-blocking)
+        if: always()
+        continue-on-error: true
+        run: |
+          echo '# Pi Durable drift lookup did not complete' > durable-drift-report.md
+          latest=$(npm view @earendil-works/pi-durable@latest version)
+          uv run --no-sync python scripts/check_durable.py --latest "$latest"
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: latest-pi-report
-          path: upstream-report.md
+          path: |
+            upstream-report.md
+            durable-drift-report.md

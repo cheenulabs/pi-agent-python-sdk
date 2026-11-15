@@ -133,6 +133,7 @@ def main() -> int:
     (ROOT / "upstream-report.md").write_text("\n".join(report) + "\n", encoding="utf-8")
     if args.record:
         baseline = {
+            **old,  # Preserve independent backend records and unknown future metadata.
             "minimumVersion": old.get("minimumVersion", "0.85.1"),
             "testedVersion": exact,
             "upstreamCommit": commit,
