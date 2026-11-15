@@ -240,19 +240,36 @@ class AsyncDurableClient:
     async def __aenter__(self) -> Self: ...  # start()
     async def __aexit__(self, *exc: object) -> None: ...  # aclose()
 
-    async def root(self, *, model: Mapping[str, str] | None = None,
-                   cwd: str | None = None, thinking_level: str | None = None,
-                   timeout: Timeout = DEFAULT_TIMEOUT) -> ConversationId: ...
-    async def submit(self, conversation_id: ConversationId, content: str, *,
-                     request_id: str,
-                     when_busy: Literal["followUp", "steer", "reject"] | None = None,
-                     timeout: Timeout = DEFAULT_TIMEOUT) -> SubmissionId: ...
-    async def wait(self, submission_id: SubmissionId, *,
-                   timeout: float | None = None) -> SettledSubmission: ...
-    async def entries(self, conversation_id: ConversationId, *, limit: int = 50,
-                      timeout: Timeout = DEFAULT_TIMEOUT) -> list[dict[str, Any]]: ...
-    async def abort(self, conversation_id: ConversationId, *,
-                    timeout: Timeout = DEFAULT_TIMEOUT) -> None: ...
+    async def root(
+        self,
+        *,
+        model: Mapping[str, str] | None = None,
+        cwd: str | None = None,
+        thinking_level: str | None = None,
+        timeout: Timeout = DEFAULT_TIMEOUT,
+    ) -> ConversationId: ...
+    async def submit(
+        self,
+        conversation_id: ConversationId,
+        content: str,
+        *,
+        request_id: str,
+        when_busy: Literal["followUp", "steer", "reject"] | None = None,
+        timeout: Timeout = DEFAULT_TIMEOUT,
+    ) -> SubmissionId: ...
+    async def wait(
+        self, submission_id: SubmissionId, *, timeout: float | None = None
+    ) -> SettledSubmission: ...
+    async def entries(
+        self,
+        conversation_id: ConversationId,
+        *,
+        limit: int = 50,
+        timeout: Timeout = DEFAULT_TIMEOUT,
+    ) -> list[dict[str, Any]]: ...
+    async def abort(
+        self, conversation_id: ConversationId, *, timeout: Timeout = DEFAULT_TIMEOUT
+    ) -> None: ...
     def watch(self, conversation_id: ConversationId) -> WatchSubscription: ...  # M6
 
     @property
