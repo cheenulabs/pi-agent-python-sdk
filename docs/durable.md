@@ -5,8 +5,9 @@
 **M3 adds `pi_agent.durable.AsyncDurableClient`** with async lifecycle, root,
 submit, wait, entries, and abort, built on the shared transport and limits.
 **M4 extracts the shared synchronous lifecycle and subscription bridge** without
-changing coding-agent behavior. Watch and the synchronous Durable client remain planned APIs from sections 5, 6, 8,
-and 9 of [#116]. The milestone plan and acceptance
+changing coding-agent behavior. **M5 adds `DurableClient`**, delegating its core
+methods to `AsyncDurableClient` on that bridge. Watch remains a planned M6 API
+from sections 5, 6, 8, and 9 of [#116]. The milestone plan and acceptance
 criteria remain in that issue. Each milestone is a separate PR; start the next
 only after the previous PR is approved and merged, unless explicitly requested
 as a stacked PR targeting the previous milestone's branch. Before a stack merges,
@@ -250,8 +251,8 @@ may have been skipped. Recover with `entries`. `live` is upstream
 
 ## Python API
 
-The async core methods below are implemented in M3. Sync methods (M5) and
-watch (M6) are still planned; they must not be used until those milestones land.
+The async core methods below are implemented in M3 and the synchronous facade
+in M5. Watch (M6) is still planned; do not use it until that milestone lands.
 
 ### Async client
 
@@ -394,7 +395,7 @@ Types in `src/pi_agent/durable/types.py`:
 - **Exit:** override subscription `aclose()` to unregister, then send
   best-effort `unwatch`; swallow errors from a dead host.
 
-### Sync client (planned; Q2 approved)
+### Sync client
 
 `DurableClient(_SyncBridge)` has the same constructor, methods, and properties
 as the async client, with `start()` / `close()` and `with` support. Every call
