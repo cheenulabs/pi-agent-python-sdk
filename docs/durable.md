@@ -404,7 +404,6 @@ delegates to a private `AsyncDurableClient` on the bridge's loop thread.
 `watch()` returns `_SyncSubscription[WatchUpdate]`, a blocking context manager
 and iterator. Inherit the bridge's rules: calls from client callbacks are
 rejected, and `KeyboardInterrupt` cancels a call but never interrupts shutdown.
-If Q2 is not approved, there is no sync client in v0.
 
 ## Recovery and verification boundaries
 
@@ -412,21 +411,25 @@ Recovery belongs entirely to upstream. `open` resumes unfinished work; a new
 client reuses the same SQLite path and conversation-scoped `request_id` to
 recover the original submission after a host or Python crash. This is not
 permission to retry with a new key or attach multiple writers. The issue's
-M7 tests must prove SIGKILL recovery and no double submission using faux data;
-the upstream spike is not SDK test coverage. Partial assistant output may
+M7 suite exercises host SIGKILL after at least 200 characters of partial live
+text, Python SIGKILL followed by host EOF shutdown, and settled-key resubmission
+without a second user entry. Every reopen uses the same 400-word faux answer,
+50 tokens/second, and 50 ms persistence/retry settings. CI repeats recovery three
+times in each Durable matrix row; the upstream spike alone is not SDK coverage. Partial assistant output may
 produce an aborted entry before the final answer; its persistence is not
 guaranteed before the configured progress window.
 
 Use isolated synthetic data. Host/integration tests require installed host
 modules and Node ≥ 22.19; `PI_DURABLE_REQUIRE_INTEGRATION=1` must fail rather than
-skip when prerequisites are absent. Planned SIGKILL tests skip Windows. Future
+skip when prerequisites are absent. SIGKILL tests skip Windows.
 Python client unit tests use a fake host without Node. See [CONTRIBUTING.md](../CONTRIBUTING.md) for standard
 checks and [#116] for each milestone's additional validation. M1's direct-host
 suite covers command envelopes and failures, memory/SQLite flows, concurrent
 wait/control, EOF shutdown (including opening and a pending wait), and record
-limits. It does not establish crash recovery, watch behavior, a Python Durable
-client, host packaging, or live-provider compatibility. Those remain later
-milestones; no live providers are used by these tests.
+limits. M3/M5 add async/sync client flow and failure coverage; M6 adds watch
+snapshots, bounds and gaps; M7 adds the crash scenarios above. Host packaging is
+not provided (bring your own host). No live providers are used or certified by
+these tests.
 
 [#116]: https://github.com/cheenulabs/pi-agent-python-sdk/issues/116
 [upstream]: https://github.com/earendil-works/pi/tree/v1.5.2/packages/durable
