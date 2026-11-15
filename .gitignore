@@ -10,3 +10,4 @@ node_modules/
 .coverage
 htmlcov/
 upstream-report.md
+durable-drift-report.md
