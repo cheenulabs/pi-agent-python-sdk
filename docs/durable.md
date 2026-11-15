@@ -6,8 +6,9 @@
 submit, wait, entries, and abort, built on the shared transport and limits.
 **M4 extracts the shared synchronous lifecycle and subscription bridge** without
 changing coding-agent behavior. **M5 adds `DurableClient`**, delegating its core
-methods to `AsyncDurableClient` on that bridge. Watch remains a planned M6 API
-from sections 5, 6, 8, and 9 of [#116]. The milestone plan and acceptance
+methods to `AsyncDurableClient` on that bridge. **M6 adds async and synchronous
+watch**, including bounded subscriptions, snapshots, entry diffs and explicit gaps.
+The protocol and API follow sections 5, 6, 8, and 9 of [#116]. The milestone plan and acceptance
 criteria remain in that issue. Each milestone is a separate PR; start the next
 only after the previous PR is approved and merged, unless explicitly requested
 as a stacked PR targeting the previous milestone's branch. Before a stack merges,
@@ -25,14 +26,14 @@ For local host development (Node ≥ 22.19):
 ```sh
 npm ci --prefix host --ignore-scripts --no-audit --no-fund
 npm run --prefix host typecheck
+npm test --prefix host
 PI_DURABLE_REQUIRE_INTEGRATION=1 uv run pytest tests/durable
 node host/src/host.ts
 ```
 
 The host accepts JSONL on stdin and shuts down on EOF. M1 supports `hello`,
 `open`, `root`, `submit`, `wait`, `entries`, and `abort`, with memory or SQLite
-storage and pinned upstream 1.5.2. `watch`/`unwatch` and their events are M6 work;
-they currently return `unknown_command` after open. The host is not bundled in
+storage and pinned upstream 1.5.2. M6 adds `watch`/`unwatch` and their events. The host is not bundled in
 the Python wheel or sdist. The separate `durable` CI matrix covers Linux/macOS
 and Python 3.11/3.14 on Node 22, and is not a required merge gate.
 
@@ -252,7 +253,7 @@ may have been skipped. Recover with `entries`. `live` is upstream
 ## Python API
 
 The async core methods below are implemented in M3 and the synchronous facade
-in M5. Watch (M6) is still planned; do not use it until that milestone lands.
+in M5. M6 implements watch in both clients.
 
 ### Async client
 

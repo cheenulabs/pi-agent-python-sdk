@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 from collections.abc import Mapping, Sequence
@@ -24,8 +25,10 @@ from .types import (
     Storage,
     SubmissionId,
     SubmitFields,
+    WatchUpdate,
     WhenBusy,
 )
+from .watch import WatchSubscription
 
 _LOG = logging.getLogger("pi_agent.durable")
 _HOST_HELP = "Pi Durable requires Node >=22.19 and an explicit host_command"
@@ -95,6 +98,8 @@ class AsyncDurableClient:
         self._ready = False
         self._host_pid: int | None = None
         self._pi_durable_version: str | None = None
+        self._watches: dict[str, WatchSubscription] = {}
+        self._background: set[asyncio.Task[None]] = set()
 
     @property
     def limits(self) -> Limits:
@@ -182,6 +187,10 @@ class AsyncDurableClient:
         self._check_loop()
         self._closed = True
         self._ready = False
+        for subscription in tuple(self._watches.values()):
+            subscription._finish()
+        if self._background:
+            await asyncio.gather(*self._background, return_exceptions=True)
         startup = self._startup_task
         if startup is not None and startup is not asyncio.current_task():
             startup.cancel()
@@ -191,6 +200,31 @@ class AsyncDurableClient:
 
     def _on_event(self, record: dict[str, Any]) -> None:
         event_type = record.get("type")
+        watch_id = record.get("watchId")
+        if event_type in {"durable_watch", "durable_watch_end"}:
+            subscription = self._watches.get(watch_id) if isinstance(watch_id, str) else None
+            if subscription is None:
+                return
+            if event_type == "durable_watch_end":
+                if not isinstance(record.get("kind"), str):
+                    raise PiProtocolError("Malformed Durable watch end")
+                subscription._finish()
+                return
+            entries, live = record.get("entries"), record.get("live")
+            if (
+                not isinstance(entries, list)
+                or any(not isinstance(entry, dict) for entry in entries)
+                or (live is not None and not isinstance(live, dict))
+                or not isinstance(record.get("gap"), bool)
+                or not isinstance(record.get("snapshot"), bool)
+                or "live" not in record
+            ):
+                raise PiProtocolError("Malformed Durable watch update")
+            subscription._put(
+                WatchUpdate(entries, live, record["gap"], record["snapshot"], record),
+                len(json.dumps(record).encode("utf-8")),
+            )
+            return
         if event_type in {"durable_report", "durable_protocol_error"}:
             # Never log payloads, messages, conversations, or credentials.
             marker = record.get("code", record.get("kind"))
@@ -198,6 +232,28 @@ class AsyncDurableClient:
 
     def _on_failure(self, error: Exception) -> None:
         self._ready = False
+        for subscription in tuple(self._watches.values()):
+            subscription._finish(error)
+
+    def _track_unwatch(self, watch_id: str) -> asyncio.Task[None]:
+        async def cleanup() -> None:
+            try:
+                await self._request("unwatch", {"watchId": watch_id}, self.limits.cleanup_timeout)
+            except Exception:
+                pass  # Best effort: EOF also stops every watch on a dead/closing host.
+
+        task = asyncio.create_task(cleanup(), name="pi-durable-unwatch")
+        self._background.add(task)
+        task.add_done_callback(self._background.discard)
+        return task
+
+    def watch(self, conversation_id: ConversationId) -> WatchSubscription:
+        """Return a bounded context/iterator; first update is the current snapshot.
+
+        Overflow raises PiSubscriptionOverflow and unwatches. Re-enter a fresh
+        watch to resume; gap=True requires an explicit entries() recovery read.
+        """
+        return WatchSubscription(self, conversation_id)
 
     async def _request(
         self,
