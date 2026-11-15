@@ -1,15 +1,34 @@
 # Experimental Pi Durable backend design
 
-This is the **docs-only M0 proposal**, not an implemented or importable backend.
-It records the design decisions, shared core, host protocol v0, and Python API
-from sections 5, 6, 8, and 9 of [#116]. The milestone plan and acceptance criteria
-remain in that issue. Each milestone is a separate PR; start the next only after
-the previous PR is approved and merged. Nothing past M0 merges without owner
-approval of Q1 (scope, including M2's small core changes). Q2 separately gates
+**M1 implements the experimental Node host's core protocol** in `host/`.
+There is no importable Python Durable backend yet. This document also records
+planned shared-core, watch, and Python APIs from sections 5, 6, 8, and 9 of
+[#116]; those parts are not implemented by M1. The milestone plan and acceptance
+criteria remain in that issue. Each milestone is a separate PR; start the next
+only after the previous PR is approved and merged, unless explicitly requested
+as a stacked PR targeting the previous milestone's branch. Before a stack merges,
+restack onto `main` after its base merges and rerun checks. Nothing past M0 merges
+without owner approval of Q1 (scope, including M2's small core changes). Q2 separately gates
 the sync refactor: without approval, skip M4/M5 and ship async-only, including
 async-only watch in M6. Q3 (host distribution) and Q4 (Windows) can wait until
 M9/M8; their defaults are caller-supplied `host_command` and Linux/macOS only.
 This document grants none of those approvals. Publishing requires separate approval.
+
+For local host development (Node ≥ 22.19):
+
+```sh
+npm ci --prefix host --ignore-scripts --no-audit --no-fund
+npm run --prefix host typecheck
+PI_DURABLE_REQUIRE_INTEGRATION=1 uv run pytest tests/durable
+node host/src/host.ts
+```
+
+The host accepts JSONL on stdin and shuts down on EOF. M1 supports `hello`,
+`open`, `root`, `submit`, `wait`, `entries`, and `abort`, with memory or SQLite
+storage and pinned upstream 1.5.2. `watch`/`unwatch` and their events are M6 work;
+they currently return `unknown_command` after open. The host is not bundled in
+the Python wheel or sdist. The separate `durable` CI matrix covers Linux/macOS
+and Python 3.11/3.14 on Node 22, and is not a required merge gate.
 
 The proposed `pi_agent.durable` drives the real upstream
 [`@earendil-works/pi-durable` Harness][upstream], not a port. Python and the host
@@ -388,10 +407,14 @@ guaranteed before the configured progress window.
 
 Use isolated synthetic data. Host/integration tests require installed host
 modules and Node ≥ 22.19; `PI_DURABLE_REQUIRE_INTEGRATION=1` must fail rather than
-skip when prerequisites are absent. SIGKILL tests skip Windows. Unit tests use
-a fake host without Node. See [CONTRIBUTING.md](../CONTRIBUTING.md) for standard
-checks and [#116] for each milestone's additional validation. No host, durable
-client, integration job, or new compatibility pin is introduced by M0.
+skip when prerequisites are absent. Planned SIGKILL tests skip Windows. Future
+Python client unit tests use a fake host without Node. See [CONTRIBUTING.md](../CONTRIBUTING.md) for standard
+checks and [#116] for each milestone's additional validation. M1's direct-host
+suite covers command envelopes and failures, memory/SQLite flows, concurrent
+wait/control, EOF shutdown (including opening and a pending wait), and record
+limits. It does not establish crash recovery, watch behavior, a Python Durable
+client, host packaging, or live-provider compatibility. Those remain later
+milestones; no live providers are used by these tests.
 
 [#116]: https://github.com/cheenulabs/pi-agent-python-sdk/issues/116
 [upstream]: https://github.com/earendil-works/pi/tree/v1.5.2/packages/durable
