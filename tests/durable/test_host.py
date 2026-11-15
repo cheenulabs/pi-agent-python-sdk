@@ -451,23 +451,113 @@ async def test_too_large(durable_host_command: list[str], tmp_path: Path) -> Non
         assert all(len(line) <= 512 for line in host.lines)
 
 
+async def test_failed_open_preserves_limit(durable_host_command: list[str], tmp_path: Path) -> None:
+    async with running_host(durable_host_command, tmp_path) as host:
+        await host.error(
+            "open",
+            "upstream_error",
+            storage={"kind": "sqlite", "path": str(tmp_path)},
+            faux=[],
+            maxRecordBytes=1,
+        )
+        await host.ok("hello")
+        await host.error("root", "not_open")
+        assert await host.ok("open", storage={"kind": "memory"}, faux=[]) == {}
+        await host.ok("hello")
+
+
+async def test_oversized_diagnostic_is_dropped(
+    durable_host_command: list[str], tmp_path: Path
+) -> None:
+    async with running_host(durable_host_command, tmp_path) as host:
+        opening = {
+            "type": "open",
+            "id": "",
+            "storage": {"kind": "memory"},
+            "faux": [],
+            "maxRecordBytes": 78,
+        }
+        await host.send(opening)
+        assert (await host.response(opening))["success"]
+        # The parse_error event is 79 bytes: it must be dropped, not fatal.
+        await host.raw(b"{\n")
+        assert await host.eof() == (0, [])
+        assert all(len(line) <= 78 for line in host.lines)
+
+
+def fault_command(command: list[str], tmp_path: Path, script: str) -> list[str]:
+    """Inject upstream faults in a Node preload, never in production host code."""
+    upstream = Path(command[1]).parents[1] / "node_modules/@earendil-works/pi-durable/dist/index.js"
+    preload = tmp_path / "upstream-fault.mjs"
+    preload.write_text(
+        f"import {{Harness, MemoryStorage}} from {json.dumps(upstream.as_uri())};\n" + script,
+        encoding="utf-8",
+    )
+    return [command[0], "--unhandled-rejections=warn", "--import", str(preload), command[1]]
+
+
+async def test_open_cleanup_preserves_original_error(
+    durable_host_command: list[str], tmp_path: Path
+) -> None:
+    command = fault_command(
+        durable_host_command,
+        tmp_path,
+        """
+Harness.open = async () => { throw new Error('synthetic open failure'); };
+MemoryStorage.prototype.close = async () => { throw new Error('synthetic cleanup failure'); };
+""",
+    )
+    async with running_host(command, tmp_path) as host:
+        result = await host.error("open", "upstream_error", storage={"kind": "memory"}, faux=[])
+        assert result["error"] == "synthetic open failure"
+        await host.ok("hello")
+        await host.error("root", "not_open")
+        assert await host.eof() == (0, [])
+
+
+async def test_reply_serialization_failure_exits_deliberately(
+    durable_host_command: list[str], tmp_path: Path
+) -> None:
+    command = fault_command(
+        durable_host_command,
+        tmp_path,
+        """
+const open = Harness.open;
+Harness.open = async (...args) => {
+  const harness = await open(...args);
+  harness.root = async () => ({id: 1n}); // Non-JSON upstream result.
+  return harness;
+};
+""",
+    )
+    async with running_host(command, tmp_path) as host:
+        await host.ok("open", storage={"kind": "memory"}, faux=[])
+        await host.send({"id": "root", "type": "root"})
+        # With Node's warn policy, an unhandled rejection alone cannot exit.
+        # Keep stdin open to prove the reply path explicitly terminates.
+        assert host.process.stdout is not None
+        async with asyncio.timeout(30):
+            assert await host.process.stdout.read() == b""
+            assert await host.process.wait() != 0
+
+
 @pytest.mark.parametrize("limit,long_id", [(1, False), (100, False), (256, True)])
 async def test_unwritable_replacement(
     durable_host_command: list[str], tmp_path: Path, limit: int, long_id: bool
 ) -> None:
     async with running_host(durable_host_command, tmp_path) as host:
-        await host.send(
-            {
-                "id": "x" * 1000 if long_id else "x",
-                "type": "open",
-                "storage": {"kind": "memory"},
-                "faux": [],
-                "maxRecordBytes": limit,
-            }
-        )
-        # A hello ensures a 100-byte limit also reaches an oversized record;
-        # the open success itself may fit. Do not assume which record fails.
-        await host.send({"id": "hello", "type": "hello"})
+        opening = {
+            "id": "x" * 1000 if long_id else "x",
+            "type": "open",
+            "storage": {"kind": "memory"},
+            "faux": [],
+            "maxRecordBytes": limit,
+        }
+        await host.send(opening)
+        if limit == 100:
+            # This open reply fits; wait for the new limit before sending hello.
+            assert (await host.response(opening))["success"]
+            await host.send({"id": "hello", "type": "hello"})
         assert host.process.stdout is not None
         async with asyncio.timeout(30):
             output = await host.process.stdout.read()
