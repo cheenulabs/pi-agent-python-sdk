@@ -14,8 +14,10 @@ This document grants none of those approvals. Publishing requires separate appro
 The proposed `pi_agent.durable` drives the real upstream
 [`@earendil-works/pi-durable` Harness][upstream], not a port. Python and the host
 must not implement agent, storage, or recovery logic. Existing `PiClient` and
-`AsyncPiClient` behavior stays unchanged. The only public API addition outside
-`pi_agent.durable` is the optional `PiCommandError.code` attribute in M2.
+`AsyncPiClient` behavior stays unchanged. The only public API additions outside
+`pi_agent.durable` are the optional `PiCommandError.code` attribute and the
+`pi_agent.coding` module, which re-exports the existing clients (both M2).
+No existing module or class is moved or renamed.
 
 Pin `@earendil-works/pi-durable`, `@earendil-works/pi-ai`, and
 `@earendil-works/chord` to published **1.5.2**, matching upstream commit
@@ -63,7 +65,12 @@ upstream fidelity rather than reimplementing the engine.
    `dist/**/*.d.ts`, not upstream main.
 9. **IDs are opaque.** Python types `ConversationId = int` and
    `SubmissionId = int` and never constructs them.
-10. **Diagnostics follow the repository.** Never embed host stderr in
+10. **Two backend namespaces.** `pi_agent.coding` (the coding agent) and
+    `pi_agent.durable` are the two backends of one SDK. `pi_agent.coding` only
+    re-exports `PiClient` and `AsyncPiClient`: there is one class per name and
+    no second implementation. The top-level `pi_agent` exports stay, so existing
+    code keeps working. `pi_agent/__init__.py` does not import `pi_agent.durable`.
+11. **Diagnostics follow the repository.** Never embed host stderr in
     exceptions. Retention is opt-in via `Limits.stderr_tail_bytes`, read via
     `stderr_tail`.
 
@@ -89,8 +96,9 @@ Durable uses `startup_timeout`, `command_timeout`, `cleanup_timeout`,
 `result_message_*`, or `collection_event_*`.
 
 New components are `host/` (Node), `src/pi_agent/durable/` (clients and types),
-`tests/durable/`, and the `durable` CI job. Deliberately do not share `_runs.py`,
-`RunResult`, `check_version`, `validate_extra_args`, or `Transport.send_ui`:
+`tests/durable/`, and the `durable` CI job. New for the coding agent is only
+`src/pi_agent/coding.py`, a re-export module (M2). Deliberately do not share
+`_runs.py`, `RunResult`, `check_version`, `validate_extra_args`, or `Transport.send_ui`:
 these are tied to coding-agent concepts (`agent_settled`, run ownership,
 `SessionInfo`, Pi CLI flags).
 
