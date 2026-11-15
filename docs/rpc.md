@@ -4,7 +4,7 @@
 Pi owns the agent loop, provider calls, tools, extensions, and session storage.
 Python owns the child process and exposes command methods, event subscriptions,
 and completed run results. This document describes those coding-agent clients.
-M2 will also make them importable from `pi_agent.coding` as re-exports of the
+They are also importable from `pi_agent.coding` as re-exports of the
 same classes; existing top-level `pi_agent` imports remain supported and are
 not deprecated.
 

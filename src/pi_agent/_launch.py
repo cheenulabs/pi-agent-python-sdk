@@ -82,6 +82,17 @@ _FLAGS = {
 }
 
 
+def child_env(inherit_env: bool, overrides: Mapping[str, str | None]) -> dict[str, str]:
+    """Copy the inherited environment, then apply overrides and explicit removals."""
+    environment = dict(os.environ) if inherit_env else {}
+    for name, value in overrides.items():
+        if value is None:
+            environment.pop(name, None)
+        else:
+            environment[name] = value
+    return environment
+
+
 def validate_extra_args(args: Sequence[str]) -> None:
     """Reject positional input and conflicting flags, retaining extension flags."""
     index = 0

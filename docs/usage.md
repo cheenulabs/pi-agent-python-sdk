@@ -5,6 +5,15 @@ launch their own Pi RPC subprocess and preserve Pi's normal defaults. There is
 no runtime installation, authentication flow, or network version lookup in this
 library.
 
+The coding-agent namespace is `pi_agent.coding`:
+
+```python
+from pi_agent.coding import AsyncPiClient, PiClient
+```
+
+These re-export the existing classes. `from pi_agent import PiClient,
+AsyncPiClient` remains supported, unchanged, and is not deprecated.
+
 ## Choose sync or async
 
 Use `PiClient` in a script or synchronous application. It keeps one background
