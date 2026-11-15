@@ -1,9 +1,15 @@
 # RPC structure
 
-This SDK is a Python client for Pi's existing RPC protocol. Pi owns the agent
-loop, provider calls, tools, extensions, and session storage. Python owns the
-child process and exposes command methods, event subscriptions, and completed
-run results.
+`PiClient` and `AsyncPiClient` are Python clients for Pi's existing RPC protocol.
+Pi owns the agent loop, provider calls, tools, extensions, and session storage.
+Python owns the child process and exposes command methods, event subscriptions,
+and completed run results. This document describes those coding-agent clients.
+
+The proposed experimental [`pi_agent.durable` backend](durable.md) instead drives
+the real upstream Harness through a thin Node host, reusing core private modules.
+The host uses the SDK transport envelope (JSONL requests, correlated responses,
+and events), but is not a Pi RPC server and implements none of Pi's RPC commands.
+M0 documents this design only; no Durable backend is implemented yet.
 
 ## Relationship to Pi
 
@@ -161,9 +167,13 @@ existing transport and run modules keep framing, cleanup, and settlement logic
 in one place, while the sync client reuses the async implementation. Additional
 transport interfaces should follow concrete requirements for another transport.
 
-The core stays focused on RPC. Extension installation, application workflows,
-and application-specific observability belong to callers. Changes to supported
-commands or payloads need matching types, fixtures, documentation, and coverage;
+The coding-agent clients stay focused on RPC. The proposed Durable backend may
+reuse the private transport, limits, subscriptions, errors, and approved sync
+bridge, with dependencies flowing from durable to core only. It does not reuse
+coding-agent run ownership or settlement semantics. Extension installation,
+application workflows, and application-specific observability belong to callers.
+Changes to supported commands or payloads need matching types, fixtures,
+documentation, and coverage;
 see [maintenance](maintenance.md).
 
 [upstream-rpc]: https://github.com/earendil-works/pi/blob/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/coding-agent/docs/rpc.md

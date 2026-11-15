@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "pi-agent-python-sdk"
 version = "0.2.7"
-description = "Typed async and synchronous Python clients for Pi's agent RPC runtime"
+description = "Typed Python clients for Pi RPC, with an experimental Durable backend planned"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

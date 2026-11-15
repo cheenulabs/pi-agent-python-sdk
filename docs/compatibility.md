@@ -5,6 +5,22 @@ distinguish the recorded protocol baseline from platform test targets.
 
 Check the proposed commit's CI results before relying on platform support.
 
+The requirements, startup policy, and RPC parity inventory below apply to
+`PiClient` and `AsyncPiClient`. The proposed experimental
+[`pi_agent.durable` backend](durable.md) drives the real upstream Harness through
+a thin Node host. It uses the SDK transport envelope but is not a Pi RPC server;
+the RPC parity inventory does not apply to that host. M0 is design documentation
+only, not a shipped backend or a Durable compatibility claim.
+
+The Durable design targets published pi-durable **1.5.2** with exact upstream
+pins and Node **22.19 or newer**, needed only by that backend. Python runtime
+dependencies remain zero. Host and integration coverage will use a separate,
+initially non-required `durable` CI job; fake-host Python unit tests will run in
+the required test matrix. Durable host distribution and Windows support remain
+owner decisions (Q3/Q4 in #116); defaults are caller-supplied `host_command` and
+Linux/macOS only, with Windows unsupported for Durable v0. These do not change
+the coding-agent platform policy below.
+
 ## Runtime requirements
 
 | Component | Policy |

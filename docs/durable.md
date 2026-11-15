@@ -1,0 +1,372 @@
+# Experimental Pi Durable backend design
+
+This is the **docs-only M0 proposal**, not an implemented or importable backend.
+It records the design decisions, shared core, host protocol v0, and Python API
+from sections 5, 6, 8, and 9 of [#116]. The milestone plan and acceptance criteria
+remain in that issue. Each milestone is a separate PR; start the next only after
+the previous PR is approved and merged. Nothing past M0 merges without owner
+approval of Q1 (scope, including M2's small core changes). Q2 separately gates
+the sync refactor: without approval, skip M4/M5 and ship async-only, including
+async-only watch in M6. Q3 (host distribution) and Q4 (Windows) can wait until
+M9/M8; their defaults are caller-supplied `host_command` and Linux/macOS only.
+This document grants none of those approvals. Publishing requires separate approval.
+
+The proposed `pi_agent.durable` drives the real upstream
+[`@earendil-works/pi-durable` Harness][upstream], not a port. Python and the host
+must not implement agent, storage, or recovery logic. Existing `PiClient` and
+`AsyncPiClient` behavior stays unchanged. The only public API addition outside
+`pi_agent.durable` is the optional `PiCommandError.code` attribute in M2.
+
+Pin `@earendil-works/pi-durable`, `@earendil-works/pi-ai`, and
+`@earendil-works/chord` to published **1.5.2**, matching upstream commit
+`b4afdddf44e059c67ccf5097e5317d913521b470`. Do not use unreleased main APIs.
+Signals, TS extension loading, Python-defined tools, custom tasks, code mode,
+compaction controls, forks, multi-client attach, remote transports, and a
+`run()` convenience call are out of scope. This differs from Python ports such
+as [pi-durable-python](https://github.com/arpesenti/pi-durable-python) and
+[pi-py](https://github.com/nivalume/pi-py): it trades a Node prerequisite for
+upstream fidelity rather than reimplementing the engine.
+
+## Design decisions
+
+1. **Thin-host rule.** `host/` translates protocol commands to upstream calls.
+   It may keep **protocol bookkeeping only**: a lifecycle state (not open /
+   opening / open / closing), the open harness, the configured record-size
+   limit, watch handles by watch ID, and the last entry ID sent per watch.
+   It has no retries, caching, agent logic, or durable state of its own. Any
+   other state needs a written exception in this document.
+2. **Share the core, add only what is new.** Use the existing `Transport`,
+   `Limits`, `_Subscription`, error classes, and approved sync bridge described
+   below. Add no second transport, new error classes, or separate timeout arguments.
+3. **SDK transport envelope, not a Pi RPC server.** The host uses the framing
+   `Transport` already implements for Pi RPC. It implements none of Pi's
+   commands; the RPC parity inventory in [compatibility](compatibility.md) does
+   not apply to it. An envelope change must update the host in the same PR;
+   bump the host `protocol` on any breaking change.
+4. **Experimental and isolated, one way.** Durable code lives in
+   `src/pi_agent/durable/` and is not imported by `pi_agent/__init__.py`.
+   Durable depends on the core; the core never imports durable. Host and
+   integration tests run in a separate `durable` CI job that stays out of
+   `required.needs` until the owner promotes it. Pure-Python durable unit tests
+   (fake host) run in the existing required `test` matrix. M2/M4 core changes
+   ship in coding-agent releases, so use separate PRs that pass every existing
+   test unmodified.
+5. **Runtime dependencies stay zero.** Keep `pyproject.toml`'s
+   `dependencies = []`. Node ≥ 22.19 is required only for `pi_agent.durable`.
+6. **Single writer.** One host owns one storage path; upstream has no
+   cross-process locking. Concurrent clients on one storage are out of scope.
+7. **Idempotency is the caller's key.** `submit` requires a non-empty string
+   `request_id`, scoped to the conversation. Resubmitting the same key after
+   any crash returns the same submission.
+8. **Pinned upstream.** Use the exact published pins above and commit
+   `host/package-lock.json`. Check API names against the installed package's
+   `dist/**/*.d.ts`, not upstream main.
+9. **IDs are opaque.** Python types `ConversationId = int` and
+   `SubmissionId = int` and never constructs them.
+10. **Diagnostics follow the repository.** Never embed host stderr in
+    exceptions. Retention is opt-in via `Limits.stderr_tail_bytes`, read via
+    `stderr_tail`.
+
+## Shared core and new components
+
+| Concern | Durable uses | Core change needed |
+| --- | --- | --- |
+| Process spawn, pipes, JSONL framing, write lock, exit monitoring, shutdown (stdin EOF → terminate → kill), late replies | `_transport.Transport`, unchanged | None |
+| Error-code passthrough | `PiCommandError.code` | M2: optional `code`, read from an error response's `code` field when it is a string |
+| Limits and deadlines | `types.Limits` | None |
+| Child environment (`inherit_env` + overrides) | `_launch.child_env()` | M2: extract the inline merge in `AsyncPiClient.start` into this helper |
+| Argv resolution | `_launch.executable_argv()` | None; Durable rewords the not-found error (it says “install Pi”) |
+| Errors | `PiCommandError`, `PiProcessError`, `PiProtocolError`, `PiTimeoutError`, `PiVersionError`, `PiSubscriptionOverflow` | None; no new error classes; messages saying “Pi …” are accepted as is |
+| Timeout argument convention | `client.Timeout` / `client.DEFAULT_TIMEOUT` | None |
+| Bounded streaming with explicit overflow | `_events._Subscription[T]`, subclassed for watch | None |
+| Sync facade (loop thread, call bridging, interrupt handling, blocking subscriptions) | `_sync_bridge._SyncBridge`, `_SyncSubscription` | M4, only if Q2 is approved: extract from `sync.py` as a base class; `PiClient` inherits it with identical behavior |
+| Test pattern | A fake host executable, like `tests/fake_pi.py` | None |
+| Compatibility record and docs | `compatibility.json` (`durable` section), `docs/` | M8, M0 |
+
+Durable uses `startup_timeout`, `command_timeout`, `cleanup_timeout`,
+`max_record_bytes`, `event_queue_size`, `event_queue_bytes`, and
+`stderr_tail_bytes` from `Limits`. It does not use `run_start_timeout`,
+`result_message_*`, or `collection_event_*`.
+
+New components are `host/` (Node), `src/pi_agent/durable/` (clients and types),
+`tests/durable/`, and the `durable` CI job. Deliberately do not share `_runs.py`,
+`RunResult`, `check_version`, `validate_extra_args`, or `Transport.send_ui`:
+these are tied to coding-agent concepts (`agent_settled`, run ownership,
+`SessionInfo`, Pi CLI flags).
+
+## Host protocol v0
+
+The host reads requests on stdin and writes responses and events on stdout,
+one UTF-8 JSON object per line. **stdout carries only protocol lines.**
+Diagnostics go to stderr.
+
+### Envelope
+
+- Request: `{"type": "<command>", "id": "<string>", ...fields}`. Fields are
+  top-level; `id` and `type` are reserved.
+- Success: `{"type": "response", "id": "<same>", "command": "<same type>", "success": true, "data": {...}}`.
+  `data` is always an object (`{}` when there is nothing to return).
+- Failure: `{"type": "response", "id": "<same>", "command": "<same type>", "success": false, "error": "<message>", "code": "<code>"}`.
+  `error` is a string.
+- Event: `{"type": "durable_<name>", ...}`. Any record whose `type` is not
+  `"response"` is an event.
+
+`Transport` validates only the envelope. A malformed envelope is fatal:
+`PiProtocolError`, connection closed. It silently drops a response whose `id`
+it is not waiting for. It does not validate `data` or event payloads; the
+Durable client validates these and raises `PiProtocolError` on a wrong shape.
+The host must:
+
+- echo the string `id` and `command` exactly, never responding without an `id`;
+- respond only to a request it received;
+- never write a record larger than `maxRecordBytes` (see below);
+- answer invalid input with an **event**, not a response: an unparseable line
+  produces `{"type": "durable_protocol_error", "code": "parse_error", "message": "..."}`;
+  a record lacking a string `id` or string `type` produces the same event with
+  `code: "bad_request"`.
+
+### Lifecycle
+
+- **Readiness:** read immediately. The client's first request is `hello`;
+  there is no startup event.
+- **Before `open` completes:** every command except `hello` and `open` returns
+  `not_open`. The client awaits `open` during `start()`, so SDK users never
+  see this. A second `open`, while opening or open, returns `already_open`.
+  A failed `open` leaves the host not open.
+- **Open:** call `Harness.open(...)`, then `harness.resume()` so work a previous
+  process left unfinished continues.
+- **After open:** requests run concurrently. `wait` may remain pending
+  indefinitely without blocking other requests.
+- **Shutdown is stdin EOF:** no `close` command. Stop all watches, close the
+  harness, and exit 0. Ignore `EPIPE` on stdout and stderr because the parent
+  may be gone. Do not answer pending requests. Unfinished durable work stays
+  in storage for the next `open`.
+
+### Commands
+
+| Command | Fields | `data` on success | Error codes |
+| --- | --- | --- | --- |
+| `hello` | — | `{protocol: 0, piDurable: "<version>", pid: <int>}` | — |
+| `open` | `storage: {kind: "sqlite", path: string} \| {kind: "memory"}`, `codingTools?: bool = true`, `settings?: {retry?, progress?}`, `maxRecordBytes?: int`, `faux?: FauxStep[]`, `fauxTokensPerSecond?: number` | `{}` | `already_open`, `bad_params`, upstream |
+| `root` | `agent?: {model?: {provider: string, modelId: string}, cwd?: string, thinkingLevel?: string}` | `{conversationId}` | `not_open`, `bad_params` |
+| `submit` | `conversationId`, `content: string`, `requestId: string`, `whenBusy?: "followUp" \| "steer" \| "reject"` | `{submissionId}` | `not_open`, `not_found`, `bad_params`, `ConversationBusy` |
+| `wait` | `submissionId` | `{submission}`: upstream settled-submission record, unchanged | `not_open`, `not_found`, `bad_params` |
+| `entries` | `conversationId`, `limit?: int = 50` | `{entries}`: newest `limit` entries, oldest → newest | `not_open`, `not_found`, `bad_params`, `too_large` |
+| `watch` | `conversationId`, `watchId: string` (client-chosen) | `{}` | `not_open`, `not_found`, `bad_params` (duplicate `watchId`) |
+| `unwatch` | `watchId: string` | `{}` (unknown ID is a no-op) | `not_open`, `bad_params` |
+| `abort` | `conversationId` | `{}`, after the conversation is idle | `not_open`, `not_found`, `bad_params` |
+
+Any command may also return `too_large` or an upstream code as described below.
+`root` agent options apply only on first creation: an existing root ignores them,
+matching upstream. An omitted model invents no default; a run without a model
+ends unanswered. `settings.retry` and `settings.progress` pass through unchanged
+as upstream `HarnessSettings.retry` and `.progress`.
+
+`maxRecordBytes` defaults to 16777216 (16 MiB). `faux` and
+`fauxTokensPerSecond` are for tests and examples. With `faux`, models come only
+from the faux provider (`provider: "faux"`, `modelId: "faux-1"`); otherwise
+use pi-ai `builtinModels()`, which reads the usual provider environment
+variables. A `FauxStep` is a string (text answer) or `{tool: string, args: object}`
+(tool call).
+
+### Error codes and size limit
+
+Host codes are `bad_params` (missing required field or wrong type),
+`unknown_command`, `not_open`, `already_open`, `not_found`, and `too_large`.
+For upstream errors, `code` is the error's `name` when specific (for example,
+`ConversationBusy`), or `upstream_error` for plain `Error`. `error` is the
+upstream message.
+
+`maxRecordBytes` comes from `Limits.max_record_bytes`. Before writing any
+record, check the UTF-8 byte length of the line **excluding the newline**, as
+`Transport` measures it:
+
+- Replace an oversized response with a `too_large` error response.
+- Replace an oversized watch event with the same event carrying `entries: []`,
+  `live: null`, and `gap: true`. Still advance that watch's last-sent entry ID
+  to the newest ID in the window, so later events do not repeat skipped entries.
+- If the replacement itself cannot fit (tiny limit or very long `id`), write
+  nothing more, close stdout, and exit non-zero. The client sees a transport failure.
+
+### Events and watch semantics
+
+| Event `type` | Fields |
+| --- | --- |
+| `durable_watch` | `watchId`, `entries`, `live`, `gap: bool`, `snapshot: bool` |
+| `durable_watch_end` | `watchId`, `kind` (upstream `WatchEnd.kind`) |
+| `durable_report` | `report`: upstream `Report`, with `error` serialized as `{name, message}` |
+| `durable_protocol_error` | `code`, `message` (see envelope) |
+
+Upstream watch values are a bounded, coalesced window (newest 50, trimmed past
+100), not a log. After answering `watch`, send one `durable_watch` with
+`snapshot: true` holding the current window. Later events have
+`snapshot: false`. All updates travel as events, so their order never depends
+on when the caller sees the response.
+
+Each later event's `entries` contains only IDs greater than the last one sent
+on that watch, oldest → newest. Implement this diff as the pure function
+`nextWatchUpdate(lastSentId, entries) → {entries, gap}` in
+`host/src/watch-window.ts`; importing it must not start the host.
+`gap: true` means the window no longer contains the last sent entry, so entries
+may have been skipped. Recover with `entries`. `live` is upstream
+`docs["pi.live"]`, unchanged.
+
+## Python API (proposed)
+
+These signatures describe M3 (async client), M5 (conditional sync client), and
+M6 (watch). They are not runnable examples for M0.
+
+### Async client
+
+```python
+class AsyncDurableClient:
+    def __init__(
+        self,
+        storage_path: str | os.PathLike[str] | None,  # None = in-memory
+        *,
+        host_command: Sequence[str] | None = None,  # ["node", "/path/host/src/host.ts"]
+        cwd: str | os.PathLike[str] | None = None,  # host cwd and default agent cwd
+        env: Mapping[str, str | None] | None = None,  # None removes a variable
+        inherit_env: bool = True,
+        limits: Limits | None = None,
+        coding_tools: bool = True,
+        settings: Mapping[str, Any] | None = None,  # sent as open.settings
+        faux: Sequence[str | Mapping[str, Any]] | None = None,
+        faux_tokens_per_second: float | None = None,
+    ) -> None: ...  # no side effects
+
+    async def start(self) -> None: ...
+    async def aclose(self) -> None: ...  # repeatable, safe after host exit
+    async def __aenter__(self) -> Self: ...  # start()
+    async def __aexit__(self, *exc: object) -> None: ...  # aclose()
+
+    async def root(self, *, model: Mapping[str, str] | None = None,
+                   cwd: str | None = None, thinking_level: str | None = None,
+                   timeout: Timeout = DEFAULT_TIMEOUT) -> ConversationId: ...
+    async def submit(self, conversation_id: ConversationId, content: str, *,
+                     request_id: str,
+                     when_busy: Literal["followUp", "steer", "reject"] | None = None,
+                     timeout: Timeout = DEFAULT_TIMEOUT) -> SubmissionId: ...
+    async def wait(self, submission_id: SubmissionId, *,
+                   timeout: float | None = None) -> SettledSubmission: ...
+    async def entries(self, conversation_id: ConversationId, *, limit: int = 50,
+                      timeout: Timeout = DEFAULT_TIMEOUT) -> list[dict[str, Any]]: ...
+    async def abort(self, conversation_id: ConversationId, *,
+                    timeout: Timeout = DEFAULT_TIMEOUT) -> None: ...
+    def watch(self, conversation_id: ConversationId) -> WatchSubscription: ...  # M6
+
+    @property
+    def limits(self) -> Limits: ...
+    @property
+    def running(self) -> bool: ...
+    @property
+    def host_pid(self) -> int | None: ...  # from hello
+    @property
+    def pi_durable_version(self) -> str | None: ...  # from hello
+    @property
+    def stderr_tail(self) -> str: ...  # needs Limits.stderr_tail_bytes > 0
+```
+
+**Startup** runs within `limits.startup_timeout`:
+
+1. Build the child env with `_launch.child_env(inherit_env, env)`.
+2. Resolve argv with `_launch.executable_argv(host_command, child_env)`.
+   Before M9, `host_command=None`, or a program not found, raises
+   `PiProcessError` naming Node ≥ 22.19 and `host_command`.
+3. Create `Transport(limits=..., on_event=..., on_failure=...)` and await
+   `transport.start(argv, cwd=cwd, env=child_env)`.
+4. Request `hello`; a `protocol != 0` raises `PiVersionError`. Store `pid` and
+   `piDurable`.
+5. Request `open` with storage, options, and
+   `maxRecordBytes=limits.max_record_bytes`.
+
+On any failure, close the transport and re-raise. Startup timeout raises
+`PiTimeoutError(..., uncertain=False)`, like `AsyncPiClient.start`.
+
+**Timeouts:** `DEFAULT_TIMEOUT` resolves to `limits.command_timeout`.
+A `Transport` response timeout raises `PiTimeoutError(uncertain=True)`, correct
+for `root`, `submit`, and `abort`. After uncertain `submit`, retrying the same
+`request_id` is safe. `wait` and `entries` submit no work, so re-raise their
+timeouts with `uncertain=False`. `wait` has no default response deadline.
+
+**Cancellation:** a response timeout or cancellation after writing abandons
+only the local wait. The host keeps working; `Transport` drops the late reply.
+Cancellation or timeout during the write itself closes the transport (existing
+behavior), shutting down the host. Unfinished work stays in storage and resumes
+on next open.
+
+**Errors:** failed commands raise `PiCommandError` with `.code` (for example,
+`"not_found"` or `"ConversationBusy"`). Host exit raises `PiProcessError`;
+malformed records raise `PiProtocolError`.
+
+**Events:** log `durable_report` and `durable_protocol_error` at debug level on
+`pi_agent.durable`, otherwise ignore them in v0. Log only event type and its
+`code` or `kind`, never payloads: conversations and credentials must not enter
+diagnostics. Ignore unknown event types and `durable_watch` for unknown
+`watchId` values.
+
+**Clients are single-use**, like `AsyncPiClient`; create a new client to reopen.
+
+Types in `src/pi_agent/durable/types.py`:
+
+- `ConversationId = int`, `SubmissionId = int`.
+- `SettledSubmission`: `status: Literal["done", "unanswered"]`,
+  `reason: str | None`, `raw: dict[str, Any]` (the upstream record).
+- `WatchUpdate`: `entries: list[dict[str, Any]]`,
+  `live: dict[str, Any] | None`, `gap: bool`, `snapshot: bool`,
+  `raw: dict[str, Any]`.
+- `TypedDict`s for every command's fields and `data`, and for every event.
+  Keep unknown upstream fields in `raw`.
+
+### Watch
+
+`WatchSubscription` subclasses `_events._Subscription[WatchUpdate]`. Use
+`async with client.watch(cid) as updates: async for update in updates: ...`.
+
+- **Enter:** choose a fresh `watchId`, register under it, then request `watch`.
+  On failure, timeout, or cancellation, unregister, send best-effort `unwatch`
+  from a tracked background task (an await inside a cancelled task would
+  re-raise), then raise. The first item is the snapshot: `snapshot=True`,
+  `gap=False` unless it exceeded the size limit.
+- **Routing:** `on_event` routes `durable_watch` by `watchId` using
+  `_put(update, size)`, where `size` is the encoded record length computed as
+  in `AsyncPiClient._on_event`.
+- **End:** `durable_watch_end` finishes the subscription (iteration stops).
+  Transport failure finishes every subscription with that error.
+- **Overflow:** a slow consumer gets `PiSubscriptionOverflow`, bounded by
+  `limits.event_queue_size` and `event_queue_bytes`. `_put` is synchronous,
+  so send `unwatch` from the same kind of tracked background task. `aclose()`
+  awaits these tasks. Call `watch()` again for a fresh snapshot.
+- **Exit:** override subscription `aclose()` to unregister, then send
+  best-effort `unwatch`; swallow errors from a dead host.
+
+### Sync client (conditional on Q2)
+
+`DurableClient(_SyncBridge)` has the same constructor, methods, and properties
+as the async client, with `start()` / `close()` and `with` support. Every call
+delegates to a private `AsyncDurableClient` on the bridge's loop thread.
+`watch()` returns `_SyncSubscription[WatchUpdate]`, a blocking context manager
+and iterator. Inherit the bridge's rules: calls from client callbacks are
+rejected, and `KeyboardInterrupt` cancels a call but never interrupts shutdown.
+If Q2 is not approved, there is no sync client in v0.
+
+## Recovery and verification boundaries
+
+Recovery belongs entirely to upstream. `open` resumes unfinished work; a new
+client reuses the same SQLite path and conversation-scoped `request_id` to
+recover the original submission after a host or Python crash. This is not
+permission to retry with a new key or attach multiple writers. The issue's
+M7 tests must prove SIGKILL recovery and no double submission using faux data;
+the upstream spike is not SDK test coverage. Partial assistant output may
+produce an aborted entry before the final answer; its persistence is not
+guaranteed before the configured progress window.
+
+Use isolated synthetic data. Host/integration tests require installed host
+modules and Node ≥ 22.19; `PI_DURABLE_REQUIRE_INTEGRATION=1` must fail rather than
+skip when prerequisites are absent. SIGKILL tests skip Windows. Unit tests use
+a fake host without Node. See [CONTRIBUTING.md](../CONTRIBUTING.md) for standard
+checks and [#116] for each milestone's additional validation. No host, durable
+client, integration job, or new compatibility pin is introduced by M0.
+
+[#116]: https://github.com/cheenulabs/pi-agent-python-sdk/issues/116
+[upstream]: https://github.com/earendil-works/pi/tree/v1.5.2/packages/durable
