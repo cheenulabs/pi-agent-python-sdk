@@ -65,7 +65,8 @@ function write(record: ObjectRecord): void {
   if (state === "closing") return;
   let line = JSON.stringify(record);
   if (Buffer.byteLength(line, "utf8") > maxRecordBytes) {
-    if (record.type !== "response") return exit(1);
+    // M1's non-response events are diagnostics, not required replies.
+    if (record.type !== "response") return;
     line = JSON.stringify({
       type: "response",
       id: record.id,
@@ -183,7 +184,6 @@ async function open(request: Request): Promise<ObjectRecord> {
   }
   const registry = createRegistry();
   if (request.codingTools !== false) registry.install(CodingTools);
-  maxRecordBytes = limit;
   state = "opening";
   let storage: Storage | undefined;
   let opened: Harness | undefined;
@@ -224,6 +224,7 @@ async function open(request: Request): Promise<ObjectRecord> {
       return {};
     }
     opened.resume();
+    maxRecordBytes = limit;
     harness = opened;
     state = "open";
     return {};
@@ -231,6 +232,8 @@ async function open(request: Request): Promise<ObjectRecord> {
     try {
       if (opened) await opened.close(ctx);
       else if (storage) await storage.close(ctx);
+    } catch {
+      // Preserve the original open error even if best-effort cleanup fails.
     } finally {
       if (isClosing()) exit(0);
       else state = "not_open";
@@ -360,27 +363,31 @@ input.on("line", (line) => {
   }
   const request = value as Request;
   // Deliberately do not await: a long wait must not block control requests.
-  void command(request).then(
-    (data) =>
-      write({
-        type: "response",
-        id: request.id,
-        command: request.type,
-        success: true,
-        data,
-      }),
-    (error: unknown) => {
-      const failureError =
-        error instanceof Error ? error : new Error(String(error));
-      write(
-        failure(
-          request,
-          failureError.name === "Error" ? "upstream_error" : failureError.name,
-          failureError.message,
-        ),
-      );
-    },
-  );
+  void command(request)
+    .then(
+      (data) =>
+        write({
+          type: "response",
+          id: request.id,
+          command: request.type,
+          success: true,
+          data,
+        }),
+      (error: unknown) => {
+        const failureError =
+          error instanceof Error ? error : new Error(String(error));
+        write(
+          failure(
+            request,
+            failureError.name === "Error"
+              ? "upstream_error"
+              : failureError.name,
+            failureError.message,
+          ),
+        );
+      },
+    )
+    .catch(() => exit(1)); // Serialization/write failures must terminate deliberately.
 });
 input.on("close", () => {
   const wasOpening = state === "opening";

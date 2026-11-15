@@ -212,8 +212,13 @@ record, check the UTF-8 byte length of the line **excluding the newline**, as
 - Replace an oversized watch event with the same event carrying `entries: []`,
   `live: null`, and `gap: true`. Still advance that watch's last-sent entry ID
   to the newest ID in the window, so later events do not repeat skipped entries.
-- If the replacement itself cannot fit (tiny limit or very long `id`), write
-  nothing more, close stdout, and exit non-zero. The client sees a transport failure.
+- Drop oversized `durable_report` and `durable_protocol_error` events: they carry
+  diagnostics only and must not stop the host.
+- If a response's or watch event's replacement itself cannot fit (tiny limit or
+  very long `id`), write nothing more, close stdout, and exit non-zero. The client
+  sees a transport failure.
+- Apply `open`'s limit only when that open succeeds; a failed open preserves the
+  previous limit.
 
 ### Events and watch semantics
 
