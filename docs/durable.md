@@ -2,9 +2,10 @@
 
 **M1 implements the experimental Node host's core protocol** in `host/`.
 **M2 adds the coding namespace, error codes, and shared child environment helper.**
-There is no importable Python Durable backend yet. This document also records
-planned shared-core, watch, and Python APIs from sections 5, 6, 8, and 9 of
-[#116]; those parts are not implemented by M1. The milestone plan and acceptance
+**M3 adds `pi_agent.durable.AsyncDurableClient`** with async lifecycle, root,
+submit, wait, entries, and abort, built on the shared transport and limits.
+Watch and the synchronous client remain planned APIs from sections 5, 6, 8,
+and 9 of [#116]. The milestone plan and acceptance
 criteria remain in that issue. Each milestone is a separate PR; start the next
 only after the previous PR is approved and merged, unless explicitly requested
 as a stacked PR targeting the previous milestone's branch. Before a stack merges,
@@ -33,7 +34,7 @@ they currently return `unknown_command` after open. The host is not bundled in
 the Python wheel or sdist. The separate `durable` CI matrix covers Linux/macOS
 and Python 3.11/3.14 on Node 22, and is not a required merge gate.
 
-The proposed `pi_agent.durable` drives the real upstream
+The experimental `pi_agent.durable` drives the real upstream
 [`@earendil-works/pi-durable` Harness][upstream], not a port. Python and the host
 must not implement agent, storage, or recovery logic. Existing `PiClient` and
 `AsyncPiClient` behavior stays unchanged. The only public API additions outside
@@ -246,10 +247,10 @@ on that watch, oldest → newest. Implement this diff as the pure function
 may have been skipped. Recover with `entries`. `live` is upstream
 `docs["pi.live"]`, unchanged.
 
-## Python API (proposed)
+## Python API
 
-These signatures describe M3 (async client), M5 (conditional sync client), and
-M6 (watch). They are not runnable examples for M0.
+The async core methods below are implemented in M3. Sync methods (M5) and
+watch (M6) are still planned; they must not be used until those milestones land.
 
 ### Async client
 
@@ -392,7 +393,7 @@ Types in `src/pi_agent/durable/types.py`:
 - **Exit:** override subscription `aclose()` to unregister, then send
   best-effort `unwatch`; swallow errors from a dead host.
 
-### Sync client (conditional on Q2)
+### Sync client (planned; Q2 approved)
 
 `DurableClient(_SyncBridge)` has the same constructor, methods, and properties
 as the async client, with `start()` / `close()` and `with` support. Every call

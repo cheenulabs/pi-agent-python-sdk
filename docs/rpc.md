@@ -8,12 +8,12 @@ They are also importable from `pi_agent.coding` as re-exports of the
 same classes; existing top-level `pi_agent` imports remain supported and are
 not deprecated.
 
-The proposed experimental [`pi_agent.durable` backend](durable.md) instead drives
+The experimental [`pi_agent.durable` backend](durable.md) instead drives
 the real upstream Harness through a thin Node host, reusing core private modules.
 The host uses the SDK transport envelope (JSONL requests, correlated responses,
 and events), but is not a Pi RPC server and implements none of Pi's RPC commands.
-M1 implements the Node host's core protocol only; Python Durable clients and
-watch support remain later milestones.
+The Node host and `AsyncDurableClient` implement the core Durable flow;
+watch and the synchronous Durable client remain later milestones.
 
 ## Relationship to Pi
 
