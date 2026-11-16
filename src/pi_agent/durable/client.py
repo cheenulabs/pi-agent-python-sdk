@@ -27,6 +27,7 @@ from .types import (
     SubmitFields,
     WatchUpdate,
     WhenBusy,
+    entry_text,
 )
 from .watch import WatchSubscription
 
@@ -389,6 +390,31 @@ class AsyncDurableClient:
         if not isinstance(entries, list) or any(not isinstance(entry, dict) for entry in entries):
             raise PiProtocolError("Malformed Durable entries")
         return cast(list[dict[str, Any]], entries)
+
+    async def answer_text(self, settled: SettledSubmission) -> str | None:
+        """Read a settled answer on this started client, or None if unavailable.
+
+        History windows expand beyond the default 50 entries until the answer
+        is found or history is exhausted. Each read uses the normal command
+        deadline and record-size budget; transport and too_large errors propagate.
+        An answer entry without text yields "", not None.
+        """
+        self._check_loop()
+        if self._closed or not self.running:
+            raise PiProcessError("Pi Durable host is not running")
+        answer_id = settled.answer_id
+        if answer_id is None:
+            return None
+        conversation_id = _integer(settled.raw.get("conversationId"))
+        limit = 50
+        while True:
+            entries = await self.entries(conversation_id, limit=limit)
+            for entry in entries:
+                if entry.get("id") == answer_id:
+                    return entry_text(entry)
+            if len(entries) < limit:
+                return None
+            limit *= 2
 
     async def abort(
         self, conversation_id: ConversationId, *, timeout: Timeout = DEFAULT_TIMEOUT

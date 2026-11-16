@@ -122,6 +122,10 @@ class DurableClient(_SyncBridge[AsyncDurableClient]):
             lambda: self._client.entries(conversation_id, limit=limit, timeout=timeout)
         )
 
+    def answer_text(self, settled: SettledSubmission) -> str | None:
+        """Read answer text through expanding history windows, or None if unavailable."""
+        return self._call(lambda: self._client.answer_text(settled))
+
     def watch(self, conversation_id: ConversationId) -> _SyncSubscription[WatchUpdate]:
         """Return a blocking bounded update context; rewatch after overflow."""
         return _SyncSubscription(self, lambda: self._client.watch(conversation_id))
