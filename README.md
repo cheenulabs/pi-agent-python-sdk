@@ -14,20 +14,20 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)][metadata]
 [![MIT license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)][license]
 
-This unofficial community SDK drives two [Pi](https://github.com/earendil-works/pi)
-runtimes from Python, with typed synchronous and async APIs:
+This unofficial community SDK drives the [Pi](https://github.com/earendil-works/pi)
+coding agent over `pi --mode rpc`, with typed synchronous and async APIs. It uses
+your installed, configured Pi CLI for models, tools, extensions and sessions.
 
-- **Pi coding agent** (`pi --mode rpc`): `pi_agent.coding` — run prompts,
-  stream events, and keep sessions going.
-- **Pi Durable (experimental)**: `pi_agent.durable` — crash-safe resume and
-  idempotent submissions on the real upstream Harness. Linux/macOS only;
-  bring your own host. This is not a release or packaged-host announcement.
+Both backends run upstream Pi's original TypeScript/Node.js code. This package
+adds Python APIs around it; it is **not a Python port** of Pi's agent or Durable
+engine.
+
+The [experimental Pi Durable backend](#pi-durable-experimental) is documented
+separately after the coding-agent/RPC guide below.
 
 <!-- Inline player: GitHub only auto-embeds bare user-attachments URLs
      (repo-relative / raw / release URLs are stripped or become download links). -->
 https://github.com/user-attachments/assets/c64dde3a-e812-42d4-a005-aa60df861e92
-
-**Pi coding agent** — uses your installed, configured Pi CLI:
 
 ```python
 from pi_agent.coding import PiClient
@@ -36,34 +36,11 @@ with PiClient() as pi:
     print(pi.run("Explain the current project without changing files.").text)
 ```
 
-**Pi Durable (experimental)** — a credential-free example after
-[host setup](#pi-durable-experimental), including the answer text:
-
-```python
-from pi_agent.durable import DurableClient
-
-with DurableClient(
-    "state.db",
-    host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
-    faux=["Hello from Durable."],
-) as durable:
-    cid = durable.root(model={"provider": "faux", "modelId": "faux-1"})
-    sid = durable.submit(cid, "Hello", request_id="job-1")
-    settled = durable.wait(sid)
-    print(durable.answer_text(settled))
-```
-
-See [prerequisites](#prerequisites) and the [full Durable guide](#pi-durable-experimental).
-The top-level import remains supported and silent; it refers to the same clients.
-Use `python -m pip install -e .` for the unreleased namespace additions in this
-source checkout rather than assuming an older PyPI version includes them.
-
 [Prerequisites](#prerequisites) · [Quick start](#quick-start) ·
-[Durable (experimental)](#pi-durable-experimental) ·
 [Streaming](#streaming) · [Async](#async-usage) ·
 [Configuration](#configuration) · [Thinking](#models-and-thinking) ·
-[RPC](#rpc-access) · [Documentation](#documentation) ·
-[Further reading](#further-reading) ·
+[RPC](#rpc-access) · [Durable (experimental)](#pi-durable-experimental) ·
+[Documentation](#documentation) · [Further reading](#further-reading) ·
 [Troubleshooting](#troubleshooting) · [Support](#support)
 
 ## What you can do
@@ -76,142 +53,15 @@ source checkout rather than assuming an older PyPI version includes them.
   compact context.
 - **Reuse your coding-agent Pi setup** — same configuration, tools, and extensions
   as the CLI, with sync or async clients.
-- **Resume Durable runs (experimental)** — crash-safe work with idempotent
-  `request_id`s and watch for live updates. Linux/macOS only; bring your own host.
-
-## Pi Durable (experimental)
-
-The source checkout adds a second backend for the real upstream Durable Harness:
-crash-safe resume, idempotent submissions, and bounded conversation watches.
-It is experimental, Linux/macOS only (Windows unsupported), and not a release
-announcement. Both backends expose synchronous and async clients.
-
-```python
-from pi_agent.coding import PiClient, AsyncPiClient  # Existing coding-agent clients
-from pi_agent.durable import DurableClient, AsyncDurableClient  # Experimental
-```
-
-**Bring your own host.** From a source checkout, install the Python package and
-the pinned host dependencies with Node **22.19+**:
-
-```sh
-python -m pip install -e .
-npm ci --prefix durable-host --ignore-scripts --no-audit --no-fund
-```
-
-The wheel does not bundle or download a host. Pass an explicit `host_command`,
-as in the quick start above. `answer_text(settled)` reads the answer without
-exposing entry internals. It expands beyond the default 50-entry window when
-necessary, returning `None` when no answer entry is available. Very large history
-reads can exceed the configured record-size budget and raise `too_large` rather
-than silently choosing the wrong answer. For entries you already fetched,
-`entry_text(entry)` remains a pure helper; `settled.answer_id` exposes the opaque
-answer entry ID.
-
-A missing or unknown model does **not** raise: upstream settles as
-`status="unanswered", reason="no_model"`. Check `settled.status` and
-`settled.reason` before looking for an answer; unanswered submissions have no
-`answer_id`.
-
-### Async Durable usage
-
-The async client exposes the same flow, with awaited methods:
-
-```python
-import asyncio
-
-from pi_agent.durable import AsyncDurableClient
-
-
-async def main() -> None:
-    async with AsyncDurableClient(
-        "state.db",
-        host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
-        faux=["Hello from async Durable."],
-    ) as durable:
-        cid = await durable.root(model={"provider": "faux", "modelId": "faux-1"})
-        sid = await durable.submit(cid, "Hello", request_id="async-job-1")
-        settled = await durable.wait(sid)
-        print(await durable.answer_text(settled))
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-The complete [sync example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/durable_sync.py)
-and [async example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/durable_async.py)
-use temporary SQLite storage and need no provider credentials. Both accept
-`PI_DURABLE_HOST` as a JSON argv array to override the file-relative host.
-
-### Use a real model
-
-Omit `faux` for real models. By default Durable uses your Pi CLI configuration
-(`~/.pi/agent`: logins such as ChatGPT/Codex, stored keys, custom providers in
-`models.json`), like `PiClient`. Pass `models="builtin"` for environment-variable-only
-providers. Set `pi_agent_dir` to use a different agent directory; otherwise upstream
-honors `PI_CODING_AGENT_DIR` or `~/.pi/agent`.
-
-For example, configure `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
-and `AWS_SESSION_TOKEN` when using temporary AWS credentials, then use Bedrock:
-
-```python
-from pi_agent.durable import DurableClient
-
-with DurableClient(
-    "bedrock.db",
-    host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
-) as durable:
-    cid = durable.root(
-        model={
-            "provider": "amazon-bedrock",
-            "modelId": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
-        }
-    )
-    sid = durable.submit(cid, "Say hello", request_id="bedrock-1")
-    settled = durable.wait(sid)
-    if settled.status == "done":
-        print(durable.answer_text(settled))
-    else:
-        print(settled.status, settled.reason)
-```
-
-Or use your existing Pi CLI ChatGPT/Codex login with a fresh root:
-
-```python
-from pi_agent.durable import DurableClient
-
-with DurableClient(
-    "codex.db",
-    host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
-) as durable:
-    cid = durable.root(model={"provider": "openai-codex", "modelId": "gpt-6.1-sol"})
-    sid = durable.submit(cid, "Say hello", request_id="codex-1")
-    settled = durable.wait(sid)
-    if settled.status == "done":
-        print(durable.answer_text(settled))
-    else:
-        print(settled.status, settled.reason)
-```
-
-The host delegates credential loading and OAuth refresh to upstream Pi, without
-reading or logging credentials itself. Real provider calls may incur charges;
-CI uses only faux models and a local HTTP stub, never live providers.
-
-Use one writer per storage path and retry uncertain submissions only with the
-same conversation-scoped request key. See the
-[Durable API, failure semantics and host setup](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/durable.md)
-and [credential-free crash recovery example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/durable_recovery.py).
 
 ## Prerequisites
 
 | Requirement | Notes |
 | --- | --- |
 | Python **3.11+** | Package metadata requires 3.11 or newer |
-| Node.js **22.19.0+** | Required for both runtimes (coding-agent baseline 1.5.2) |
-| Pi CLI **0.85.1+** | Coding agent only; **1.5.2** is the tested baseline |
-| Host checkout + npm dependencies | Durable only; pass `host_command`; Linux/macOS, not Windows |
-| Model provider | Both use Pi CLI configuration by default. Durable also offers `models="builtin"` for environment-only providers, or credential-free `faux` |
+| Node.js **22.19.0+** | Required by the coding-agent baseline **1.5.2** |
+| Pi CLI **0.85.1+** | **1.5.2** is the tested baseline |
+| Model provider | Configure your provider and model with the Pi CLI |
 
 ## Quick start
 
@@ -232,7 +82,10 @@ python -m pip install pi-agent-python-sdk
 ```
 
 The distribution is named `pi-agent-python-sdk`; import it as
-`pi_agent`.
+`pi_agent`. The top-level import remains supported and silent; it refers to the
+same clients. Use `python -m pip install -e .` for the unreleased namespace
+additions in this source checkout rather than assuming an older PyPI version
+includes them.
 
 ```python
 from pi_agent.coding import PiClient
@@ -246,6 +99,9 @@ The context manager starts and closes Pi. `run()` waits for the conversation to
 settle. The result includes finalized messages, session identity, elapsed time,
 and observed assistant usage.
 
+<details>
+<summary>Continue the conversation</summary>
+
 Continue the conversation with another call on the same client:
 
 ```python
@@ -258,6 +114,8 @@ with PiClient() as pi:
 
 Pi keeps the conversation context. Each result contains only the messages and
 answer from that call; a call with no assistant output has empty text.
+
+</details>
 
 ## Streaming
 
@@ -355,6 +213,12 @@ with PiClient(provider="openai", model="gpt-5") as pi:
     print(pi.run("Summarise this repo without changing files.").text)
 ```
 
+Replace the example provider/model ids with ones from your Pi install
+(`pi --list-models` or `get_available_models()`).
+
+<details>
+<summary>Query and set thinking levels</summary>
+
 Thinking levels depend on the current model. Query them, set one, then confirm
 what Pi actually applied:
 
@@ -370,8 +234,7 @@ with PiClient() as pi:
     print(pi.run("Analyse this project's architecture without changing files.").text)
 ```
 
-Replace the example provider/model ids with ones from your Pi install
-(`pi --list-models` or `get_available_models()`).
+</details>
 
 <details>
 <summary>List models and switch after start</summary>
@@ -437,6 +300,159 @@ the [command reference][commands] for every method.
 
 </details>
 
+## Pi Durable (experimental)
+
+The source checkout adds Python APIs for the original upstream Durable Harness,
+not a Python reimplementation: crash-safe resume, idempotent submissions, and
+bounded conversation watches.
+It is experimental, Linux/macOS only (Windows unsupported), and not a release
+announcement. Both backends expose synchronous and async clients.
+
+### Durable quick start
+
+**Bring your own host.** From a source checkout, install the Python package and
+the pinned host dependencies with Node **22.19+**:
+
+```sh
+python -m pip install -e .
+npm ci --prefix durable-host --ignore-scripts --no-audit --no-fund
+```
+
+The wheel does not bundle or download a host. Pass an explicit `host_command`.
+This credential-free example submits work and prints its answer:
+
+```python
+from pi_agent.durable import DurableClient
+
+with DurableClient(
+    "state.db",
+    host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
+    faux=["Hello from Durable."],
+) as durable:
+    cid = durable.root(model={"provider": "faux", "modelId": "faux-1"})
+    sid = durable.submit(cid, "Hello", request_id="job-1")
+    settled = durable.wait(sid)
+    print(durable.answer_text(settled))
+```
+
+The complete [sync example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/durable_sync.py)
+and [async example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/durable_async.py)
+use temporary SQLite storage and need no provider credentials. Both accept
+`PI_DURABLE_HOST` as a JSON argv array to override the file-relative host.
+
+<details>
+<summary>Namespaces, answer text and unanswered submissions</summary>
+
+```python
+from pi_agent.coding import PiClient, AsyncPiClient  # Existing coding-agent clients
+from pi_agent.durable import DurableClient, AsyncDurableClient  # Experimental
+```
+
+`answer_text(settled)` reads the answer without exposing entry internals. It
+expands beyond the default 50-entry window when necessary, returning `None` when
+no answer entry is available. Very large history reads can exceed the configured
+record-size budget and raise `too_large` rather than silently choosing the wrong
+answer. For entries you already fetched, `entry_text(entry)` remains a pure
+helper; `settled.answer_id` exposes the opaque answer entry ID.
+
+A missing or unknown model does **not** raise: upstream settles as
+`status="unanswered", reason="no_model"`. Check `settled.status` and
+`settled.reason` before looking for an answer; unanswered submissions have no
+`answer_id`.
+
+</details>
+
+<details>
+<summary>Async Durable usage</summary>
+
+The async client exposes the same flow, with awaited methods:
+
+```python
+import asyncio
+
+from pi_agent.durable import AsyncDurableClient
+
+
+async def main() -> None:
+    async with AsyncDurableClient(
+        "state.db",
+        host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
+        faux=["Hello from async Durable."],
+    ) as durable:
+        cid = await durable.root(model={"provider": "faux", "modelId": "faux-1"})
+        sid = await durable.submit(cid, "Hello", request_id="async-job-1")
+        settled = await durable.wait(sid)
+        print(await durable.answer_text(settled))
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+</details>
+
+<details>
+<summary>Real models: Pi CLI logins, Codex and Bedrock</summary>
+
+Omit `faux` for real models. By default Durable uses your Pi CLI configuration
+(`~/.pi/agent`: logins such as ChatGPT/Codex, stored keys, custom providers in
+`models.json`), like `PiClient`. Pass `models="builtin"` for environment-variable-only
+providers. Set `pi_agent_dir` to use a different agent directory; otherwise upstream
+honors `PI_CODING_AGENT_DIR` or `~/.pi/agent`.
+
+For example, configure `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
+and `AWS_SESSION_TOKEN` when using temporary AWS credentials, then use Bedrock:
+
+```python
+from pi_agent.durable import DurableClient
+
+with DurableClient(
+    "bedrock.db",
+    host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
+) as durable:
+    cid = durable.root(
+        model={
+            "provider": "amazon-bedrock",
+            "modelId": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+        }
+    )
+    sid = durable.submit(cid, "Say hello", request_id="bedrock-1")
+    settled = durable.wait(sid)
+    if settled.status == "done":
+        print(durable.answer_text(settled))
+    else:
+        print(settled.status, settled.reason)
+```
+
+Or use your existing Pi CLI ChatGPT/Codex login with a fresh root:
+
+```python
+from pi_agent.durable import DurableClient
+
+with DurableClient(
+    "codex.db",
+    host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
+) as durable:
+    cid = durable.root(model={"provider": "openai-codex", "modelId": "gpt-6.1-sol"})
+    sid = durable.submit(cid, "Say hello", request_id="codex-1")
+    settled = durable.wait(sid)
+    if settled.status == "done":
+        print(durable.answer_text(settled))
+    else:
+        print(settled.status, settled.reason)
+```
+
+The host delegates credential loading and OAuth refresh to upstream Pi, without
+reading or logging credentials itself. Real provider calls may incur charges;
+CI uses only faux models and a local HTTP stub, never live providers.
+
+</details>
+
+Use one writer per storage path and retry uncertain submissions only with the
+same conversation-scoped request key. See the
+[Durable API, failure semantics and host setup](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/durable.md)
+and [credential-free crash recovery example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/durable_recovery.py).
+
 ## Documentation
 
 | Guide | Contents |
@@ -449,9 +465,9 @@ the [command reference][commands] for every method.
 | [Examples][examples] | Runnable sync, async, streaming, sessions, steering, and UI examples |
 | [Release notes][release] | Changes included in 0.2.7 |
 
-Examples use your configured Pi and may make provider calls. Development checks
-use an isolated local test provider; see [CONTRIBUTING.md][contributing] for
-setup and validation commands.
+Coding-agent examples use your configured Pi and may make provider calls.
+Development checks use an isolated local test provider; see
+[CONTRIBUTING.md][contributing] for setup and validation commands.
 
 ## Further reading
 
