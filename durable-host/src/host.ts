@@ -331,7 +331,9 @@ async function open(request: Request): Promise<ObjectRecord> {
     try {
       await closeLocal();
     } catch {
-      // Preserve the original open error even if best-effort cleanup fails.
+      // Preserve the reply's original open error, but never report successful
+      // shutdown when the opening continuation could not close its resources.
+      if (isClosing()) shutdownCode = Math.max(shutdownCode, 1);
     } finally {
       if (isClosing()) exit(0);
       else state = "not_open";

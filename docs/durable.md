@@ -337,7 +337,8 @@ The host must:
 - **Shutdown is stdin EOF:** no `close` command. Stop all watches, close the
   harness, settle upstream credential writes in `finally`, then exit 0 on success.
   Deliberate protocol/write failures use the same cleanup and retain nonzero status.
-  Opening continuations retain ownership of their local runtime and storage.
+  Opening continuations retain ownership of their local runtime and storage;
+  failed cleanup escalates shutdown status without replacing an original open-error reply.
   Watch/harness/storage teardown steps have six-second bounds so a stuck close
   cannot prevent credential settling. A referenced 20-second shutdown deadline
   forces nonzero exit if cleanup or output flushing still hangs; Python's
