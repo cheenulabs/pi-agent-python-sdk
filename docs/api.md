@@ -17,6 +17,9 @@ whose Python return value is `None`.
 The experimental `pi_agent.durable.AsyncDurableClient` and blocking
 `pi_agent.durable.DurableClient` drive the separate Durable Harness through an explicit `host_command`. It is not a coding-agent
 RPC client; see [Durable API and failure semantics](durable.md#python-api).
+For answers, use `SettledSubmission.answer_id` to find the entry and the pure
+`pi_agent.durable.entry_text(entry)` helper to read its text; see
+[answer retrieval](durable.md#read-the-answer-text).
 
 ## Command errors
 

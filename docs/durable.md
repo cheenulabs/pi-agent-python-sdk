@@ -93,6 +93,93 @@ as [pi-durable-python](https://github.com/arpesenti/pi-durable-python) and
 [pi-py](https://github.com/nivalume/pi-py): it trades a Node prerequisite for
 upstream fidelity rather than reimplementing the engine.
 
+## Read the answer text
+
+`wait()` returns the upstream settlement record, not an assistant message.
+`settled.answer_id` is the opaque answer entry ID from `settled.raw["answer"]`,
+or `None` when no answer is present. Match that ID in `entries()` and use the
+read-only `entry_text(entry)` helper:
+
+```python
+from pi_agent.durable import entry_text
+
+# Inside an AsyncDurableClient context, after submit() returned sid:
+settled = await client.wait(sid)
+if settled.status == "done":
+    entries = await client.entries(cid)
+    answer = next((e for e in entries if e["id"] == settled.answer_id), None)
+    if answer is None:
+        raise LookupError("Answer is outside this entries window; increase limit")
+    print(entry_text(answer))
+else:
+    print(settled.status, settled.reason)
+```
+
+The synchronous client uses the same pattern without `await`. `entries()`
+returns the newest 50 entries by default: request a larger `limit` within your
+record-size budget for an older answer. Do not assume the last assistant entry
+belongs to the submission you waited for. `entry_text()` joins string content
+and text blocks in model-message order, ignores thinking/images/tool calls and
+unknown or malformed parts, and returns `""` if there is no text. Neither helper
+modifies entries or the preserved raw record.
+
+A missing or unknown model settles as **`status="unanswered", reason="no_model"`**
+rather than raising. Check both fields before looking up an answer.
+
+## Use a real model
+
+Without `faux`, the host uses pi-ai `builtinModels()` with provider environment
+variables. For example, configure standard AWS credentials (`AWS_ACCESS_KEY_ID`,
+`AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` for temporary credentials), plus
+`AWS_REGION` and access to the chosen Bedrock model, then run:
+
+```python
+from pi_agent.durable import DurableClient, entry_text
+
+with DurableClient(
+    "bedrock.db",
+    host_command=["node", "/absolute/path/to/checkout/host/src/host.ts"],
+) as client:
+    cid = client.root(model={
+        "provider": "amazon-bedrock",
+        "modelId": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+    })
+    sid = client.submit(cid, "Say hello", request_id="bedrock-1")
+    settled = client.wait(sid)
+    if settled.status == "done":
+        answer = next(e for e in client.entries(cid) if e["id"] == settled.answer_id)
+        print(entry_text(answer))
+    else:
+        print(settled.status, settled.reason)
+```
+
+The default `inherit_env=True` passes provider environment variables to the
+host. When disabling inheritance, provide the required variables explicitly
+through `env`. Durable **does not read Pi CLI logins** from
+`~/.pi/agent/auth.json`, including OAuth logins; configure provider credentials
+separately. Selecting a missing/unknown model returns `unanswered/no_model`.
+Real provider calls may incur charges. CI and all Durable examples/tests use
+faux; no live-provider tests are enabled automatically.
+
+## Troubleshooting
+
+- **Host exits during startup:** check the explicit `host_command` path, Node
+  ≥22.19, and `npm ci --prefix host` in the matching checkout. The SDK reports
+  these hints as `PiProcessError`, without attaching stderr.
+- **Need host diagnostics:** opt in with `limits=Limits(stderr_tail_bytes=8192)`
+  (import `Limits` from `pi_agent`) and inspect `client.stderr_tail` after the
+  failure. Retention is disabled by default. Inspect it locally: stderr may
+  contain application data and must not be copied into shared logs or reports.
+- **No answer:** inspect `settled.status` and `settled.reason`; `no_model` is an
+  upstream settlement, not a Python exception. Select an available provider/model
+  explicitly, and configure its environment credentials rather than Pi CLI auth.
+- **Relative working directory:** constructor `cwd` is resolved once at startup,
+  used for the host and as the default agent directory. A `root(cwd=...)` override
+  remains relative to the host directory when you supply a relative value.
+- **Cancelled close:** cleanup is shielded from caller cancellation. A subsequent
+  `await client.aclose()` joins the same teardown; keep the owning event loop
+  alive until it completes.
+
 ## Design decisions
 
 1. **Thin-host rule.** `host/` translates protocol commands to upstream calls.
@@ -405,10 +492,13 @@ Types in `src/pi_agent/durable/types.py`:
 
 - `ConversationId = int`, `SubmissionId = int`.
 - `SettledSubmission`: `status: Literal["done", "unanswered"]`,
-  `reason: str | None`, `raw: dict[str, Any]` (the upstream record).
+  `reason: str | None`, `raw: dict[str, Any]` (the upstream record), and read-only
+  `answer_id: int | None` for its answer entry.
+- `entry_text(entry: Mapping[str, Any]) -> str`: pure text extraction from an
+  entry's model messages; non-text and malformed parts are ignored.
 - `WatchUpdate`: `entries: list[dict[str, Any]]`,
   `live: dict[str, Any] | None`, `gap: bool`, `snapshot: bool`,
-  `raw: dict[str, Any]`.
+  `raw: dict[str, Any]`. Entries, live state and raw data are omitted from repr.
 - `TypedDict`s for every command's fields and `data`, and for every event.
   Keep unknown upstream fields in `raw`.
 

@@ -1,7 +1,7 @@
 # Pi Agent Python SDK
 
 <p align="center">
-  <strong>Your terminal agent. Your Python API.</strong>
+  <strong>Two Pi runtimes. Your Python API.</strong>
 </p>
 
 <p align="center">
@@ -14,14 +14,20 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)][metadata]
 [![MIT license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)][license]
 
-[Pi](https://github.com/earendil-works/pi) is the coding agent that runs in your
-terminal. This unofficial community SDK puts *your* Pi behind a typed sync and
-async Python API — run prompts, stream events, and keep sessions going without
-leaving Python.
+This unofficial community SDK drives two [Pi](https://github.com/earendil-works/pi)
+runtimes from Python, with typed synchronous and async APIs:
+
+- **Pi coding agent** (`pi --mode rpc`): `pi_agent.coding`, with the unchanged
+  top-level `pi_agent` imports — run prompts, stream events, and keep sessions going.
+- **Pi Durable (experimental)**: `pi_agent.durable` — crash-safe resume and
+  idempotent submissions on the real upstream Harness. Linux/macOS only;
+  bring your own host. This is not a release or packaged-host announcement.
 
 <!-- Inline player: GitHub only auto-embeds bare user-attachments URLs
      (repo-relative / raw / release URLs are stripped or become download links). -->
 https://github.com/user-attachments/assets/c64dde3a-e812-42d4-a005-aa60df861e92
+
+**Pi coding agent** — uses your installed, configured Pi CLI:
 
 ```python
 from pi_agent import PiClient
@@ -30,13 +36,33 @@ with PiClient() as pi:
     print(pi.run("Explain the current project without changing files.").text)
 ```
 
-Requires an installed, configured Pi CLI — see [Prerequisites](#prerequisites).
+**Pi Durable (experimental)** — a credential-free example after
+[host setup](#pi-durable-experimental), including the answer text:
+
+```python
+from pi_agent.durable import DurableClient, entry_text
+
+with DurableClient(
+    "state.db",
+    host_command=["node", "/absolute/path/to/checkout/host/src/host.ts"],
+    faux=["Hello from Durable."],
+) as durable:
+    cid = durable.root(model={"provider": "faux", "modelId": "faux-1"})
+    sid = durable.submit(cid, "Hello", request_id="job-1")
+    settled = durable.wait(sid)
+    answer = next(e for e in durable.entries(cid) if e["id"] == settled.answer_id)
+    print(entry_text(answer))
+```
+
+See [prerequisites](#prerequisites) and the [full Durable guide](#pi-durable-experimental).
+Existing top-level coding-agent imports remain supported and are not deprecated.
 
 [Prerequisites](#prerequisites) · [Quick start](#quick-start) ·
+[Durable (experimental)](#pi-durable-experimental) ·
 [Streaming](#streaming) · [Async](#async-usage) ·
 [Configuration](#configuration) · [Thinking](#models-and-thinking) ·
 [RPC](#rpc-access) · [Documentation](#documentation) ·
-[Durable (experimental)](#pi-durable-experimental) · [Further reading](#further-reading) ·
+[Further reading](#further-reading) ·
 [Troubleshooting](#troubleshooting) · [Support](#support)
 
 ## What you can do
@@ -47,8 +73,10 @@ Requires an installed, configured Pi CLI — see [Prerequisites](#prerequisites)
   fork, and clone sessions.
 - **Control the agent** — switch models, set thinking level, steer mid-run, and
   compact context.
-- **Reuse your Pi setup** — same configuration, tools, and extensions as the CLI,
-  with sync or async clients.
+- **Reuse your coding-agent Pi setup** — same configuration, tools, and extensions
+  as the CLI, with sync or async clients.
+- **Resume Durable runs (experimental)** — crash-safe work with idempotent
+  `request_id`s and watch for live updates. Linux/macOS only; bring your own host.
 
 ## Pi Durable (experimental)
 
@@ -70,20 +98,47 @@ python -m pip install -e .
 npm ci --prefix host --ignore-scripts --no-audit --no-fund
 ```
 
-The wheel does not bundle or download a host. Pass an explicit command:
+The wheel does not bundle or download a host. Pass an explicit `host_command`,
+as in the quick start above. `SettledSubmission.answer_id` identifies the answer
+entry; `entry_text(entry)` reads its text without modifying raw data and ignores
+thinking, tool calls and images. `entries()` returns the newest 50 entries by
+default; increase its `limit` when retrieving an older answer rather than assuming
+the last assistant entry belongs to your submission.
+
+A missing or unknown model does **not** raise: upstream settles as
+`status="unanswered", reason="no_model"`. Check `settled.status` and
+`settled.reason` before looking for an answer; unanswered submissions have no
+`answer_id`.
+
+### Use a real model
+
+Omit `faux` to use pi-ai `builtinModels()` and provider environment variables.
+For example, configure `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
+and `AWS_SESSION_TOKEN` when using temporary AWS credentials, then use Bedrock:
 
 ```python
-from pi_agent.durable import DurableClient
+from pi_agent.durable import DurableClient, entry_text
 
 with DurableClient(
-    "state.db",
+    "bedrock.db",
     host_command=["node", "/absolute/path/to/checkout/host/src/host.ts"],
-    faux=["Synthetic answer; no provider keys needed."],
 ) as durable:
-    cid = durable.root(model={"provider": "faux", "modelId": "faux-1"})
-    sid = durable.submit(cid, "Hello", request_id="job-1")
-    print(durable.wait(sid).status)
+    cid = durable.root(model={
+        "provider": "amazon-bedrock",
+        "modelId": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+    })
+    sid = durable.submit(cid, "Say hello", request_id="bedrock-1")
+    settled = durable.wait(sid)
+    if settled.status == "done":
+        answer = next(e for e in durable.entries(cid) if e["id"] == settled.answer_id)
+        print(entry_text(answer))
+    else:
+        print(settled.status, settled.reason)
 ```
+
+Durable does **not** use Pi CLI logins from `~/.pi/agent/auth.json`, including
+OAuth logins. Configure credentials for the selected provider separately. Real
+provider calls may incur charges; CI and the recovery example use faux only.
 
 Use one writer per storage path and retry uncertain submissions only with the
 same conversation-scoped request key. See the
@@ -95,9 +150,10 @@ and [credential-free crash recovery example](https://github.com/cheenulabs/pi-ag
 | Requirement | Notes |
 | --- | --- |
 | Python **3.11+** | Package metadata requires 3.11 or newer |
-| Node.js **22.19.0+** | Required by Pi 1.5.2 |
-| Pi **0.85.1+** | Minimum accepted version; **1.5.2** is the tested baseline |
-| Model provider | Required; configure with the Pi CLI (see Quick start) |
+| Node.js **22.19.0+** | Required for both runtimes (coding-agent baseline 1.5.2) |
+| Pi CLI **0.85.1+** | Coding agent only; **1.5.2** is the tested baseline |
+| Host checkout + npm dependencies | Durable only; pass `host_command`; Linux/macOS, not Windows |
+| Model provider | Coding agent: configure with Pi CLI. Durable: provider environment variables, or credential-free `faux` |
 
 ## Quick start
 

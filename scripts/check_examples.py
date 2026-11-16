@@ -235,6 +235,7 @@ def check_durable_example(path: Path, command: list[str]) -> None:
         asyncio.run(run())
     assert "Recovered submission" in output.getvalue()
     assert "done; user entries: 1" in output.getvalue()
+    assert "Synthetic recovery answer." in output.getvalue()
 
 
 def main() -> None:
