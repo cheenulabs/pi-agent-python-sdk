@@ -35,7 +35,7 @@ separately after the coding-agent/RPC guide below.
 https://github.com/user-attachments/assets/c64dde3a-e812-42d4-a005-aa60df861e92
 
 ```python
-from pi_agent.coding import PiClient
+from pi_agent import PiClient
 
 with PiClient() as pi:
     print(pi.run("Explain the current project without changing files.").text)
@@ -156,7 +156,7 @@ arguments and results match the synchronous client.
 ```python
 import asyncio
 
-from pi_agent.coding import AsyncPiClient
+from pi_agent import AsyncPiClient
 
 
 async def main() -> None:
