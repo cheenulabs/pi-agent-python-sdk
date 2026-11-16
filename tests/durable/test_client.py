@@ -54,6 +54,27 @@ async def test_missing_host(command: list[str] | None) -> None:
     await client.aclose()
 
 
+@pytest.mark.parametrize("capacity", [0, 512])
+async def test_missing_host_script_has_safe_startup_hint(tmp_path: Path, capacity: int) -> None:
+    missing = tmp_path / "synthetic-missing-host.py"
+    client = AsyncDurableClient(
+        None,
+        host_command=[sys.executable, str(missing)],
+        limits=Limits(stderr_tail_bytes=capacity),
+    )
+    with pytest.raises(PiProcessError) as caught:
+        await client.start()
+    message = str(caught.value)
+    assert "Durable host exited during startup" in message
+    assert "host_command" in message and "npm ci --prefix host" in message
+    assert "Limits(stderr_tail_bytes=" in message
+    assert str(missing) not in message
+    assert "can't open file" not in message
+    assert bool(client.stderr_tail) is bool(capacity)
+    assert not client.running
+    await client.aclose()
+
+
 async def test_protocol_mismatch() -> None:
     client = fake("protocol")
     with pytest.raises(PiVersionError):

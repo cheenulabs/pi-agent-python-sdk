@@ -2,7 +2,7 @@
 
 from .client import AsyncDurableClient
 from .sync import DurableClient
-from .types import ConversationId, SettledSubmission, SubmissionId, WatchUpdate
+from .types import ConversationId, SettledSubmission, SubmissionId, WatchUpdate, entry_text
 from .watch import WatchSubscription
 
 TESTED_PI_DURABLE_VERSION = "1.5.2"
@@ -16,4 +16,5 @@ __all__ = [
     "SubmissionId",
     "WatchSubscription",
     "WatchUpdate",
+    "entry_text",
 ]

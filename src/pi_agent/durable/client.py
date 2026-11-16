@@ -93,6 +93,10 @@ class AsyncDurableClient:
         self._transport: Transport | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._startup_task: asyncio.Task[Any] | None = None
+        self._startup_done = asyncio.Event()
+        self._startup_done.set()
+        self._close_task: asyncio.Task[None] | None = None
+        self._close_initiator: asyncio.Task[Any] | None = None
         self._used = False
         self._closed = False
         self._ready = False
@@ -146,6 +150,8 @@ class AsyncDurableClient:
             raise PiProcessError("Clients are single-use; create a new Durable client")
         self._used = True
         self._startup_task = asyncio.current_task()
+        self._startup_done.clear()
+        spawned = False
         try:
             async with asyncio.timeout(self.limits.startup_timeout):
                 environment = child_env(self._inherit_env, self._env)
@@ -155,10 +161,15 @@ class AsyncDurableClient:
                     argv = executable_argv(self._host_command, environment)
                 except PiProcessError as exc:
                     raise PiProcessError(_HOST_HELP) from exc
+                if self._cwd is not None:
+                    # Resolve once in the caller's launch-time directory. Passing
+                    # a relative cwd again to the agent would apply it twice.
+                    self._cwd = await asyncio.to_thread(os.path.abspath, self._cwd)
                 self._transport = Transport(
                     limits=self.limits, on_event=self._on_event, on_failure=self._on_failure
                 )
                 await self._transport.start(argv, cwd=self._cwd, env=environment)
+                spawned = True
                 hello = await self._request("hello", {}, self.limits.startup_timeout, startup=True)
                 protocol = _integer(hello.get("protocol"))
                 if protocol != 0:
@@ -178,25 +189,50 @@ class AsyncDurableClient:
                 await self._transport.aclose()
             if isinstance(exc, TimeoutError):
                 raise PiTimeoutError("Pi Durable startup timed out", uncertain=False) from exc
+            if isinstance(exc, PiProcessError) and spawned:
+                raise PiProcessError(
+                    "The Durable host exited during startup; check host_command and run "
+                    "npm ci --prefix host. Set Limits(stderr_tail_bytes=...) "
+                    "to capture host stderr.",
+                    returncode=exc.returncode,
+                ) from exc
             raise
         finally:
             self._startup_task = None
+            self._startup_done.set()
 
     async def aclose(self) -> None:
-        """Shut down and reap the host; safe after failure and on repeated calls."""
+        """Shut down and reap the host; repeated calls join shielded cleanup.
+
+        Cancelling the caller does not cancel teardown. A later aclose() can
+        await that same cleanup to completion.
+        """
         self._check_loop()
-        self._closed = True
-        self._ready = False
-        for subscription in tuple(self._watches.values()):
-            subscription._finish()
-        if self._background:
-            await asyncio.gather(*self._background, return_exceptions=True)
-        startup = self._startup_task
-        if startup is not None and startup is not asyncio.current_task():
-            startup.cancel()
-            await asyncio.gather(startup, return_exceptions=True)
-        if self._transport is not None:
-            await self._transport.aclose()
+        if self._close_task is None:
+            self._closed = True
+            self._ready = False
+            self._close_initiator = asyncio.current_task()
+            self._close_task = asyncio.create_task(self._finish_close(), name="pi-durable-close")
+        await asyncio.shield(self._close_task)
+
+    async def _finish_close(self) -> None:
+        try:
+            startup = self._startup_task
+            if startup is not None and startup is not self._close_initiator and not startup.done():
+                startup.cancel()
+                # start() can be nested in an application task whose finally
+                # also awaits us. Join startup cleanup, never that whole task.
+                await self._startup_done.wait()
+            for subscription in tuple(self._watches.values()):
+                subscription._finish()
+            if self._transport is not None:
+                # EOF stops watches upstream and wakes any pending unwatch.
+                # Never delay process teardown waiting for an unwatch reply.
+                await self._transport.aclose()
+        finally:
+            if self._background:
+                await asyncio.gather(*self._background, return_exceptions=True)
+            self._close_initiator = None
 
     def _on_event(self, record: dict[str, Any]) -> None:
         event_type = record.get("type")

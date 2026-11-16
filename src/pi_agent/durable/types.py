@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal, NotRequired, TypedDict
 
@@ -16,11 +17,42 @@ class SettledSubmission:
     reason: str | None
     raw: dict[str, Any] = field(repr=False)
 
+    @property
+    def answer_id(self) -> int | None:
+        """The settled answer's opaque entry ID, or None if no answer is present."""
+        value = self.raw.get("answer")
+        return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def entry_text(entry: Mapping[str, Any]) -> str:
+    """Read text from an entry's model messages without changing the entry.
+
+    String content and text blocks are joined in order. Thinking, images,
+    tool calls and malformed/unknown parts are ignored; no text yields "".
+    """
+    messages = entry.get("model")
+    if not isinstance(messages, list):
+        return ""
+    text: list[str] = []
+    for message in messages:
+        if not isinstance(message, Mapping):
+            continue
+        content = message.get("content")
+        if isinstance(content, str):
+            text.append(content)
+        elif isinstance(content, list):
+            for part in content:
+                if isinstance(part, Mapping) and part.get("type") == "text":
+                    value = part.get("text")
+                    if isinstance(value, str):
+                        text.append(value)
+    return "".join(text)
+
 
 @dataclass(frozen=True)
 class WatchUpdate:
-    entries: list[dict[str, Any]]
-    live: dict[str, Any] | None
+    entries: list[dict[str, Any]] = field(repr=False)
+    live: dict[str, Any] | None = field(repr=False)
     gap: bool
     snapshot: bool
     raw: dict[str, Any] = field(repr=False)
