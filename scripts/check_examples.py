@@ -4,7 +4,7 @@ Run with the development dependencies installed and `npm ci --prefix tests/pi
 --ignore-scripts` completed. This checks runnable example entry points, not every
 CLI option or provider behavior. It never uses live agents, credentials, existing
 Pi configuration, or a network provider. Integration tests cover protocol details.
---durable runs only Durable examples and needs host/node_modules instead of tests/pi.
+--durable runs only Durable examples and needs durable-host/node_modules instead of tests/pi.
 """
 
 from __future__ import annotations
@@ -249,9 +249,11 @@ def main() -> None:
         raise RuntimeError("Update check_examples.py to cover the current complete example set")
     if args.durable:
         node = shutil.which("node")
-        if node is None or not (ROOT / "host/node_modules").is_dir():
-            raise RuntimeError("Durable examples require Node >=22.19 and npm ci --prefix host")
-        command = [node, str(ROOT / "host/src/host.ts")]
+        if node is None or not (ROOT / "durable-host/node_modules").is_dir():
+            raise RuntimeError(
+                "Durable examples require Node >=22.19 and npm ci --prefix durable-host"
+            )
+        command = [node, str(ROOT / "durable-host/src/host.ts")]
         for name in DURABLE_EXAMPLES:
             check_durable_example(ROOT / "examples" / name, command)
             print(f"PASS {name}: isolated real Durable faux provider")

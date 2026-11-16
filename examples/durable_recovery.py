@@ -1,6 +1,6 @@
 """Recover a faux submission after killing the host; Linux/macOS, no keys needed.
 
-Install the checkout's host dependencies first: npm ci --prefix host.
+Install the checkout's host dependencies first: npm ci --prefix durable-host.
 PI_DURABLE_HOST may contain a JSON argv array, e.g. ["node", "/path/host.ts"].
 The default host path is resolved relative to this file, never the caller's cwd.
 """
@@ -20,7 +20,7 @@ from pi_agent.durable import AsyncDurableClient, entry_text
 def host_command() -> list[str]:
     configured = os.environ.get("PI_DURABLE_HOST")
     if configured is None:
-        return ["node", str(Path(__file__).resolve().parents[1] / "host/src/host.ts")]
+        return ["node", str(Path(__file__).resolve().parents[1] / "durable-host/src/host.ts")]
     value = json.loads(configured)
     if not isinstance(value, list) or not value or any(not isinstance(arg, str) for arg in value):
         raise ValueError("PI_DURABLE_HOST must be a non-empty JSON argv array")

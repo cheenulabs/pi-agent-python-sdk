@@ -17,8 +17,8 @@ spec.loader.exec_module(durable)
 def pins(tmp_path, monkeypatch):
     for relative in [
         "compatibility.json",
-        "host/package.json",
-        "host/package-lock.json",
+        "durable-host/package.json",
+        "durable-host/package-lock.json",
         "src/pi_agent/durable/__init__.py",
     ]:
         target = tmp_path / relative
@@ -37,7 +37,7 @@ def mutate(path, change):
 
 def test_pins_agree_without_installed_node_modules(pins):
     assert durable.main() == 0
-    assert not (pins / "host/node_modules").exists()
+    assert not (pins / "durable-host/node_modules").exists()
 
 
 @pytest.mark.parametrize("package", durable.PACKAGES)
@@ -45,7 +45,8 @@ def test_pins_agree_without_installed_node_modules(pins):
 def test_disagreement_in_each_package_fails(pins, package, location):
     if location == "manifest":
         mutate(
-            pins / "host/package.json", lambda data: data["dependencies"].update({package: "1.5.3"})
+            pins / "durable-host/package.json",
+            lambda data: data["dependencies"].update({package: "1.5.3"}),
         )
     else:
 
@@ -59,13 +60,13 @@ def test_disagreement_in_each_package_fails(pins, package, location):
                     "version": "1.5.3"
                 }
 
-        mutate(pins / "host/package-lock.json", change)
+        mutate(pins / "durable-host/package-lock.json", change)
     assert durable.main() == 1
 
 
 def test_missing_locked_package_fails(pins):
     mutate(
-        pins / "host/package-lock.json",
+        pins / "durable-host/package-lock.json",
         lambda data: data["packages"].pop(f"node_modules/{durable.PACKAGES[0]}"),
     )
     assert durable.main() == 1

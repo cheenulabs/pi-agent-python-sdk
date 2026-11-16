@@ -96,11 +96,11 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: host/package-lock.json
+          cache-dependency-path: durable-host/package-lock.json
       - run: uv sync --locked --group dev --python ${{ matrix.python }}
-      - run: npm ci --prefix host --ignore-scripts --no-audit --no-fund
-      - run: npm run --prefix host typecheck
-      - run: npm test --prefix host
+      - run: npm ci --prefix durable-host --ignore-scripts --no-audit --no-fund
+      - run: npm run --prefix durable-host typecheck
+      - run: npm test --prefix durable-host
       - run: uv run --no-sync python scripts/check_durable.py
       - run: uv run --no-sync python scripts/check_examples.py --durable
       - run: uv run --no-sync pytest tests/durable

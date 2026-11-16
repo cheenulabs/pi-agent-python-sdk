@@ -16,8 +16,8 @@ def durable_host_command() -> list[str]:
     root = Path(__file__).resolve().parents[2]
     node = shutil.which("node")
     problem = None
-    if node is None or not (root / "host/node_modules").is_dir():
-        problem = "Install Node >=22.19 and run npm ci --prefix host --ignore-scripts"
+    if node is None or not (root / "durable-host/node_modules").is_dir():
+        problem = "Install Node >=22.19 and run npm ci --prefix durable-host --ignore-scripts"
     else:
         version = subprocess.run(
             [node, "--version"], capture_output=True, text=True, timeout=30, check=True
@@ -30,4 +30,4 @@ def durable_host_command() -> list[str]:
             pytest.fail(problem)
         pytest.skip(problem)
     assert node is not None
-    return [node, str(root / "host/src/host.ts")]
+    return [node, str(root / "durable-host/src/host.ts")]

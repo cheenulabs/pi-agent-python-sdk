@@ -44,7 +44,7 @@ from pi_agent.durable import DurableClient, entry_text
 
 with DurableClient(
     "state.db",
-    host_command=["node", "/absolute/path/to/checkout/host/src/host.ts"],
+    host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
     faux=["Hello from Durable."],
 ) as durable:
     cid = durable.root(model={"provider": "faux", "modelId": "faux-1"})
@@ -95,7 +95,7 @@ the pinned host dependencies with Node **22.19+**:
 
 ```sh
 python -m pip install -e .
-npm ci --prefix host --ignore-scripts --no-audit --no-fund
+npm ci --prefix durable-host --ignore-scripts --no-audit --no-fund
 ```
 
 The wheel does not bundle or download a host. Pass an explicit `host_command`,
@@ -121,7 +121,7 @@ from pi_agent.durable import DurableClient, entry_text
 
 with DurableClient(
     "bedrock.db",
-    host_command=["node", "/absolute/path/to/checkout/host/src/host.ts"],
+    host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
 ) as durable:
     cid = durable.root(
         model={

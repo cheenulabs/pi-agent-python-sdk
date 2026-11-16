@@ -29,7 +29,7 @@ def checker(tmp_path, monkeypatch):
 
 
 def test_durable_mode_needs_no_coding_runtime(checker, monkeypatch):
-    (checker.ROOT / "host/node_modules").mkdir(parents=True)
+    (checker.ROOT / "durable-host/node_modules").mkdir(parents=True)
     called = []
     monkeypatch.setattr(
         checker, "check_durable_example", lambda path, command: called.append(path.name)
@@ -67,14 +67,14 @@ def test_union_inventory_rejects_uncovered_example(checker, monkeypatch):
 
 def test_durable_mode_requires_host_modules(checker, monkeypatch):
     monkeypatch.setattr(sys, "argv", ["check_examples.py", "--durable"])
-    with pytest.raises(RuntimeError, match="npm ci --prefix host"):
+    with pytest.raises(RuntimeError, match="npm ci --prefix durable-host"):
         checker.main()
 
 
 def test_recovery_example_default_path_and_explicit_argv(monkeypatch):
     example = load("examples/durable_recovery.py")
     monkeypatch.delenv("PI_DURABLE_HOST", raising=False)
-    assert example.host_command() == ["node", str(ROOT / "host/src/host.ts")]
+    assert example.host_command() == ["node", str(ROOT / "durable-host/src/host.ts")]
     monkeypatch.setenv("PI_DURABLE_HOST", '["/node with spaces", "/host path/host.ts"]')
     assert example.host_command() == ["/node with spaces", "/host path/host.ts"]
     monkeypatch.setenv("PI_DURABLE_HOST", '"not an argv array"')

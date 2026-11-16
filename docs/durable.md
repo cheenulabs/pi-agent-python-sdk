@@ -1,6 +1,6 @@
 # Experimental Pi Durable backend design
 
-**M1 implements the experimental Node host's core protocol** in `host/`.
+**M1 implements the experimental Node host's core protocol** in `durable-host/`.
 **M2 adds the coding namespace, error codes, and shared child environment helper.**
 **M3 adds `pi_agent.durable.AsyncDurableClient`** with async lifecycle, root,
 submit, wait, entries, and abort, built on the shared transport and limits.
@@ -28,13 +28,13 @@ includes the host or its npm dependencies, and the SDK never downloads them.
 From the source checkout, install Node ≥22.19 and the Python package, then:
 
 ```sh
-npm ci --prefix host --ignore-scripts --no-audit --no-fund
+npm ci --prefix durable-host --ignore-scripts --no-audit --no-fund
 ```
 
-Pass `host_command=["node", "/absolute/path/to/checkout/host/src/host.ts"]` to
+Pass `host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"]` to
 `AsyncDurableClient` or `DurableClient`. `host_command=None` raises
 `PiProcessError` explaining the prerequisites. Keep the pinned checkout and its
-`host/node_modules` together; Node's built-in type stripping runs `host.ts`
+`durable-host/node_modules` together; Node's built-in type stripping runs `host.ts`
 directly, without a build step. Linux and macOS are supported targets; Windows
 Durable v0 is unsupported.
 
@@ -56,11 +56,11 @@ coding-agent examples; `--durable` runs only Durable examples.
 For local host development:
 
 ```sh
-npm ci --prefix host --ignore-scripts --no-audit --no-fund
-npm run --prefix host typecheck
-npm test --prefix host
+npm ci --prefix durable-host --ignore-scripts --no-audit --no-fund
+npm run --prefix durable-host typecheck
+npm test --prefix durable-host
 PI_DURABLE_REQUIRE_INTEGRATION=1 uv run pytest tests/durable
-node host/src/host.ts
+node durable-host/src/host.ts
 ```
 
 The host accepts JSONL on stdin and shuts down on EOF. M1 supports `hello`,
@@ -73,7 +73,7 @@ unsupported. `TESTED_PI_DURABLE_VERSION` and `compatibility.json` record 1.5.2.
 M8's `scripts/check_durable.py` checks all three manifest/lock pins and that
 constant; coding-agent `--record` preserves the independent Durable record.
 The Latest Pi workflow uploads a non-blocking npm-latest drift report, and
-Dependabot groups the three `/host` upstream packages.
+Dependabot groups the three `/durable-host` upstream packages.
 
 The experimental `pi_agent.durable` drives the real upstream
 [`@earendil-works/pi-durable` Harness][upstream], not a port. Python and the host
@@ -138,7 +138,7 @@ from pi_agent.durable import DurableClient, entry_text
 
 with DurableClient(
     "bedrock.db",
-    host_command=["node", "/absolute/path/to/checkout/host/src/host.ts"],
+    host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
 ) as client:
     cid = client.root(
         model={
@@ -166,7 +166,7 @@ faux; no live-provider tests are enabled automatically.
 ## Troubleshooting
 
 - **Host exits during startup:** check the explicit `host_command` path, Node
-  ≥22.19, and `npm ci --prefix host` in the matching checkout. The SDK reports
+  ≥22.19, and `npm ci --prefix durable-host` in the matching checkout. The SDK reports
   these hints as `PiProcessError`, without attaching stderr.
 - **Need host diagnostics:** opt in with `limits=Limits(stderr_tail_bytes=8192)`
   (import `Limits` from `pi_agent`) and inspect `client.stderr_tail` after the
@@ -184,7 +184,7 @@ faux; no live-provider tests are enabled automatically.
 
 ## Design decisions
 
-1. **Thin-host rule.** `host/` translates protocol commands to upstream calls.
+1. **Thin-host rule.** `durable-host/` translates protocol commands to upstream calls.
    It may keep **protocol bookkeeping only**: a lifecycle state (not open /
    opening / open / closing), the open harness, the configured record-size
    limit, watch handles by watch ID, and the last entry ID sent per watch.
@@ -214,7 +214,7 @@ faux; no live-provider tests are enabled automatically.
    `request_id`, scoped to the conversation. Resubmitting the same key after
    any crash returns the same submission.
 8. **Pinned upstream.** Use the exact published pins above and commit
-   `host/package-lock.json`. Check API names against the installed package's
+   `durable-host/package-lock.json`. Check API names against the installed package's
    `dist/**/*.d.ts`, not upstream main.
 9. **IDs are opaque.** Python types `ConversationId = int` and
    `SubmissionId = int` and never constructs them.
@@ -248,7 +248,7 @@ Durable uses `startup_timeout`, `command_timeout`, `cleanup_timeout`,
 `stderr_tail_bytes` from `Limits`. It does not use `run_start_timeout`,
 `result_message_*`, or `collection_event_*`.
 
-New components are `host/` (Node), `src/pi_agent/durable/` (clients and types),
+New components are `durable-host/` (Node), `src/pi_agent/durable/` (clients and types),
 `tests/durable/`, and the `durable` CI job. New for the coding agent is only
 `src/pi_agent/coding.py`, a re-export module (M2). Deliberately do not share
 `_runs.py`, `RunResult`, `check_version`, `validate_extra_args`, or `Transport.send_ui`:
@@ -372,7 +372,7 @@ on when the caller sees the response.
 Each later event's `entries` contains only IDs greater than the last one sent
 on that watch, oldest → newest. Implement this diff as the pure function
 `nextWatchUpdate(lastSentId, entries) → {entries, gap}` in
-`host/src/watch-window.ts`; importing it must not start the host.
+`durable-host/src/watch-window.ts`; importing it must not start the host.
 `gap: true` means the window no longer contains the last sent entry, so entries
 may have been skipped. Recover with `entries`. `live` is upstream
 `docs["pi.live"]`, unchanged.
@@ -390,7 +390,7 @@ class AsyncDurableClient:
         self,
         storage_path: str | os.PathLike[str] | None,  # None = in-memory
         *,
-        host_command: Sequence[str] | None = None,  # ["node", "/path/host/src/host.ts"]
+        host_command: Sequence[str] | None = None,  # ["node", "/path/durable-host/src/host.ts"]
         cwd: str | os.PathLike[str] | None = None,  # host cwd and default agent cwd
         env: Mapping[str, str | None] | None = None,  # None removes a variable
         inherit_env: bool = True,

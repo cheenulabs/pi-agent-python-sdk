@@ -192,7 +192,7 @@ class AsyncDurableClient:
             if isinstance(exc, PiProcessError) and spawned:
                 raise PiProcessError(
                     "The Durable host exited during startup; check host_command and run "
-                    "npm ci --prefix host. Set Limits(stderr_tail_bytes=...) "
+                    "npm ci --prefix durable-host. Set Limits(stderr_tail_bytes=...) "
                     "to capture host stderr.",
                     returncode=exc.returncode,
                 ) from exc
