@@ -36,7 +36,7 @@ Requires an installed, configured Pi CLI — see [Prerequisites](#prerequisites)
 [Streaming](#streaming) · [Async](#async-usage) ·
 [Configuration](#configuration) · [Thinking](#models-and-thinking) ·
 [RPC](#rpc-access) · [Documentation](#documentation) ·
-[Further reading](#further-reading) ·
+[Durable (experimental)](#pi-durable-experimental) · [Further reading](#further-reading) ·
 [Troubleshooting](#troubleshooting) · [Support](#support)
 
 ## What you can do
@@ -49,6 +49,46 @@ Requires an installed, configured Pi CLI — see [Prerequisites](#prerequisites)
   compact context.
 - **Reuse your Pi setup** — same configuration, tools, and extensions as the CLI,
   with sync or async clients.
+
+## Pi Durable (experimental)
+
+The source checkout adds a second backend for the real upstream Durable Harness:
+crash-safe resume, idempotent submissions, and bounded conversation watches.
+It is experimental, Linux/macOS only (Windows unsupported), and not a release
+announcement. Existing top-level coding-agent imports above remain unchanged.
+
+```python
+from pi_agent.coding import PiClient, AsyncPiClient  # Existing coding-agent clients
+from pi_agent.durable import DurableClient, AsyncDurableClient  # Experimental
+```
+
+**Bring your own host.** From a source checkout, install the Python package and
+the pinned host dependencies with Node **22.19+**:
+
+```sh
+python -m pip install -e .
+npm ci --prefix host --ignore-scripts --no-audit --no-fund
+```
+
+The wheel does not bundle or download a host. Pass an explicit command:
+
+```python
+from pi_agent.durable import DurableClient
+
+with DurableClient(
+    "state.db",
+    host_command=["node", "/absolute/path/to/checkout/host/src/host.ts"],
+    faux=["Synthetic answer; no provider keys needed."],
+) as durable:
+    cid = durable.root(model={"provider": "faux", "modelId": "faux-1"})
+    sid = durable.submit(cid, "Hello", request_id="job-1")
+    print(durable.wait(sid).status)
+```
+
+Use one writer per storage path and retry uncertain submissions only with the
+same conversation-scoped request key. See the
+[Durable API, failure semantics and host setup](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/durable.md)
+and [credential-free crash recovery example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/durable_recovery.py).
 
 ## Prerequisites
 

@@ -21,7 +21,39 @@ to be merged, auto-merged, published, or released by this work.
 
 [owner-decisions]: https://github.com/cheenulabs/pi-agent-python-sdk/issues/116#issuecomment-6902908994
 
-For local host development (Node ≥ 22.19):
+## Bring your own host (M9 skipped)
+
+Q3 selected an explicit caller-supplied `host_command`. Neither wheel nor sdist
+includes the host or its npm dependencies, and the SDK never downloads them.
+From the source checkout, install Node ≥22.19 and the Python package, then:
+
+```sh
+npm ci --prefix host --ignore-scripts --no-audit --no-fund
+```
+
+Pass `host_command=["node", "/absolute/path/to/checkout/host/src/host.ts"]` to
+`AsyncDurableClient` or `DurableClient`. `host_command=None` raises
+`PiProcessError` explaining the prerequisites. Keep the pinned checkout and its
+`host/node_modules` together; Node's built-in type stripping runs `host.ts`
+directly, without a build step. Linux and macOS are supported targets; Windows
+Durable v0 is unsupported.
+
+Run the credential-free [recovery example](../examples/durable_recovery.py):
+
+```sh
+uv run python examples/durable_recovery.py
+uv run python scripts/check_examples.py --durable
+```
+
+It creates temporary SQLite storage, kills a faux run's host, and reopens the
+same submission key. It requires no Pi coding-agent CLI or model credentials.
+The example defaults to the host path relative to its own file. To use another
+host, set `PI_DURABLE_HOST` to a JSON argv array, for example
+`["node", "/absolute/path/to/host.ts"]`. The checker always overrides that with
+the checkout's isolated host. The default example-check mode still runs only
+coding-agent examples; `--durable` runs only Durable examples.
+
+For local host development:
 
 ```sh
 npm ci --prefix host --ignore-scripts --no-audit --no-fund
