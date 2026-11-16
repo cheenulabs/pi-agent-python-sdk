@@ -8,7 +8,14 @@ from pathlib import Path
 
 import pytest
 
-from pi_agent import Limits, PiCommandError, PiProcessError, PiSubscriptionOverflow, PiTimeoutError
+from pi_agent import (
+    Limits,
+    PiCommandError,
+    PiProcessError,
+    PiProtocolError,
+    PiSubscriptionOverflow,
+    PiTimeoutError,
+)
 from pi_agent.durable import AsyncDurableClient, DurableClient
 
 from .test_host import running_host
@@ -57,6 +64,19 @@ async def test_watch_end_stops_iteration() -> None:
             assert (await anext(updates)).snapshot
             with pytest.raises(StopAsyncIteration):
                 await anext(updates)
+
+
+@pytest.mark.parametrize("mode", ["malformed_watch", "malformed_watch_end"])
+async def test_malformed_watch_event_is_fatal(mode: str) -> None:
+    async with fake(mode) as client:
+        async with client.watch(1) as updates:
+            if mode == "malformed_watch_end":
+                # A valid prefix is retained before the terminal protocol failure.
+                assert (await anext(updates)).snapshot
+            async with asyncio.timeout(5):
+                with pytest.raises(PiProtocolError):
+                    await anext(updates)
+            assert not client.running
 
 
 async def test_failure_finishes_watch() -> None:

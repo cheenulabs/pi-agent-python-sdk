@@ -62,7 +62,7 @@ for line in sys.stdin:
                     dict(
                         type="durable_watch",
                         watchId=request["watchId"],
-                        entries=[{"id": index + 1}],
+                        entries="malformed" if mode == "malformed_watch" else [{"id": index + 1}],
                         live=None,
                         gap=False,
                         snapshot=index == 0,
@@ -71,10 +71,14 @@ for line in sys.stdin:
                 ),
                 flush=True,
             )
-        if mode == "watch_end":
+        if mode in {"watch_end", "malformed_watch_end"}:
             print(
                 json.dumps(
-                    dict(type="durable_watch_end", watchId=request["watchId"], kind="ended")
+                    dict(
+                        type="durable_watch_end",
+                        watchId=request["watchId"],
+                        kind=42 if mode == "malformed_watch_end" else "ended",
+                    )
                 ),
                 flush=True,
             )
