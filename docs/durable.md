@@ -190,7 +190,10 @@ The default `inherit_env=True` passes provider environment variables to the
 host. When disabling inheritance, provide required variables explicitly through
 `env`, or select a synthetic/test agent directory. `faux` bypasses both model
 sources entirely and does not load Pi auth/configuration. Selecting a missing or
-unknown model returns `unanswered/no_model`. Real provider calls may incur charges.
+unknown model returns `unanswered/no_model`. With `models="builtin"`, a known model
+whose credentials exist only in Pi CLI storage instead settles as
+`unanswered/model_error`: the model exists, but that mode cannot authenticate it.
+Real provider calls may incur charges.
 CI uses faux and a local HTTP stub with synthetic keys; no live-provider tests
 are enabled automatically.
 
