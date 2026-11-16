@@ -102,6 +102,7 @@ jobs:
       - run: npm run --prefix host typecheck
       - run: npm test --prefix host
       - run: uv run --no-sync python scripts/check_durable.py
+      - run: uv run --no-sync python scripts/check_examples.py --durable
       - run: uv run --no-sync pytest tests/durable
         env:
           PI_DURABLE_REQUIRE_INTEGRATION: '1'
