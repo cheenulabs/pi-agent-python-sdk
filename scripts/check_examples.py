@@ -42,7 +42,7 @@ EXAMPLES = (
     "sync.py",
     "ui.py",
 )
-DURABLE_EXAMPLES = ("durable_recovery.py",)
+DURABLE_EXAMPLES = ("durable_async.py", "durable_recovery.py")
 ANSWER = "Synthetic example answer."
 PIXEL = (
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII="
@@ -233,9 +233,13 @@ def check_durable_example(path: Path, command: list[str]) -> None:
 
     with contextlib.redirect_stdout(output):
         asyncio.run(run())
-    assert "Recovered submission" in output.getvalue()
-    assert "done; user entries: 1" in output.getvalue()
-    assert "Synthetic recovery answer." in output.getvalue()
+    text = output.getvalue()
+    if path.stem == "durable_recovery":
+        assert "Recovered submission" in text
+        assert "done; user entries: 1" in text
+        assert "Synthetic recovery answer." in text
+    else:
+        assert "Hello from async Durable." in text
 
 
 def main() -> None:

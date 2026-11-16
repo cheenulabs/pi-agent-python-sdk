@@ -113,6 +113,35 @@ A missing or unknown model does **not** raise: upstream settles as
 `settled.reason` before looking for an answer; unanswered submissions have no
 `answer_id`.
 
+### Async Durable usage
+
+The async client exposes the same flow, with awaited methods:
+
+```python
+import asyncio
+
+from pi_agent.durable import AsyncDurableClient
+
+
+async def main() -> None:
+    async with AsyncDurableClient(
+        "state.db",
+        host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
+        faux=["Hello from async Durable."],
+    ) as durable:
+        cid = await durable.root(model={"provider": "faux", "modelId": "faux-1"})
+        sid = await durable.submit(cid, "Hello", request_id="async-job-1")
+        settled = await durable.wait(sid)
+        print(await durable.answer_text(settled))
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+The [complete async example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/durable_async.py)
+uses temporary SQLite storage and needs no provider credentials.
+
 ### Use a real model
 
 Omit `faux` to use pi-ai `builtinModels()` and provider environment variables.
