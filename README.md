@@ -22,6 +22,11 @@ Both backends run upstream Pi's original TypeScript/Node.js code. This package
 adds Python APIs around it; it is **not a Python port** of Pi's agent or Durable
 engine.
 
+> **Version note:** `pi_agent.coding` and `pi_agent.durable` are available from
+> the release after 0.2.7 and in this source checkout. On 0.2.7, use
+> `from pi_agent import PiClient, AsyncPiClient`: the same classes, still supported
+> and silent.
+
 The [experimental Pi Durable backend](#pi-durable-experimental) is documented
 separately after the coding-agent/RPC guide below.
 
@@ -30,7 +35,7 @@ separately after the coding-agent/RPC guide below.
 https://github.com/user-attachments/assets/c64dde3a-e812-42d4-a005-aa60df861e92
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     print(pi.run("Explain the current project without changing files.").text)
@@ -77,18 +82,20 @@ configuration when it starts Pi.
 
 Install the Python package from [PyPI][pypi]:
 
+> **Version note:** `pi_agent.coding` and `pi_agent.durable` are available from
+> the release after 0.2.7 and in this source checkout. On 0.2.7, use
+> `from pi_agent import PiClient, AsyncPiClient`: the same classes, still supported
+> and silent.
+
 ```sh
 python -m pip install pi-agent-python-sdk
 ```
 
 The distribution is named `pi-agent-python-sdk`; import it as `pi_agent`.
-The PyPI-facing examples here use the supported, silent top-level imports.
-`pi_agent.coding` is a re-export namespace available in this source checkout and
-the next release, **not in PyPI 0.2.7**. To use that namespace, install the
-checkout with `python -m pip install -e .`.
+For installation from this checkout instead, use `python -m pip install -e .`.
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     result = pi.run("Explain the current project without changing files.")
@@ -105,7 +112,7 @@ and observed assistant usage.
 Continue the conversation with another call on the same client:
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     print(pi.run("Explain this project's entry points without editing files.").text)
@@ -120,7 +127,7 @@ answer from that call; a call with no assistant output has empty text.
 ## Streaming
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     with pi.stream("Explain this project's entry points without editing files.") as stream:
@@ -149,7 +156,7 @@ arguments and results match the synchronous client.
 ```python
 import asyncio
 
-from pi_agent import AsyncPiClient
+from pi_agent.coding import AsyncPiClient
 
 
 async def main() -> None:
@@ -175,7 +182,7 @@ Use `async with pi.stream(...)`, `async for event in stream`, and
 Choose the project directory and whether to save the conversation:
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient(cwd=".", no_session=True) as pi:
     print(pi.run("Describe this project without changing files.").text)
@@ -207,7 +214,7 @@ Set the model and thinking level **before** `run()` or `stream()`.
 Select a model at construction:
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient(provider="openai", model="gpt-5") as pi:
     print(pi.run("Summarise this repo without changing files.").text)
@@ -223,7 +230,7 @@ Thinking levels depend on the current model. Query them, set one, then confirm
 what Pi actually applied:
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     levels = pi.get_available_thinking_levels()
@@ -240,7 +247,7 @@ with PiClient() as pi:
 <summary>List models and switch after start</summary>
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     for model in pi.get_available_models():
@@ -266,7 +273,7 @@ Your Python application
 Inspect session state without starting a model run:
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     state = pi.get_state()

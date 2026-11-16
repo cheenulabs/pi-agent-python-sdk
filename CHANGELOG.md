@@ -7,8 +7,9 @@
 - Experimental `pi_agent.durable` sync/async clients for the original upstream
   Durable Harness: idempotent submissions, watches and crash recovery through a
   caller-supplied Node host. Python runtime dependencies remain zero.
-- `pi_agent.coding` as a source-checkout/next-release namespace for the existing
-  coding-agent clients. Top-level imports remain supported and silent.
+- `pi_agent.coding` as the primary namespace for the existing coding-agent
+  clients, available in this checkout and the release after 0.2.7. Top-level
+  imports remain supported and silent.
 - Optional `PiCommandError.code` passthrough for upstream command error codes.
 
 ## 0.2.7
