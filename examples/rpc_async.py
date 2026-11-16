@@ -2,7 +2,7 @@
 
 import asyncio
 
-from pi_agent import AsyncPiClient
+from pi_agent.coding import AsyncPiClient
 from pi_agent.types import Event
 
 

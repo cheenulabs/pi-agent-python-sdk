@@ -347,7 +347,12 @@ class Transport:
             pending.future.set_result(record)
         else:
             pending.future.set_exception(
-                PiCommandError(pending.command, record["error"], request_id=request_id)
+                PiCommandError(
+                    pending.command,
+                    record["error"],
+                    request_id=request_id,
+                    code=record.get("code") if isinstance(record.get("code"), str) else None,
+                )
             )
 
     @staticmethod

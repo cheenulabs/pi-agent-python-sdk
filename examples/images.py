@@ -4,7 +4,8 @@ import argparse
 import base64
 from pathlib import Path
 
-from pi_agent import ImageContent, PiClient
+from pi_agent import ImageContent
+from pi_agent.coding import PiClient
 
 MIME_TYPES = {
     ".png": "image/png",

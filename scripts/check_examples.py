@@ -1,13 +1,15 @@
-"""Smoke every example main() against isolated real Pi and its local faux provider.
+"""Smoke example main() entry points against isolated real Pi or Pi Durable.
 
 Run with the development dependencies installed and `npm ci --prefix tests/pi
 --ignore-scripts` completed. This checks runnable example entry points, not every
 CLI option or provider behavior. It never uses live agents, credentials, existing
 Pi configuration, or a network provider. Integration tests cover protocol details.
+--durable runs only Durable examples and needs durable-host/node_modules instead of tests/pi.
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import base64
 import builtins
@@ -40,6 +42,7 @@ EXAMPLES = (
     "sync.py",
     "ui.py",
 )
+DURABLE_EXAMPLES = ("durable_async.py", "durable_recovery.py", "durable_sync.py")
 ANSWER = "Synthetic example answer."
 PIXEL = (
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII="
@@ -193,15 +196,98 @@ def check_example(path: Path, fixture: ModuleType) -> str:
         return versions[0]
 
 
+def check_durable_example(path: Path, command: list[str]) -> None:
+    from pi_agent.durable import AsyncDurableClient, DurableClient
+
+    clients: list[AsyncDurableClient] = []
+    sync_clients: list[DurableClient] = []
+
+    class CheckedClient(AsyncDurableClient):
+        def __init__(self, storage_path: str | Path | None, **kwargs: Any) -> None:
+            super().__init__(
+                storage_path, **{**kwargs, "host_command": command, "inherit_env": False}
+            )
+            clients.append(self)
+
+    class CheckedSyncClient(DurableClient):
+        def __init__(self, storage_path: str | Path | None, **kwargs: Any) -> None:
+            super().__init__(
+                storage_path, **{**kwargs, "host_command": command, "inherit_env": False}
+            )
+            sync_clients.append(self)
+
+    module = load(path, f"pi_checked_durable_example_{path.stem}")
+    for name, replacement in (
+        ("AsyncDurableClient", CheckedClient),
+        ("DurableClient", CheckedSyncClient),
+        ("host_command", lambda: command),
+    ):
+        setattr(module, name, replacement)
+    output = io.StringIO()
+
+    async def run() -> None:
+        try:
+            async with asyncio.timeout(60):
+                await module.main()
+        finally:
+            for client in clients:
+                await client.aclose()
+
+    with contextlib.redirect_stdout(output):
+        if inspect.iscoroutinefunction(module.main):
+            asyncio.run(run())
+        else:
+            try:
+                module.main()
+            finally:
+                for sync_client in sync_clients:
+                    sync_client.close()
+    assert clients or sync_clients, "Durable example created no clients"
+    for sync_client in sync_clients:
+        assert sync_client._thread is None or not sync_client._thread.is_alive(), (
+            "Example left its sync bridge thread alive"
+        )
+    for client in clients + [sync_client._client for sync_client in sync_clients]:
+        assert not client.running
+        if client._transport is not None and client._transport._process is not None:
+            assert client._transport._process.returncode is not None, "Example left a host alive"
+    text = output.getvalue()
+    if path.stem == "durable_recovery":
+        assert "Recovered submission" in text
+        assert "done; user entries: 1" in text
+        assert "Synthetic recovery answer." in text
+    elif path.stem == "durable_sync":
+        assert "Hello from sync Durable." in text
+    else:
+        assert "Hello from async Durable." in text
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--durable", action="store_true", help="Run only the experimental Durable examples"
+    )
+    args = parser.parse_args()
+    actual = {path.name for path in (ROOT / "examples").glob("*.py")}
+    if actual != set(EXAMPLES) | set(DURABLE_EXAMPLES):
+        raise RuntimeError("Update check_examples.py to cover the current complete example set")
+    if args.durable:
+        node = shutil.which("node")
+        if node is None or not (ROOT / "durable-host/node_modules").is_dir():
+            raise RuntimeError(
+                "Durable examples require Node >=22.19 and npm ci --prefix durable-host"
+            )
+        command = [node, str(ROOT / "durable-host/src/host.ts")]
+        for name in DURABLE_EXAMPLES:
+            check_durable_example(ROOT / "examples" / name, command)
+            print(f"PASS {name}: isolated real Durable faux provider")
+        print(f"All {len(DURABLE_EXAMPLES)} Durable example entry points passed; no live providers")
+        return
     runtime = ROOT / "tests/pi/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js"
     if shutil.which("node") is None or not runtime.is_file():
         raise RuntimeError(
             "Example checks require Node and real Pi; run npm ci --prefix tests/pi --ignore-scripts"
         )
-    actual = {path.name for path in (ROOT / "examples").glob("*.py")}
-    if actual != set(EXAMPLES):
-        raise RuntimeError("Update check_examples.py to cover the current complete example set")
     fixture = load(ROOT / "tests/integration/conftest.py", "pi_example_fixture")
     for name in EXAMPLES:
         version = check_example(ROOT / "examples" / name, fixture)

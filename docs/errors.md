@@ -10,7 +10,7 @@ All library exceptions derive from `PiError` and are exported from the package.
 
 | Exception | Meaning and useful fields |
 |---|---|
-| `PiCommandError` | Pi returned `success=False`; inspect `command`, `request_id`, and explicit `.error` text |
+| `PiCommandError` | Pi returned `success=False`; inspect `command`, `request_id`, explicit `.error` text, and optional string `.code` (absent or non-string wire codes become `None`) |
 | `PiProtocolError` | Invalid UTF-8/JSON, malformed envelope/payload, oversized inbound record, or response mismatch |
 | `PiProcessError` | Missing/unstartable process, process exit, closed client, or broken transport; optional `returncode` |
 | `PiTimeoutError` | A deadline elapsed; also derives from Python `TimeoutError`; `command`, `request_id`, and `uncertain` describe available context |
@@ -72,7 +72,8 @@ See [the helper contract](api.md#listeners-and-settlement-helpers).
 ## Partial results and stop reasons
 
 ```python
-from pi_agent import PiClient, PiRunError
+from pi_agent import PiRunError
+from pi_agent.coding import PiClient
 
 
 def main() -> None:

@@ -4,6 +4,22 @@ Keep the client small and reviewable. Pi owns agent behavior, credentials,
 configuration, models, extensions, tools, and session storage. Preserve its
 defaults unless the caller explicitly overrides them.
 
+`PiClient` and `AsyncPiClient` stay focused on Pi's RPC protocol.
+`pi_agent.coding` and `pi_agent.durable` are the two backend namespaces;
+top-level `from pi_agent import PiClient, AsyncPiClient` stays supported and
+is not deprecated. The experimental `pi_agent.durable` backend may drive the real
+upstream Harness through the thin Node host in `durable-host/`, never a Python port. It reuses core
+private transport, limits, subscription, error, and sync-bridge modules. Follow the
+[Durable design decisions](docs/durable.md#design-decisions): dependencies flow
+from durable to core only, Python runtime dependencies stay zero, and the host
+keeps protocol bookkeeping only. Its SDK transport envelope does not make it a
+Pi RPC server. Pure-Python fake-host tests join the required test matrix; host
+and integration tests belong to a separate, initially non-required `durable`
+CI job. Core changes must pass all existing tests unmodified.
+
+See [#116](https://github.com/cheenulabs/pi-agent-python-sdk/issues/116) for
+milestone and approval status.
+
 Use Python 3.11-compatible syntax, standard-library runtime dependencies,
 explicit public methods, and typed wire dictionaries. Comments should explain
 non-obvious ordering, cancellation, and compatibility decisions. Public

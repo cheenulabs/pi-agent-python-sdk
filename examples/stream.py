@@ -4,7 +4,8 @@ import argparse
 import asyncio
 import json
 
-from pi_agent import AsyncPiClient, Event
+from pi_agent import Event
+from pi_agent.coding import AsyncPiClient
 
 
 def display(event: Event) -> None:

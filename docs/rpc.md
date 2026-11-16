@@ -1,9 +1,18 @@
 # RPC structure
 
-This SDK is a Python client for Pi's existing RPC protocol. Pi owns the agent
-loop, provider calls, tools, extensions, and session storage. Python owns the
-child process and exposes command methods, event subscriptions, and completed
-run results.
+`PiClient` and `AsyncPiClient` are Python clients for Pi's existing RPC protocol.
+Pi owns the agent loop, provider calls, tools, extensions, and session storage.
+Python owns the child process and exposes command methods, event subscriptions,
+and completed run results. This document describes those coding-agent clients.
+Import them from `pi_agent.coding`, which re-exports the same implementations;
+see the [API reference](api.md) for compatibility imports.
+
+The experimental [`pi_agent.durable` backend](durable.md) instead drives
+the real upstream Harness through a thin Node host, reusing core private modules.
+The host uses the SDK transport envelope (JSONL requests, correlated responses,
+and events), but is not a Pi RPC server and implements none of Pi's RPC commands.
+The Node host, `AsyncDurableClient`, and its blocking `DurableClient` facade
+implement the core Durable flow and bounded watch subscriptions.
 
 ## Relationship to Pi
 
@@ -149,11 +158,12 @@ The Python implementation keeps process I/O separate from conversation behavior:
 | [`_observation.py`](../src/pi_agent/_observation.py) | Process output records and delivery status |
 | [`_runs.py`](../src/pi_agent/_runs.py) | Run ownership, settlement, result collection, and cancellation |
 | [`_usage.py`](../src/pi_agent/_usage.py) | Usage accumulation from observed assistant messages |
-| [`sync.py`](../src/pi_agent/sync.py) | Synchronous calls through the same async client on one background event loop |
+| [`sync.py`](../src/pi_agent/sync.py) | Coding-agent synchronous methods delegated to the async client |
+| [`_sync_bridge.py`](../src/pi_agent/_sync_bridge.py) | Shared blocking lifecycle, loop thread, interrupt handling, and subscriptions |
 | [`types.py`](../src/pi_agent/types.py), [`errors.py`](../src/pi_agent/errors.py) | Typed wire dictionaries, Python results, and explicit failures |
 
 Underscored modules are private implementation details. Applications import
-`PiClient` and `AsyncPiClient` from `pi_agent`.
+`PiClient` and `AsyncPiClient` from `pi_agent.coding`.
 
 Keep protocol compatibility at the wire and command-method level. Copying Pi's
 TypeScript directory structure would not simplify the Python interface. The
@@ -161,9 +171,13 @@ existing transport and run modules keep framing, cleanup, and settlement logic
 in one place, while the sync client reuses the async implementation. Additional
 transport interfaces should follow concrete requirements for another transport.
 
-The core stays focused on RPC. Extension installation, application workflows,
-and application-specific observability belong to callers. Changes to supported
-commands or payloads need matching types, fixtures, documentation, and coverage;
+The coding-agent clients stay focused on RPC. The proposed Durable backend may
+reuse the private transport, limits, subscriptions, errors, and approved sync
+bridge, with dependencies flowing from durable to core only. It does not reuse
+coding-agent run ownership or settlement semantics. Extension installation,
+application workflows, and application-specific observability belong to callers.
+Changes to supported commands or payloads need matching types, fixtures,
+documentation, and coverage;
 see [maintenance](maintenance.md).
 
 [upstream-rpc]: https://github.com/earendil-works/pi/blob/f9a26365568127461c47a07a37dcb42c140a3ac5/packages/coding-agent/docs/rpc.md

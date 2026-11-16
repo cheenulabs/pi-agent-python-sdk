@@ -1,8 +1,11 @@
 # API reference
 
-Import `PiClient` or `AsyncPiClient` from `pi_agent`. Both expose
-the same command arguments and return values. Await command methods on the async
-client; call them directly on the synchronous client. Types named below are
+Import `PiClient` or `AsyncPiClient` from `pi_agent.coding`, the coding-agent
+namespace. Both expose the same command arguments and return values.
+The top-level import remains supported and silent:
+`from pi_agent import PiClient, AsyncPiClient` returns the same client classes.
+
+Await command methods on the async client; call them directly on the synchronous client. Types named below are
 defined in `pi_agent.types`, except `ProcessOutput` and `ObservationStatus`,
 which are exported directly from `pi_agent`.
 
@@ -11,6 +14,30 @@ Python method arguments use snake_case. Optional arguments are omitted from the
 wire when unset; explicitly supplied `False`, empty strings, and empty lists
 remain meaningful values. The client checks response success even for commands
 whose Python return value is `None`.
+
+The experimental `pi_agent.durable.AsyncDurableClient` and blocking
+`pi_agent.durable.DurableClient` drive the separate Durable Harness through an explicit `host_command`. It is not a coding-agent
+RPC client; see [Durable API and failure semantics](durable.md#python-api).
+Both Durable constructors default to `models="pi"`, using upstream Pi CLI logins,
+stored keys and custom providers. Use `pi_agent_dir` to choose a different agent
+directory, or `models="builtin"` for environment-variable-only providers.
+Relative SQLite and agent-directory paths resolve against the caller cwd at
+startup. With `limits=None`, Durable uses a 25-second cleanup grace; explicit
+`Limits` objects are honored without changing coding-agent defaults.
+
+For answers, use `client.answer_text(settled)` on either Durable client. It reads
+expanding history windows to find `SettledSubmission.answer_id`; the pure
+`pi_agent.durable.entry_text(entry)` helper remains available for entries you
+already fetched. See
+[answer retrieval](durable.md#read-the-answer-text).
+
+## Command errors
+
+`PiCommandError(command, error, request_id=None, code=None)` exposes the rejected
+command, explicit error text, request ID, and optional string `.code`. A response
+with no `code` or a non-string `code` produces `code=None`. Existing positional
+construction remains supported. Error text and codes are not automatically
+included in exception messages. See [errors](errors.md).
 
 ## Constructor options
 

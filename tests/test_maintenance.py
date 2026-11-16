@@ -83,6 +83,20 @@ def test_record_is_explicit(baseline, monkeypatch):
     assert json.loads(upstream.BASELINE.read_text())["testedVersion"] == "0.86.0"
 
 
+def test_record_preserves_durable_and_unknown_metadata(baseline, monkeypatch):
+    record = json.loads(upstream.BASELINE.read_text())
+    durable = {"testedVersion": "1.5.2", "upstreamCommit": "b" * 40, "future": {"kept": True}}
+    record.update(durable=durable, futureTopLevel=["preserved"])
+    upstream.BASELINE.write_text(json.dumps(record))
+    baseline["version"] = "0.86.0"
+    monkeypatch.setattr(sys, "argv", ["check_upstream.py", "--record"])
+    assert upstream.main() == 0
+    updated = json.loads(upstream.BASELINE.read_text())
+    assert updated["durable"] == durable
+    assert updated["futureTopLevel"] == ["preserved"]
+    assert updated["testedVersion"] == "0.86.0"
+
+
 def test_offline_claim_cannot_disagree_with_record(baseline):
     (upstream.ROOT / "src/pi_agent/_launch.py").write_text('TESTED_PI_VERSION = "0.84.0"')
     assert upstream.main() == 1

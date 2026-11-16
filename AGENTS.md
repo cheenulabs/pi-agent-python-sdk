@@ -7,9 +7,22 @@ Paths below are relative to the repository root.
 ## Scope and implementation
 
 - The distribution is `pi-agent-python-sdk`; Python code imports `pi_agent`.
-- Keep the SDK focused on Pi's RPC protocol. Pi owns models, authentication,
-  tools, extensions, configuration, and session storage. Preserve Pi's defaults
-  unless the caller explicitly overrides them.
+- Keep `PiClient` and `AsyncPiClient` focused on Pi's RPC protocol. Pi owns
+  models, authentication, tools, extensions, configuration, and session storage.
+  Preserve Pi's defaults unless the caller explicitly overrides them.
+- `pi_agent.coding` and `pi_agent.durable` are the two backend namespaces;
+  top-level `from pi_agent import PiClient, AsyncPiClient` stays supported and
+  is not deprecated.
+- The experimental `pi_agent.durable` backend may ship a thin Node host in
+  `durable-host/`, driving the real upstream Harness, not a Python port. It reuses core private modules
+  for transport, limits, subscriptions, errors, and the sync bridge. Keep
+  dependencies one-way from durable to core, Python runtime dependencies at
+  zero, and Durable tests isolated: fake-host unit tests in the required matrix,
+  host/integration tests in a separate job, non-required until owner promotion.
+  Core changes must pass every existing test unmodified. The host uses the SDK
+  transport envelope; it is not a Pi RPC server. Follow the design decisions in
+  [durable](docs/durable.md); see [#116](https://github.com/cheenulabs/pi-agent-python-sdk/issues/116)
+  for milestone and approval status.
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing code or preparing a PR;
   it defines coding conventions, test setup, and required validation commands.
 - For lifecycle, transport, or run changes, read [RPC structure](docs/rpc.md) and

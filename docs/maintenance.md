@@ -22,6 +22,26 @@ version PR is the single update PR. Its normal CI jobs provide the test and
 source-review results; review artifacts remain attached to the workflow run
 linked from the PR checks.
 
+## Experimental Durable pin
+
+`compatibility.json` also records an independent `durable` tested version and
+upstream commit. Coding-agent `check_upstream.py --record` preserves that section.
+The four host pins and Durable constant are checked against this record only;
+a coding-agent baseline bump neither requires a Durable bump nor fails its
+required test job because those baseline versions differ.
+For Durable updates, review the published package APIs and update all four
+`durable-host/package.json`/lockfile upstream pins (including
+`@earendil-works/pi-coding-agent`) and
+`pi_agent.durable.TESTED_PI_DURABLE_VERSION` with the record. Run
+`uv run python scripts/check_durable.py` and the complete Durable checks,
+including the three-run crash recovery loop. The separate Linux/macOS Durable
+job remains outside `required.needs` by owner decision; Windows is unsupported.
+
+Dependabot groups the four upstream packages in `/durable-host`. The latest workflow
+resolves npm's Durable latest and uploads `durable-drift-report.md` without
+blocking the coding-agent job or changing pins. A version match does not
+establish source compatibility; this report is maintenance input only.
+
 ## Reviewing an update
 
 1. Check the Dependabot PR's exact package version and npm integrity lock.

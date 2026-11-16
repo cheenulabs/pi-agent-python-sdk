@@ -78,6 +78,41 @@ jobs:
         env:
           PI_CLIENT_REQUIRE_INTEGRATION: '1'
           PI_CLIENT_EXPECTED_PI_VERSION: ${{ matrix.pi }}
+  durable:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ['3.11', '3.14']
+    name: Durable ${{ matrix.os }} Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: durable-host/package-lock.json
+      - run: uv sync --locked --group dev --python ${{ matrix.python }}
+      - run: npm ci --prefix durable-host --ignore-scripts --no-audit --no-fund
+      - run: npm run --prefix durable-host typecheck
+      - run: npm test --prefix durable-host
+      - run: uv run --no-sync python scripts/check_durable.py
+      - run: uv run --no-sync python scripts/check_examples.py --durable
+      - run: uv run --no-sync pytest tests/durable
+        env:
+          PI_DURABLE_REQUIRE_INTEGRATION: '1'
+      - name: Prove crash recovery three times
+        run: |
+          for attempt in 1 2 3; do
+            uv run --no-sync pytest tests/durable -k recovery -rP || exit 1
+          done
+        env:
+          PI_DURABLE_REQUIRE_INTEGRATION: '1'
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 10
