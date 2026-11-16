@@ -16,8 +16,9 @@ Durable is pinned to published pi-durable **1.5.2**, exposed as
 `pi_agent.durable.TESTED_PI_DURABLE_VERSION` and checked against
 `compatibility.json`, all four host package pins and their lockfile versions by
 `scripts/check_durable.py`. Coding-agent baseline recording preserves the
-independent `durable` record; the host model-runtime pin must nevertheless agree
-with the coding-agent baseline. Durable uses exact upstream
+independent `durable` record. The four host pins agree with that Durable record,
+not the coding-agent baseline, so coding-agent updates do not gate on this
+experimental backend. Durable uses exact upstream
 pins and Node **22.19 or newer**, needed only by that backend. Python runtime
 dependencies remain zero. Core host coverage uses a separate, initially
 non-required `durable` CI job; fake-host Python unit tests run in

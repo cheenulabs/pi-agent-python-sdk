@@ -1,29 +1,22 @@
 # Experimental Pi Durable backend design
 
-**M1 implements the experimental Node host's core protocol** in `durable-host/`.
-**M2 adds the coding namespace, error codes, and shared child environment helper.**
-**M3 adds `pi_agent.durable.AsyncDurableClient`** with async lifecycle, root,
-submit, wait, entries, and abort, built on the shared transport and limits.
-**M4 extracts the shared synchronous lifecycle and subscription bridge** without
-changing coding-agent behavior. **M5 adds `DurableClient`**, delegating its core
-methods to `AsyncDurableClient` on that bridge. **M6 adds async and synchronous
-watch**, including bounded subscriptions, snapshots, entry diffs and explicit gaps.
-The protocol and API follow sections 5, 6, 8, and 9 of [#116]. The milestone plan and acceptance
-criteria remain in that issue. Each milestone is a separate PR; start the next
-only after the previous PR is approved and merged, unless explicitly requested
-as a stacked PR targeting the previous milestone's branch. Before a stack merges,
-restack onto `main` after its base merges and rerun checks. The owner approved Q1 (scope, including M2) and Q2 (shared sync bridge and sync
-Durable client) in [the updated instruction][owner-decisions]. Q3 uses
-caller-supplied `host_command` (skip M9); Q4 is Linux/macOS only, Windows
-unsupported, with `durable` left out of `required.needs`. The current delivery
-is an unmerged stack followed by one combined PR for owner review. Nothing is
-to be merged, auto-merged, published, or released by this work.
+Python APIs for the original upstream Pi Durable Harness, not a Python port.
+`AsyncDurableClient` and `DurableClient` provide root, submit, wait, entries,
+abort and bounded conversation watches, reusing the SDK transport, limits,
+subscriptions and sync bridge. Agent execution, models, storage and recovery
+remain upstream-owned.
+
+This backend is experimental and supports Linux/macOS, not Windows. It requires
+an explicit caller-supplied Node host; neither wheel nor sdist bundles or downloads
+one. The Durable CI matrix remains outside `required.needs`.
+See [#116] for the design history, acceptance criteria and
+[owner decisions][owner-decisions].
 
 [owner-decisions]: https://github.com/cheenulabs/pi-agent-python-sdk/issues/116#issuecomment-6902908994
 
-## Bring your own host (M9 skipped)
+## Bring your own host
 
-Q3 selected an explicit caller-supplied `host_command`. Neither wheel nor sdist
+Pass an explicit caller-supplied `host_command`. Neither wheel nor sdist
 includes the host or its npm dependencies, and the SDK never downloads them.
 From the source checkout, install Node ≥22.19 and the Python package, then:
 
@@ -68,25 +61,25 @@ PI_DURABLE_REQUIRE_INTEGRATION=1 uv run pytest tests/durable
 node durable-host/src/host.ts
 ```
 
-The host accepts JSONL on stdin and shuts down on EOF. M1 supports `hello`,
-`open`, `root`, `submit`, `wait`, `entries`, and `abort`, with memory or SQLite
-storage and pinned upstream 1.5.2. M6 adds `watch`/`unwatch` and their events. The host is not bundled in
+The host accepts JSONL on stdin and shuts down on EOF. It supports `hello`,
+`open`, `root`, `submit`, `wait`, `entries`, `abort`, `watch` and `unwatch`, with
+memory or SQLite storage and pinned upstream 1.5.2. The host is not bundled in
 the Python wheel or sdist. The separate `durable` CI matrix covers Linux/macOS
 and Python 3.11/3.14 on Node 22, and is not a required merge gate. The owner
 explicitly chose to leave it out of `required.needs` (Q4); Windows Durable v0 is
 unsupported. `TESTED_PI_DURABLE_VERSION` and `compatibility.json` record 1.5.2.
-M8's `scripts/check_durable.py` checks all four manifest/lock pins and that
+`scripts/check_durable.py` checks all four manifest/lock pins and that
 constant; coding-agent `--record` preserves the independent Durable record.
 The Latest Pi workflow uploads a non-blocking npm-latest drift report, and
-Dependabot groups the four `/durable-host` upstream packages. The coding-agent
-model-runtime pin must also match the coding-agent baseline in `compatibility.json`.
+Dependabot groups the four `/durable-host` upstream packages. These pins track
+`durable.testedVersion` independently of the coding-agent compatibility baseline.
 
 The experimental `pi_agent.durable` drives the real upstream
 [`@earendil-works/pi-durable` Harness][upstream], not a port. Python and the host
 must not implement agent, storage, or recovery logic. Existing `PiClient` and
 `AsyncPiClient` behavior stays unchanged. The only public API additions outside
 `pi_agent.durable` are the optional `PiCommandError.code` attribute and the
-`pi_agent.coding` module, which re-exports the existing clients (both M2).
+`pi_agent.coding` module, which re-exports the existing clients.
 No existing module or class is moved or renamed.
 
 Pin `@earendil-works/pi-durable`, `@earendil-works/pi-ai`,
@@ -144,6 +137,11 @@ Use `pi_agent_dir` for a different directory; otherwise upstream honors
 once at `start()`, against the caller's working directory, before launching the
 host. Setting constructor `cwd` does not change that resolution.
 
+By default `coding_tools=True` gives the model unattended `read`/`write`/`edit`/`bash`
+in the host `cwd`, with the inherited environment. Set `coding_tools=False` to
+disable these tools, as the real-model examples below do. Shared Pi credentials
+and catalogs do not select a default model: pass the root model explicitly.
+
 For example, configure standard AWS credentials (`AWS_ACCESS_KEY_ID`,
 `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` for temporary credentials), plus
 `AWS_REGION` and access to the chosen Bedrock model, then run:
@@ -154,6 +152,7 @@ from pi_agent.durable import DurableClient
 with DurableClient(
     "bedrock.db",
     host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
+    coding_tools=False,
 ) as client:
     cid = client.root(
         model={
@@ -177,6 +176,7 @@ from pi_agent.durable import DurableClient
 with DurableClient(
     "codex.db",
     host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
+    coding_tools=False,
 ) as client:
     cid = client.root(model={"provider": "openai-codex", "modelId": "gpt-6.1-sol"})
     sid = client.submit(cid, "Say hello", request_id="codex-1")
@@ -203,7 +203,7 @@ are enabled automatically.
 - **Host exits during startup:** check the explicit `host_command` path, Node
   ≥22.19, and `npm ci --prefix durable-host` in the matching checkout. The SDK reports
   these hints as `PiProcessError`, without attaching stderr.
-- **Need host diagnostics:** opt in with `limits=Limits(stderr_tail_bytes=8192)`
+- **Need host diagnostics:** opt in with `limits=Limits(stderr_tail_bytes=8192, cleanup_timeout=25)`
   (import `Limits` from `pi_agent`) and inspect `client.stderr_tail` after the
   failure. Retention is disabled by default. Inspect it locally: stderr may
   contain application data and must not be copied into shared logs or reports.
@@ -212,7 +212,9 @@ are enabled automatically.
   explicitly, and check Pi CLI configuration (or environment credentials when
   using `models="builtin"`).
 - **Relative working directory:** constructor `cwd` is resolved once at startup,
-  used for the host and as the default agent working directory. A `root(cwd=...)` override
+  used for the host and as the default agent working directory. Relative
+  `storage_path` and `pi_agent_dir` are also resolved once at startup against the
+  caller's cwd, independently of that host directory. A `root(cwd=...)` override
   remains relative to the host directory when you supply a relative value.
 - **Cancelled close:** cleanup is shielded from caller cancellation. A subsequent
   `await client.aclose()` joins the same teardown; keep the owning event loop
@@ -223,7 +225,9 @@ are enabled automatically.
 1. **Thin-host rule.** `durable-host/` translates protocol commands to upstream calls.
    It may keep **protocol bookkeeping only**: a lifecycle state (not open /
    opening / open / closing), the open harness, the configured record-size
-   limit, watch handles by watch ID, and the last entry ID sent per watch.
+   limit, watch handles by watch ID, and the last entry ID sent per watch. Lifecycle
+   bookkeeping also includes the `ModelRuntime` handle for upstream credential
+   settling, shutdown status/started flags, local cleanup promises and timers.
    It has no retries, caching, agent logic, or durable state of its own. Any
    other state needs a written exception in this document.
 2. **Share the core, add only what is new.** Use the existing `Transport`,
@@ -239,9 +243,8 @@ are enabled automatically.
    Durable depends on the core; the core never imports durable. Host and
    integration tests run in a separate `durable` CI job that stays out of
    `required.needs` until the owner promotes it. Pure-Python durable unit tests
-   (fake host) run in the existing required `test` matrix. M2/M4 core changes
-   ship in coding-agent releases, so use separate PRs that pass every existing
-   test unmodified.
+   (fake host) run in the existing required `test` matrix. Shared core changes
+   also reach coding-agent users and must preserve every existing behavioral test.
 5. **Runtime dependencies stay zero.** Keep `pyproject.toml`'s
    `dependencies = []`. Node ≥ 22.19 is required only for `pi_agent.durable`.
 6. **Single writer.** One host owns one storage path; upstream has no
@@ -265,28 +268,32 @@ are enabled automatically.
 
 ## Shared core and new components
 
-| Concern | Durable uses | Core change needed |
+| Concern | Durable uses | Integration |
 | --- | --- | --- |
 | Process spawn, pipes, JSONL framing, write lock, exit monitoring, shutdown (stdin EOF → terminate → kill), late replies | `_transport.Transport`, unchanged | None |
-| Error-code passthrough | `PiCommandError.code` | M2: optional `code`, read from an error response's `code` field when it is a string |
+| Error-code passthrough | `PiCommandError.code` | Optional `code`, read from an error response's `code` field when it is a string |
 | Limits and deadlines | `types.Limits` | None |
-| Child environment (`inherit_env` + overrides) | `_launch.child_env()` | M2: extract the inline merge in `AsyncPiClient.start` into this helper |
+| Child environment (`inherit_env` + overrides) | `_launch.child_env()` | Both clients use the same helper |
 | Argv resolution | `_launch.executable_argv()` | None; Durable rewords the not-found error (it says “install Pi”) |
 | Errors | `PiCommandError`, `PiProcessError`, `PiProtocolError`, `PiTimeoutError`, `PiVersionError`, `PiSubscriptionOverflow` | None; no new error classes; messages saying “Pi …” are accepted as is |
 | Timeout argument convention | `client.Timeout` / `client.DEFAULT_TIMEOUT` | None |
 | Bounded streaming with explicit overflow | `_events._Subscription[T]`, subclassed for watch | None |
-| Sync facade (loop thread, call bridging, interrupt handling, blocking subscriptions) | `_sync_bridge._SyncBridge`, `_SyncSubscription` | M4, only if Q2 is approved: extract from `sync.py` as a base class; `PiClient` inherits it with identical behavior |
+| Sync facade (loop thread, call bridging, interrupt handling, blocking subscriptions) | `_sync_bridge._SyncBridge`, `_SyncSubscription` | Shared base; `PiClient` retains identical behavior |
 | Test pattern | A fake host executable, like `tests/fake_pi.py` | None |
-| Compatibility record and docs | `compatibility.json` (`durable` section), `docs/` | M8, M0 |
+| Compatibility record and docs | `compatibility.json` (`durable` section), `docs/` | Separate Durable record and checks |
 
 Durable uses `startup_timeout`, `command_timeout`, `cleanup_timeout`,
 `max_record_bytes`, `event_queue_size`, `event_queue_bytes`, and
-`stderr_tail_bytes` from `Limits`. It does not use `run_start_timeout`,
+`stderr_tail_bytes` from `Limits`. When no `limits` object is supplied, Durable
+uses `cleanup_timeout=25` seconds so the host's 20-second shutdown bound finishes
+before transport escalation. `PiClient` and the shared `Limits()` defaults remain
+unchanged at five seconds. An explicit `Limits` object is honored as supplied;
+set `cleanup_timeout=25` there to retain Durable's longer grace. It does not use `run_start_timeout`,
 `result_message_*`, or `collection_event_*`.
 
 New components are `durable-host/` (Node), `src/pi_agent/durable/` (clients and types),
 `tests/durable/`, and the `durable` CI job. New for the coding agent is only
-`src/pi_agent/coding.py`, a re-export module (M2). Deliberately do not share
+`src/pi_agent/coding.py`, a re-export module. Deliberately do not share
 `_runs.py`, `RunResult`, `check_version`, `validate_extra_args`, or `Transport.send_ui`:
 these are tied to coding-agent concepts (`agent_settled`, run ownership,
 `SessionInfo`, Pi CLI flags).
@@ -342,7 +349,11 @@ The host must:
   Watch/harness/storage teardown steps have six-second bounds so a stuck close
   cannot prevent credential settling. A referenced 20-second shutdown deadline
   forces nonzero exit if cleanup or output flushing still hangs; Python's
-  `Limits.cleanup_timeout` can terminate the child earlier. Ignore `EPIPE` on
+  explicit `Limits.cleanup_timeout` can terminate the child earlier. Durable's
+  default 25-second transport grace allows this host deadline to finish first.
+  SIGTERM requests the same owned cleanup with nonzero status. SIGINT is ignored
+  by the host so terminal Ctrl-C is handled by the Python parent, which closes
+  stdin during teardown. Ignore `EPIPE` on
   stdout and stderr because the parent may be gone. Do not answer pending
   requests. Unfinished durable work stays in storage for the next `open`.
 
@@ -423,10 +434,17 @@ on that watch, oldest → newest. Implement this diff as the pure function
 may have been skipped. Recover with `entries`. `live` is upstream
 `docs["pi.live"]`, unchanged.
 
+Known limits: Python treats every upstream watch-end kind as normal end of
+iteration; it does not expose `failed` or `listener_error` separately. After an
+empty snapshot there is no prior entry-ID cursor, so a first non-empty window
+that was already trimmed can omit entries without setting `gap`. Use explicit
+history reads when a complete transcript is required, rather than treating the
+watch as a lossless log.
+
 ## Python API
 
-The async core methods below are implemented in M3 and the synchronous facade
-in M5. M6 implements watch in both clients.
+Both clients expose the same core methods and bounded watches; the synchronous
+facade delegates to the async implementation.
 
 ### Async client
 
@@ -485,7 +503,7 @@ class AsyncDurableClient:
     async def abort(
         self, conversation_id: ConversationId, *, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> None: ...
-    def watch(self, conversation_id: ConversationId) -> WatchSubscription: ...  # M6
+    def watch(self, conversation_id: ConversationId) -> WatchSubscription: ...
 
     @property
     def limits(self) -> Limits: ...
@@ -503,7 +521,7 @@ class AsyncDurableClient:
 
 1. Build the child env with `_launch.child_env(inherit_env, env)`.
 2. Resolve argv with `_launch.executable_argv(host_command, child_env)`.
-   Before M9, `host_command=None`, or a program not found, raises
+   A missing `host_command`, or a program not found, raises
    `PiProcessError` naming Node ≥ 22.19 and `host_command`.
 3. Create `Transport(limits=..., on_event=..., on_failure=...)` and await
    `transport.start(argv, cwd=cwd, env=child_env)`.
@@ -589,8 +607,8 @@ rejected, and `KeyboardInterrupt` cancels a call but never interrupts shutdown.
 Recovery belongs entirely to upstream. `open` resumes unfinished work; a new
 client reuses the same SQLite path and conversation-scoped `request_id` to
 recover the original submission after a host or Python crash. This is not
-permission to retry with a new key or attach multiple writers. The issue's
-M7 suite exercises host SIGKILL after at least 200 characters of partial live
+permission to retry with a new key or attach multiple writers. The recovery
+suite exercises host SIGKILL after at least 200 characters of partial live
 text, Python SIGKILL followed by host EOF shutdown, and settled-key resubmission
 without a second user entry. Every reopen uses the same 400-word faux answer,
 50 tokens/second, and 50 ms persistence/retry settings. CI repeats recovery three
@@ -602,11 +620,10 @@ Use isolated synthetic data. Host/integration tests require installed host
 modules and Node ≥ 22.19; `PI_DURABLE_REQUIRE_INTEGRATION=1` must fail rather than
 skip when prerequisites are absent. SIGKILL tests skip Windows.
 Python client unit tests use a fake host without Node. See [CONTRIBUTING.md](../CONTRIBUTING.md) for standard
-checks and [#116] for each milestone's additional validation. M1's direct-host
-suite covers command envelopes and failures, memory/SQLite flows, concurrent
+checks and [#116] for the acceptance criteria. The direct-host suite covers command envelopes and failures, memory/SQLite flows, concurrent
 wait/control, EOF shutdown (including opening and a pending wait), and record
-limits. M3/M5 add async/sync client flow and failure coverage; M6 adds watch
-snapshots, bounds and gaps; M7 adds the crash scenarios above. Host packaging is
+limits. Client tests cover async/sync flows and failures, watch snapshots,
+bounds and gaps, and the crash scenarios above. Host packaging is
 not provided (bring your own host). No live providers are used or certified by
 these tests.
 

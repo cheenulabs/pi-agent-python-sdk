@@ -26,6 +26,9 @@ linked from the PR checks.
 
 `compatibility.json` also records an independent `durable` tested version and
 upstream commit. Coding-agent `check_upstream.py --record` preserves that section.
+The four host pins and Durable constant are checked against this record only;
+a coding-agent baseline bump neither requires a Durable bump nor fails its
+required test job because those baseline versions differ.
 For Durable updates, review the published package APIs and update all four
 `durable-host/package.json`/lockfile upstream pins (including
 `@earendil-works/pi-coding-agent`) and

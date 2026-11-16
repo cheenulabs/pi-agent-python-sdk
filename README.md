@@ -30,7 +30,7 @@ separately after the coding-agent/RPC guide below.
 https://github.com/user-attachments/assets/c64dde3a-e812-42d4-a005-aa60df861e92
 
 ```python
-from pi_agent.coding import PiClient
+from pi_agent import PiClient
 
 with PiClient() as pi:
     print(pi.run("Explain the current project without changing files.").text)
@@ -81,14 +81,14 @@ Install the Python package from [PyPI][pypi]:
 python -m pip install pi-agent-python-sdk
 ```
 
-The distribution is named `pi-agent-python-sdk`; import it as
-`pi_agent`. The top-level import remains supported and silent; it refers to the
-same clients. Use `python -m pip install -e .` for the unreleased namespace
-additions in this source checkout rather than assuming an older PyPI version
-includes them.
+The distribution is named `pi-agent-python-sdk`; import it as `pi_agent`.
+The PyPI-facing examples here use the supported, silent top-level imports.
+`pi_agent.coding` is a re-export namespace available in this source checkout and
+the next release, **not in PyPI 0.2.7**. To use that namespace, install the
+checkout with `python -m pip install -e .`.
 
 ```python
-from pi_agent.coding import PiClient
+from pi_agent import PiClient
 
 with PiClient() as pi:
     result = pi.run("Explain the current project without changing files.")
@@ -105,7 +105,7 @@ and observed assistant usage.
 Continue the conversation with another call on the same client:
 
 ```python
-from pi_agent.coding import PiClient
+from pi_agent import PiClient
 
 with PiClient() as pi:
     print(pi.run("Explain this project's entry points without editing files.").text)
@@ -120,7 +120,7 @@ answer from that call; a call with no assistant output has empty text.
 ## Streaming
 
 ```python
-from pi_agent.coding import PiClient
+from pi_agent import PiClient
 
 with PiClient() as pi:
     with pi.stream("Explain this project's entry points without editing files.") as stream:
@@ -149,7 +149,7 @@ arguments and results match the synchronous client.
 ```python
 import asyncio
 
-from pi_agent.coding import AsyncPiClient
+from pi_agent import AsyncPiClient
 
 
 async def main() -> None:
@@ -175,7 +175,7 @@ Use `async with pi.stream(...)`, `async for event in stream`, and
 Choose the project directory and whether to save the conversation:
 
 ```python
-from pi_agent.coding import PiClient
+from pi_agent import PiClient
 
 with PiClient(cwd=".", no_session=True) as pi:
     print(pi.run("Describe this project without changing files.").text)
@@ -207,7 +207,7 @@ Set the model and thinking level **before** `run()` or `stream()`.
 Select a model at construction:
 
 ```python
-from pi_agent.coding import PiClient
+from pi_agent import PiClient
 
 with PiClient(provider="openai", model="gpt-5") as pi:
     print(pi.run("Summarise this repo without changing files.").text)
@@ -223,7 +223,7 @@ Thinking levels depend on the current model. Query them, set one, then confirm
 what Pi actually applied:
 
 ```python
-from pi_agent.coding import PiClient
+from pi_agent import PiClient
 
 with PiClient() as pi:
     levels = pi.get_available_thinking_levels()
@@ -240,7 +240,7 @@ with PiClient() as pi:
 <summary>List models and switch after start</summary>
 
 ```python
-from pi_agent.coding import PiClient
+from pi_agent import PiClient
 
 with PiClient() as pi:
     for model in pi.get_available_models():
@@ -266,7 +266,7 @@ Your Python application
 Inspect session state without starting a model run:
 
 ```python
-from pi_agent.coding import PiClient
+from pi_agent import PiClient
 
 with PiClient() as pi:
     state = pi.get_state()
@@ -400,6 +400,12 @@ Omit `faux` for real models. By default Durable uses your Pi CLI configuration
 providers. Set `pi_agent_dir` to use a different agent directory; otherwise upstream
 honors `PI_CODING_AGENT_DIR` or `~/.pi/agent`.
 
+By default `coding_tools=True` gives the model unattended `read`/`write`/`edit`/`bash`
+in the host `cwd`, with the inherited environment. Set `coding_tools=False` to
+disable those tools, as these real-model examples do. Credentials/catalogs are
+shared with Pi; still choose the root model explicitly rather than relying on
+Pi CLI's last-selected model.
+
 For example, configure `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
 and `AWS_SESSION_TOKEN` when using temporary AWS credentials, then use Bedrock:
 
@@ -409,6 +415,7 @@ from pi_agent.durable import DurableClient
 with DurableClient(
     "bedrock.db",
     host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
+    coding_tools=False,
 ) as durable:
     cid = durable.root(
         model={
@@ -432,6 +439,7 @@ from pi_agent.durable import DurableClient
 with DurableClient(
     "codex.db",
     host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
+    coding_tools=False,
 ) as durable:
     cid = durable.root(model={"provider": "openai-codex", "modelId": "gpt-6.1-sol"})
     sid = durable.submit(cid, "Say hello", request_id="codex-1")

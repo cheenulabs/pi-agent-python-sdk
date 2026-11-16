@@ -21,6 +21,9 @@ RPC client; see [Durable API and failure semantics](durable.md#python-api).
 Both Durable constructors default to `models="pi"`, using upstream Pi CLI logins,
 stored keys and custom providers. Use `pi_agent_dir` to choose a different agent
 directory, or `models="builtin"` for environment-variable-only providers.
+Relative SQLite and agent-directory paths resolve against the caller cwd at
+startup. With `limits=None`, Durable uses a 25-second cleanup grace; explicit
+`Limits` objects are honored without changing coding-agent defaults.
 
 For answers, use `client.answer_text(settled)` on either Durable client. It reads
 expanding history windows to find `SettledSubmission.answer_id`; the pure
