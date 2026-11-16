@@ -10,16 +10,18 @@ from typing import Any
 
 import pytest
 
-from pi_agent import Limits, PiCommandError
+from pi_agent import Limits
 from pi_agent._transport import Transport
 from pi_agent.durable import AsyncDurableClient, DurableClient
+
+from .test_host import running_host
 
 SECRET = "synthetic-pi-sdk-test-key-not-a-real-credential"
 ANSWER = "Local configured model answer."
 
 
 @pytest.mark.parametrize("mode", ["default", "pi", "builtin"])
-@pytest.mark.parametrize("directory", ["explicit", "environment"])
+@pytest.mark.parametrize("directory", ["explicit", "environment", "relative"])
 @pytest.mark.parametrize("credential", ["stored", "config"])
 async def test_pi_model_configuration(
     durable_host_command: list[str],
@@ -119,8 +121,13 @@ async def test_pi_model_configuration(
     options: dict[str, Any] = {}
     if mode != "default":
         options["models"] = mode
-    if directory == "explicit":
-        options["pi_agent_dir"] = agent
+    if directory in {"explicit", "relative"}:
+        options["pi_agent_dir"] = agent if directory == "explicit" else Path("agent")
+    if directory == "relative":
+        monkeypatch.chdir(tmp_path)
+        host_directory = tmp_path / "host-working-directory"
+        host_directory.mkdir()
+        options["cwd"] = host_directory
     client = AsyncDurableClient(
         None,
         host_command=durable_host_command,
@@ -166,14 +173,12 @@ async def test_pi_model_configuration(
         {"piAgentDir": 1},
     ],
 )
-async def test_bad_model_fields(durable_host_command: list[str], fields: dict[str, Any]) -> None:
-    # A fake Python field injection reaches the real host's validation unchanged.
-    client = AsyncDurableClient(None, host_command=durable_host_command, inherit_env=False, faux=[])
-    client._open_fields.update(fields)
-    with pytest.raises(PiCommandError) as error:
-        await client.start()
-    assert error.value.code == "bad_params"
-    await client.aclose()
+async def test_bad_model_fields(
+    durable_host_command: list[str], tmp_path: Path, fields: dict[str, Any]
+) -> None:
+    # Exercise host validation directly, before Python path normalization.
+    async with running_host(durable_host_command, tmp_path) as host:
+        await host.error("open", "bad_params", storage={"kind": "memory"}, faux=[], **fields)
 
 
 @pytest.mark.parametrize("mode", ["pi", "builtin"])

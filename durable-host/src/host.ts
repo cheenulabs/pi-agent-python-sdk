@@ -37,6 +37,9 @@ let state: "not_open" | "opening" | "open" | "closing" = "not_open";
 let harness: Harness | undefined;
 let modelRuntime: ModelRuntime | undefined;
 let maxRecordBytes = 16777216;
+let shutdownCode = 0;
+let shutdownStarted = false;
+let exitStarted = false;
 type WatchState = { handle?: ConversationWatch; lastSentId?: number };
 const watches = new Map<string, WatchState>();
 const version: string = JSON.parse(
@@ -49,13 +52,68 @@ const version: string = JSON.parse(
 // EPIPE is expected when the parent disappears. Other stream errors remain fatal.
 for (const stream of [process.stdout, process.stderr]) {
   stream.on("error", (error: NodeJS.ErrnoException) => {
-    if (error.code !== "EPIPE") process.exit(1);
+    if (error.code !== "EPIPE") shutdown(1);
   });
 }
 
 function exit(code: number): void {
+  shutdownCode = Math.max(shutdownCode, code);
+  if (exitStarted) return;
+  exitStarted = true;
   state = "closing";
-  process.stdout.end(() => process.exit(code));
+  process.stdout.end(() => process.exit(shutdownCode));
+}
+
+async function cleanupStep(operation: Promise<unknown>): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      operation,
+      new Promise<never>((_, reject) => {
+        // Upstream streams may observe cancellation only at their next chunk.
+        timer = setTimeout(() => reject(new Error("Host cleanup timed out")), 6000);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
+async function closeOwned(
+  opened?: Harness, storage?: Storage, runtime?: ModelRuntime,
+): Promise<void> {
+  try {
+    if (opened) await cleanupStep(opened.close(ctx));
+    else if (storage) await cleanupStep(storage.close(ctx));
+  } finally {
+    await runtime?.settleCredentialWrites();
+  }
+}
+
+function shutdown(code: number): void {
+  shutdownCode = Math.max(shutdownCode, code);
+  if (shutdownStarted) return;
+  shutdownStarted = true;
+  const wasOpening = state === "opening";
+  state = "closing";
+  // Keep this timer referenced: a never-resolving promise alone cannot keep
+  // Node alive. Leave time for upstream's bounded OAuth refresh/persistence.
+  setTimeout(() => process.exit(1), 20000);
+  if (wasOpening) return; // The continuation still owns its local resources.
+  void (async () => {
+    try {
+      const active = [...watches.values()];
+      watches.clear();
+      try {
+        await cleanupStep(Promise.all(active.map(async (watch) => watch.handle?.stop())));
+      } finally {
+        await closeOwned(harness, undefined, modelRuntime);
+      }
+    } catch {
+      shutdownCode = 1;
+    }
+    exit(shutdownCode);
+  })();
 }
 
 function failure(request: Request, code: string, error: string): ObjectRecord {
@@ -87,7 +145,7 @@ function write(record: ObjectRecord): void {
     } else {
       return; // Oversized diagnostics carry no required data.
     }
-    if (Buffer.byteLength(line, "utf8") > maxRecordBytes) return exit(1);
+    if (Buffer.byteLength(line, "utf8") > maxRecordBytes) return shutdown(1);
   }
   process.stdout.write(line + "\n");
 }
@@ -204,6 +262,8 @@ async function open(request: Request): Promise<ObjectRecord> {
   let storage: Storage | undefined;
   let opened: Harness | undefined;
   let runtime: ModelRuntime | undefined;
+  let cleanup: Promise<void> | undefined;
+  const closeLocal = () => cleanup ??= closeOwned(opened, storage, runtime);
   try {
     if (request.faux === undefined) {
       if (request.models === "builtin") models = builtinModels();
@@ -222,7 +282,7 @@ async function open(request: Request): Promise<ObjectRecord> {
       }
     }
     if (isClosing()) {
-      await runtime?.settleCredentialWrites();
+      await closeLocal();
       exit(0);
       return {};
     }
@@ -257,8 +317,7 @@ async function open(request: Request): Promise<ObjectRecord> {
     // EOF can arrive while storage/Harness.open is in flight. Never publish that
     // harness or resume work after shutdown; its local owner closes it instead.
     if (isClosing()) {
-      await opened.close(ctx);
-      await runtime?.settleCredentialWrites();
+      await closeLocal();
       exit(0);
       return {};
     }
@@ -270,12 +329,7 @@ async function open(request: Request): Promise<ObjectRecord> {
     return {};
   } catch (error) {
     try {
-      try {
-        if (opened) await opened.close(ctx);
-        else if (storage) await storage.close(ctx);
-      } finally {
-        await runtime?.settleCredentialWrites();
-      }
+      await closeLocal();
     } catch {
       // Preserve the original open error even if best-effort cleanup fails.
     } finally {
@@ -332,7 +386,7 @@ async function command(request: Request): Promise<ObjectRecord | (() => void)> {
             if (watches.get(watchId) !== watch) return;
             watches.delete(watchId);
             write({ type: "durable_watch_end", watchId, kind: end.kind });
-          }).catch(() => exit(1));
+          }).catch(() => shutdown(1));
         };
       } catch (error) {
         if (watches.get(watchId) === watch) watches.delete(watchId);
@@ -484,25 +538,6 @@ input.on("line", (line) => {
         );
       },
     )
-    .catch(() => exit(1)); // Serialization/write failures must terminate deliberately.
+    .catch(() => shutdown(1)); // Serialization/write failures must terminate deliberately.
 });
-input.on("close", () => {
-  const wasOpening = state === "opening";
-  state = "closing"; // Suppress all outstanding command completions and reports.
-  if (wasOpening) return; // The open continuation owns cleanup in this case.
-  void (async () => {
-    try {
-      const active = [...watches.values()];
-      watches.clear();
-      try {
-        await Promise.all(active.map((watch) => watch.handle?.stop()));
-        await harness?.close(ctx);
-      } finally {
-        await modelRuntime?.settleCredentialWrites();
-      }
-      exit(0);
-    } catch {
-      exit(1);
-    }
-  })();
-});
+input.on("close", () => shutdown(0));

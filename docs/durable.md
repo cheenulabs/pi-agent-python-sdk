@@ -140,8 +140,9 @@ logins such as ChatGPT/Codex, stored keys, custom providers in `models.json`), l
 The default `models="pi"` delegates to upstream `ModelRuntime.create()`; the host
 never reads or logs credentials itself, including during OAuth refresh.
 Use `pi_agent_dir` for a different directory; otherwise upstream honors
-`PI_CODING_AGENT_DIR` or `~/.pi/agent`. Relative explicit directories are relative
-to the host working directory.
+`PI_CODING_AGENT_DIR` or `~/.pi/agent`. Python resolves a relative `pi_agent_dir`
+once at `start()`, against the caller's working directory, before launching the
+host. Setting constructor `cwd` does not change that resolution.
 
 For example, configure standard AWS credentials (`AWS_ACCESS_KEY_ID`,
 `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` for temporary credentials), plus
@@ -211,7 +212,7 @@ are enabled automatically.
   explicitly, and check Pi CLI configuration (or environment credentials when
   using `models="builtin"`).
 - **Relative working directory:** constructor `cwd` is resolved once at startup,
-  used for the host and as the default agent directory. A `root(cwd=...)` override
+  used for the host and as the default agent working directory. A `root(cwd=...)` override
   remains relative to the host directory when you supply a relative value.
 - **Cancelled close:** cleanup is shielded from caller cancellation. A subsequent
   `await client.aclose()` joins the same teardown; keep the owning event loop
@@ -334,9 +335,15 @@ The host must:
 - **After open:** requests run concurrently. `wait` may remain pending
   indefinitely without blocking other requests.
 - **Shutdown is stdin EOF:** no `close` command. Stop all watches, close the
-  harness, and exit 0. Ignore `EPIPE` on stdout and stderr because the parent
-  may be gone. Do not answer pending requests. Unfinished durable work stays
-  in storage for the next `open`.
+  harness, settle upstream credential writes in `finally`, then exit 0 on success.
+  Deliberate protocol/write failures use the same cleanup and retain nonzero status.
+  Opening continuations retain ownership of their local runtime and storage.
+  Watch/harness/storage teardown steps have six-second bounds so a stuck close
+  cannot prevent credential settling. A referenced 20-second shutdown deadline
+  forces nonzero exit if cleanup or output flushing still hangs; Python's
+  `Limits.cleanup_timeout` can terminate the child earlier. Ignore `EPIPE` on
+  stdout and stderr because the parent may be gone. Do not answer pending
+  requests. Unfinished durable work stays in storage for the next `open`.
 
 ### Commands
 

@@ -171,6 +171,11 @@ class AsyncDurableClient:
                     # Resolve once in the caller's launch-time directory. Passing
                     # a relative cwd again to the agent would apply it twice.
                     self._cwd = await asyncio.to_thread(os.path.abspath, self._cwd)
+                agent_dir = self._open_fields.get("piAgentDir")
+                if agent_dir is not None:
+                    self._open_fields["piAgentDir"] = await asyncio.to_thread(
+                        os.path.abspath, agent_dir
+                    )
                 self._transport = Transport(
                     limits=self.limits, on_event=self._on_event, on_failure=self._on_failure
                 )

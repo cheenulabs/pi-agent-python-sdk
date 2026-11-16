@@ -26,8 +26,9 @@ linked from the PR checks.
 
 `compatibility.json` also records an independent `durable` tested version and
 upstream commit. Coding-agent `check_upstream.py --record` preserves that section.
-For Durable updates, review the published package APIs and update all three
-`durable-host/package.json`/lockfile upstream pins and
+For Durable updates, review the published package APIs and update all four
+`durable-host/package.json`/lockfile upstream pins (including
+`@earendil-works/pi-coding-agent`) and
 `pi_agent.durable.TESTED_PI_DURABLE_VERSION` with the record. Run
 `uv run python scripts/check_durable.py` and the complete Durable checks,
 including the three-run crash recovery loop. The separate Linux/macOS Durable
