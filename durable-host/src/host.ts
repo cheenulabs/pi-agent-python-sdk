@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline";
+import { join } from "node:path";
+import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context";
+import type { Models } from "@earendil-works/pi-ai";
 import { createModels } from "@earendil-works/pi-ai/models";
 import { builtinModels } from "@earendil-works/pi-ai/providers/all";
 import {
@@ -32,6 +35,7 @@ type ObjectRecord = Record<string, unknown>;
 type Request = ObjectRecord & { id: string; type: string };
 let state: "not_open" | "opening" | "open" | "closing" = "not_open";
 let harness: Harness | undefined;
+let modelRuntime: ModelRuntime | undefined;
 let maxRecordBytes = 16777216;
 type WatchState = { handle?: ConversationWatch; lastSentId?: number };
 const watches = new Map<string, WatchState>();
@@ -160,6 +164,9 @@ async function open(request: Request): Promise<ObjectRecord> {
     typeof request.codingTools !== "boolean"
   )
     reject("bad_params", "codingTools must be boolean");
+  if (request.models !== undefined && request.models !== "pi" && request.models !== "builtin")
+    reject("bad_params", "models must be pi or builtin");
+  optionalStrings(request, ["piAgentDir"]);
   const policies = settings(request.settings);
   const limit =
     request.maxRecordBytes === undefined
@@ -167,7 +174,8 @@ async function open(request: Request): Promise<ObjectRecord> {
       : positive(integer(request.maxRecordBytes));
   if (request.fauxTokensPerSecond !== undefined)
     positive(request.fauxTokensPerSecond);
-  const models = request.faux === undefined ? builtinModels() : createModels();
+  const fauxModels = createModels();
+  let models: Models = fauxModels;
   if (request.faux !== undefined) {
     if (!Array.isArray(request.faux))
       reject("bad_params", "faux must be an array");
@@ -188,14 +196,36 @@ async function open(request: Request): Promise<ObjectRecord> {
       tokensPerSecond: request.fauxTokensPerSecond as number | undefined,
     });
     faux.setResponses(responses);
-    models.setProvider(faux.provider);
+    fauxModels.setProvider(faux.provider);
   }
   const registry = createRegistry();
   if (request.codingTools !== false) registry.install(CodingTools);
   state = "opening";
   let storage: Storage | undefined;
   let opened: Harness | undefined;
+  let runtime: ModelRuntime | undefined;
   try {
+    if (request.faux === undefined) {
+      if (request.models === "builtin") models = builtinModels();
+      else {
+        const { ModelRuntime } = await import("@earendil-works/pi-coding-agent");
+        if (isClosing()) {
+          exit(0);
+          return {};
+        }
+        const directory = request.piAgentDir as string | undefined;
+        runtime = await ModelRuntime.create(directory === undefined ? undefined : {
+          authPath: join(directory, "auth.json"),
+          modelsPath: join(directory, "models.json"),
+        });
+        models = runtime;
+      }
+    }
+    if (isClosing()) {
+      await runtime?.settleCredentialWrites();
+      exit(0);
+      return {};
+    }
     storage =
       storageSpec.kind === "memory"
         ? new MemoryStorage()
@@ -228,18 +258,24 @@ async function open(request: Request): Promise<ObjectRecord> {
     // harness or resume work after shutdown; its local owner closes it instead.
     if (isClosing()) {
       await opened.close(ctx);
+      await runtime?.settleCredentialWrites();
       exit(0);
       return {};
     }
     opened.resume();
     maxRecordBytes = limit;
     harness = opened;
+    modelRuntime = runtime;
     state = "open";
     return {};
   } catch (error) {
     try {
-      if (opened) await opened.close(ctx);
-      else if (storage) await storage.close(ctx);
+      try {
+        if (opened) await opened.close(ctx);
+        else if (storage) await storage.close(ctx);
+      } finally {
+        await runtime?.settleCredentialWrites();
+      }
     } catch {
       // Preserve the original open error even if best-effort cleanup fails.
     } finally {
@@ -458,8 +494,12 @@ input.on("close", () => {
     try {
       const active = [...watches.values()];
       watches.clear();
-      await Promise.all(active.map((watch) => watch.handle?.stop()));
-      await harness?.close(ctx);
+      try {
+        await Promise.all(active.map((watch) => watch.handle?.stop()));
+        await harness?.close(ctx);
+      } finally {
+        await modelRuntime?.settleCredentialWrites();
+      }
       exit(0);
     } catch {
       exit(1);

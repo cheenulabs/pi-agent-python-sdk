@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, Literal
 
 from .._sync_bridge import _SyncBridge, _SyncSubscription
 from ..client import DEFAULT_TIMEOUT, Timeout
@@ -30,6 +30,8 @@ class DurableClient(_SyncBridge[AsyncDurableClient]):
         inherit_env: bool = True,
         limits: Limits | None = None,
         coding_tools: bool = True,
+        models: Literal["pi", "builtin"] = "pi",
+        pi_agent_dir: str | os.PathLike[str] | None = None,
         settings: Mapping[str, Any] | None = None,
         faux: Sequence[str | Mapping[str, Any]] | None = None,
         faux_tokens_per_second: float | None = None,
@@ -43,6 +45,8 @@ class DurableClient(_SyncBridge[AsyncDurableClient]):
                 inherit_env=inherit_env,
                 limits=limits,
                 coding_tools=coding_tools,
+                models=models,
+                pi_agent_dir=pi_agent_dir,
                 settings=settings,
                 faux=faux,
                 faux_tokens_per_second=faux_tokens_per_second,

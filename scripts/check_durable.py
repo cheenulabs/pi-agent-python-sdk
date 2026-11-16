@@ -14,7 +14,12 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-PACKAGES = ("@earendil-works/pi-durable", "@earendil-works/pi-ai", "@earendil-works/chord")
+PACKAGES = (
+    "@earendil-works/pi-durable",
+    "@earendil-works/pi-ai",
+    "@earendil-works/chord",
+    "@earendil-works/pi-coding-agent",
+)
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -26,9 +31,12 @@ def read_json(path: Path) -> dict[str, Any]:
 
 def check_pins(root: Path) -> str:
     """Fail on any disagreement, including nested lockfile copies of pinned packages."""
-    version = read_json(root / "compatibility.json")["durable"]["testedVersion"]
+    compatibility = read_json(root / "compatibility.json")
+    version = compatibility["durable"]["testedVersion"]
     if not isinstance(version, str) or not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise ValueError("Durable testedVersion must be an exact stable version")
+    if compatibility["testedVersion"] != version:
+        raise ValueError("Durable and coding-agent tested versions must agree")
     manifest = read_json(root / "durable-host/package.json")["dependencies"]
     lock = read_json(root / "durable-host/package-lock.json")["packages"]
     for package in PACKAGES:

@@ -75,10 +75,11 @@ the Python wheel or sdist. The separate `durable` CI matrix covers Linux/macOS
 and Python 3.11/3.14 on Node 22, and is not a required merge gate. The owner
 explicitly chose to leave it out of `required.needs` (Q4); Windows Durable v0 is
 unsupported. `TESTED_PI_DURABLE_VERSION` and `compatibility.json` record 1.5.2.
-M8's `scripts/check_durable.py` checks all three manifest/lock pins and that
+M8's `scripts/check_durable.py` checks all four manifest/lock pins and that
 constant; coding-agent `--record` preserves the independent Durable record.
 The Latest Pi workflow uploads a non-blocking npm-latest drift report, and
-Dependabot groups the three `/durable-host` upstream packages.
+Dependabot groups the four `/durable-host` upstream packages. The coding-agent
+model-runtime pin must also match the coding-agent baseline in `compatibility.json`.
 
 The experimental `pi_agent.durable` drives the real upstream
 [`@earendil-works/pi-durable` Harness][upstream], not a port. Python and the host
@@ -88,8 +89,8 @@ must not implement agent, storage, or recovery logic. Existing `PiClient` and
 `pi_agent.coding` module, which re-exports the existing clients (both M2).
 No existing module or class is moved or renamed.
 
-Pin `@earendil-works/pi-durable`, `@earendil-works/pi-ai`, and
-`@earendil-works/chord` to published **1.5.2**, matching upstream commit
+Pin `@earendil-works/pi-durable`, `@earendil-works/pi-ai`,
+`@earendil-works/pi-coding-agent`, and `@earendil-works/chord` to published **1.5.2**, matching upstream commit
 `b4afdddf44e059c67ccf5097e5317d913521b470`. Do not use unreleased main APIs.
 Signals, TS extension loading, Python-defined tools, custom tasks, code mode,
 compaction controls, forks, multi-client attach, remote transports, and a
@@ -133,8 +134,16 @@ rather than raising. Check both fields before looking up an answer.
 
 ## Use a real model
 
-Without `faux`, the host uses pi-ai `builtinModels()` with provider environment
-variables. For example, configure standard AWS credentials (`AWS_ACCESS_KEY_ID`,
+Without `faux`, by default Durable uses your Pi CLI configuration (`~/.pi/agent`:
+logins such as ChatGPT/Codex, stored keys, custom providers in `models.json`), like
+`PiClient`. Pass `models="builtin"` for environment-variable-only providers.
+The default `models="pi"` delegates to upstream `ModelRuntime.create()`; the host
+never reads or logs credentials itself, including during OAuth refresh.
+Use `pi_agent_dir` for a different directory; otherwise upstream honors
+`PI_CODING_AGENT_DIR` or `~/.pi/agent`. Relative explicit directories are relative
+to the host working directory.
+
+For example, configure standard AWS credentials (`AWS_ACCESS_KEY_ID`,
 `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` for temporary credentials), plus
 `AWS_REGION` and access to the chosen Bedrock model, then run:
 
@@ -159,13 +168,31 @@ with DurableClient(
         print(settled.status, settled.reason)
 ```
 
+Or use your existing Pi CLI ChatGPT/Codex login with a fresh root:
+
+```python
+from pi_agent.durable import DurableClient
+
+with DurableClient(
+    "codex.db",
+    host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
+) as client:
+    cid = client.root(model={"provider": "openai-codex", "modelId": "gpt-6.1-sol"})
+    sid = client.submit(cid, "Say hello", request_id="codex-1")
+    settled = client.wait(sid)
+    if settled.status == "done":
+        print(client.answer_text(settled))
+    else:
+        print(settled.status, settled.reason)
+```
+
 The default `inherit_env=True` passes provider environment variables to the
-host. When disabling inheritance, provide the required variables explicitly
-through `env`. Durable **does not read Pi CLI logins** from
-`~/.pi/agent/auth.json`, including OAuth logins; configure provider credentials
-separately. Selecting a missing/unknown model returns `unanswered/no_model`.
-Real provider calls may incur charges. CI and all Durable examples/tests use
-faux; no live-provider tests are enabled automatically.
+host. When disabling inheritance, provide required variables explicitly through
+`env`, or select a synthetic/test agent directory. `faux` bypasses both model
+sources entirely and does not load Pi auth/configuration. Selecting a missing or
+unknown model returns `unanswered/no_model`. Real provider calls may incur charges.
+CI uses faux and a local HTTP stub with synthetic keys; no live-provider tests
+are enabled automatically.
 
 ## Troubleshooting
 
@@ -178,7 +205,8 @@ faux; no live-provider tests are enabled automatically.
   contain application data and must not be copied into shared logs or reports.
 - **No answer:** inspect `settled.status` and `settled.reason`; `no_model` is an
   upstream settlement, not a Python exception. Select an available provider/model
-  explicitly, and configure its environment credentials rather than Pi CLI auth.
+  explicitly, and check Pi CLI configuration (or environment credentials when
+  using `models="builtin"`).
 - **Relative working directory:** constructor `cwd` is resolved once at startup,
   used for the host and as the default agent directory. A `root(cwd=...)` override
   remains relative to the host directory when you supply a relative value.
@@ -312,7 +340,7 @@ The host must:
 | Command | Fields | `data` on success | Error codes |
 | --- | --- | --- | --- |
 | `hello` | — | `{protocol: 0, piDurable: "<version>", pid: <int>}` | — |
-| `open` | `storage: {kind: "sqlite", path: string} \| {kind: "memory"}`, `codingTools?: bool = true`, `settings?: {retry?, progress?}`, `maxRecordBytes?: int`, `faux?: FauxStep[]`, `fauxTokensPerSecond?: number` | `{}` | `already_open`, `bad_params`, upstream |
+| `open` | `storage: {kind: "sqlite", path: string} \| {kind: "memory"}`, `codingTools?: bool = true`, `models?: "pi" \| "builtin" = "pi"`, `piAgentDir?: string`, `settings?: {retry?, progress?}`, `maxRecordBytes?: int`, `faux?: FauxStep[]`, `fauxTokensPerSecond?: number` | `{}` | `already_open`, `bad_params`, upstream |
 | `root` | `agent?: {model?: {provider: string, modelId: string}, cwd?: string, thinkingLevel?: string}` | `{conversationId}` | `not_open`, `bad_params` |
 | `submit` | `conversationId`, `content: string`, `requestId: string`, `whenBusy?: "followUp" \| "steer" \| "reject"` | `{submissionId}` | `not_open`, `not_found`, `bad_params`, `ConversationBusy` |
 | `wait` | `submissionId` | `{submission}`: upstream settled-submission record, unchanged | `not_open`, `not_found`, `bad_params` |
@@ -329,9 +357,12 @@ as upstream `HarnessSettings.retry` and `.progress`.
 
 `maxRecordBytes` defaults to 16777216 (16 MiB). `faux` and
 `fauxTokensPerSecond` are for tests and examples. With `faux`, models come only
-from the faux provider (`provider: "faux"`, `modelId: "faux-1"`); otherwise
-use pi-ai `builtinModels()`, which reads the usual provider environment
-variables. A `FauxStep` is a string (text answer) or `{tool: string, args: object}`
+from the faux provider (`provider: "faux"`, `modelId: "faux-1"`), bypassing both
+model sources. Otherwise `models="pi"` (the default) uses upstream
+`ModelRuntime.create()` with Pi CLI logins, stored keys and custom providers.
+`piAgentDir` supplies `auth.json` and `models.json` paths; when omitted upstream
+chooses `PI_CODING_AGENT_DIR` or `~/.pi/agent`. `models="builtin"` instead uses
+pi-ai `builtinModels()` and provider environment variables only. A `FauxStep` is a string (text answer) or `{tool: string, args: object}`
 (tool call).
 
 ### Error codes and size limit
@@ -400,6 +431,8 @@ class AsyncDurableClient:
         inherit_env: bool = True,
         limits: Limits | None = None,
         coding_tools: bool = True,
+        models: Literal["pi", "builtin"] = "pi",
+        pi_agent_dir: str | os.PathLike[str] | None = None,
         settings: Mapping[str, Any] | None = None,  # sent as open.settings
         faux: Sequence[str | Mapping[str, Any]] | None = None,
         faux_tokens_per_second: float | None = None,

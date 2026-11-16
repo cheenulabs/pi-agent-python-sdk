@@ -18,6 +18,10 @@ whose Python return value is `None`.
 The experimental `pi_agent.durable.AsyncDurableClient` and blocking
 `pi_agent.durable.DurableClient` drive the separate Durable Harness through an explicit `host_command`. It is not a coding-agent
 RPC client; see [Durable API and failure semantics](durable.md#python-api).
+Both Durable constructors default to `models="pi"`, using upstream Pi CLI logins,
+stored keys and custom providers. Use `pi_agent_dir` to choose a different agent
+directory, or `models="builtin"` for environment-variable-only providers.
+
 For answers, use `client.answer_text(settled)` on either Durable client. It reads
 expanding history windows to find `SettledSubmission.answer_id`; the pure
 `pi_agent.durable.entry_text(entry)` helper remains available for entries you

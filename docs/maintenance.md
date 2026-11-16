@@ -33,7 +33,7 @@ For Durable updates, review the published package APIs and update all three
 including the three-run crash recovery loop. The separate Linux/macOS Durable
 job remains outside `required.needs` by owner decision; Windows is unsupported.
 
-Dependabot groups the three upstream packages in `/durable-host`. The latest workflow
+Dependabot groups the four upstream packages in `/durable-host`. The latest workflow
 resolves npm's Durable latest and uploads `durable-drift-report.md` without
 blocking the coding-agent job or changing pins. A version match does not
 establish source compatibility; this report is maintenance input only.

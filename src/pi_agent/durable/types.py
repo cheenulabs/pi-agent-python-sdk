@@ -76,6 +76,8 @@ class Storage(TypedDict):
 class OpenFields(TypedDict):
     storage: Storage
     codingTools: NotRequired[bool]
+    models: NotRequired[Literal["pi", "builtin"]]
+    piAgentDir: NotRequired[str]
     settings: NotRequired[dict[str, Any]]
     maxRecordBytes: NotRequired[int]
     faux: NotRequired[list[str | dict[str, Any]]]

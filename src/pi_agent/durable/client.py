@@ -8,7 +8,7 @@ import logging
 import os
 from collections.abc import Mapping, Sequence
 from types import TracebackType
-from typing import Any, Self, cast
+from typing import Any, Literal, Self, cast
 
 from .._launch import child_env, executable_argv
 from .._transport import Transport
@@ -66,6 +66,8 @@ class AsyncDurableClient:
         inherit_env: bool = True,
         limits: Limits | None = None,
         coding_tools: bool = True,
+        models: Literal["pi", "builtin"] = "pi",
+        pi_agent_dir: str | os.PathLike[str] | None = None,
         settings: Mapping[str, Any] | None = None,
         faux: Sequence[str | Mapping[str, Any]] | None = None,
         faux_tokens_per_second: float | None = None,
@@ -83,8 +85,11 @@ class AsyncDurableClient:
         self._open_fields: OpenFields = {
             "storage": self._storage,
             "codingTools": coding_tools,
+            "models": models,
             "maxRecordBytes": self._limits.max_record_bytes,
         }
+        if pi_agent_dir is not None:
+            self._open_fields["piAgentDir"] = os.fspath(pi_agent_dir)
         if settings is not None:
             self._open_fields["settings"] = dict(settings)
         if faux is not None:

@@ -146,7 +146,12 @@ use temporary SQLite storage and need no provider credentials. Both accept
 
 ### Use a real model
 
-Omit `faux` to use pi-ai `builtinModels()` and provider environment variables.
+Omit `faux` for real models. By default Durable uses your Pi CLI configuration
+(`~/.pi/agent`: logins such as ChatGPT/Codex, stored keys, custom providers in
+`models.json`), like `PiClient`. Pass `models="builtin"` for environment-variable-only
+providers. Set `pi_agent_dir` to use a different agent directory; otherwise upstream
+honors `PI_CODING_AGENT_DIR` or `~/.pi/agent`.
+
 For example, configure `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
 and `AWS_SESSION_TOKEN` when using temporary AWS credentials, then use Bedrock:
 
@@ -171,9 +176,27 @@ with DurableClient(
         print(settled.status, settled.reason)
 ```
 
-Durable does **not** use Pi CLI logins from `~/.pi/agent/auth.json`, including
-OAuth logins. Configure credentials for the selected provider separately. Real
-provider calls may incur charges; CI and the recovery example use faux only.
+Or use your existing Pi CLI ChatGPT/Codex login with a fresh root:
+
+```python
+from pi_agent.durable import DurableClient
+
+with DurableClient(
+    "codex.db",
+    host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts"],
+) as durable:
+    cid = durable.root(model={"provider": "openai-codex", "modelId": "gpt-6.1-sol"})
+    sid = durable.submit(cid, "Say hello", request_id="codex-1")
+    settled = durable.wait(sid)
+    if settled.status == "done":
+        print(durable.answer_text(settled))
+    else:
+        print(settled.status, settled.reason)
+```
+
+The host delegates credential loading and OAuth refresh to upstream Pi, without
+reading or logging credentials itself. Real provider calls may incur charges;
+CI uses only faux models and a local HTTP stub, never live providers.
 
 Use one writer per storage path and retry uncertain submissions only with the
 same conversation-scoped request key. See the
@@ -188,7 +211,7 @@ and [credential-free crash recovery example](https://github.com/cheenulabs/pi-ag
 | Node.js **22.19.0+** | Required for both runtimes (coding-agent baseline 1.5.2) |
 | Pi CLI **0.85.1+** | Coding agent only; **1.5.2** is the tested baseline |
 | Host checkout + npm dependencies | Durable only; pass `host_command`; Linux/macOS, not Windows |
-| Model provider | Coding agent: configure with Pi CLI. Durable: provider environment variables, or credential-free `faux` |
+| Model provider | Both use Pi CLI configuration by default. Durable also offers `models="builtin"` for environment-only providers, or credential-free `faux` |
 
 ## Quick start
 
