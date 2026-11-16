@@ -66,6 +66,7 @@ async def test_missing_host_script_has_safe_startup_hint(tmp_path: Path, capacit
         await client.start()
     message = str(caught.value)
     assert "Durable host exited during startup" in message
+    assert "Node >=22.19" in message
     assert "host_command" in message and "npm ci --prefix durable-host" in message
     assert "Limits(stderr_tail_bytes=" in message
     assert str(missing) not in message

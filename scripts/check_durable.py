@@ -35,8 +35,6 @@ def check_pins(root: Path) -> str:
     version = compatibility["durable"]["testedVersion"]
     if not isinstance(version, str) or not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise ValueError("Durable testedVersion must be an exact stable version")
-    if compatibility["testedVersion"] != version:
-        raise ValueError("Durable and coding-agent tested versions must agree")
     manifest = read_json(root / "durable-host/package.json")["dependencies"]
     lock = read_json(root / "durable-host/package-lock.json")["packages"]
     for package in PACKAGES:

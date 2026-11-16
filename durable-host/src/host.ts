@@ -56,6 +56,10 @@ for (const stream of [process.stdout, process.stderr]) {
   });
 }
 
+// The Python parent owns interactive cancellation and closes stdin on teardown.
+process.on("SIGINT", () => {});
+process.on("SIGTERM", () => shutdown(1));
+
 function exit(code: number): void {
   shutdownCode = Math.max(shutdownCode, code);
   if (exitStarted) return;

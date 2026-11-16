@@ -81,7 +81,7 @@ class AsyncDurableClient:
         self._cwd = os.fspath(cwd) if cwd is not None else None
         self._env = dict(env or {})
         self._inherit_env = inherit_env
-        self._limits = limits or Limits()
+        self._limits = limits or Limits(cleanup_timeout=25)
         self._open_fields: OpenFields = {
             "storage": self._storage,
             "codingTools": coding_tools,
@@ -171,6 +171,9 @@ class AsyncDurableClient:
                     # Resolve once in the caller's launch-time directory. Passing
                     # a relative cwd again to the agent would apply it twice.
                     self._cwd = await asyncio.to_thread(os.path.abspath, self._cwd)
+                storage_path = self._storage.get("path")
+                if storage_path is not None:
+                    self._storage["path"] = await asyncio.to_thread(os.path.abspath, storage_path)
                 agent_dir = self._open_fields.get("piAgentDir")
                 if agent_dir is not None:
                     self._open_fields["piAgentDir"] = await asyncio.to_thread(
@@ -202,7 +205,8 @@ class AsyncDurableClient:
                 raise PiTimeoutError("Pi Durable startup timed out", uncertain=False) from exc
             if isinstance(exc, PiProcessError) and spawned:
                 raise PiProcessError(
-                    "The Durable host exited during startup; check host_command and run "
+                    "The Durable host exited during startup; check host_command, "
+                    "Node >=22.19, and run "
                     "npm ci --prefix durable-host. Set Limits(stderr_tail_bytes=...) "
                     "to capture host stderr.",
                     returncode=exc.returncode,
@@ -274,7 +278,12 @@ class AsyncDurableClient:
             return
         if event_type in {"durable_report", "durable_protocol_error"}:
             # Never log payloads, messages, conversations, or credentials.
-            marker = record.get("code", record.get("kind"))
+            report = record.get("report")
+            marker = (
+                report.get("kind")
+                if event_type == "durable_report" and isinstance(report, dict)
+                else record.get("code")
+            )
             _LOG.debug("%s %s", event_type, marker if isinstance(marker, str) else None)
 
     def _on_failure(self, error: Exception) -> None:

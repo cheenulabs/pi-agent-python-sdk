@@ -89,3 +89,9 @@ def test_latest_report_does_not_change_pins(pins, monkeypatch, latest, expected)
     assert durable.main() == expected
     assert latest in (pins / "durable-drift-report.md").read_text()
     assert (pins / "compatibility.json").read_bytes() == baseline
+
+
+def test_coding_agent_baseline_can_advance_independently(pins):
+    mutate(pins / "compatibility.json", lambda data: data.update(testedVersion="9.9.9"))
+    assert durable.main() == 0
+    assert durable.check_pins(pins) == "1.5.2"
