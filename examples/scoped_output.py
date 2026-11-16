@@ -2,7 +2,8 @@
 
 import asyncio
 
-from pi_agent import AsyncPiClient, ProcessOutput
+from pi_agent import ProcessOutput
+from pi_agent.coding import AsyncPiClient
 
 
 async def main() -> None:

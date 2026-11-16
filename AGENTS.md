@@ -13,8 +13,8 @@ Paths below are relative to the repository root.
 - `pi_agent.coding` and `pi_agent.durable` are the two backend namespaces;
   top-level `from pi_agent import PiClient, AsyncPiClient` stays supported and
   is not deprecated.
-- The experimental `pi_agent.durable` backend may ship a thin Node host driving
-  the real upstream Harness, not a Python port. It reuses core private modules
+- The experimental `pi_agent.durable` backend may ship a thin Node host in
+  `durable-host/`, driving the real upstream Harness, not a Python port. It reuses core private modules
   for transport, limits, subscriptions, errors, and the sync bridge. Keep
   dependencies one-way from durable to core, Python runtime dependencies at
   zero, and Durable tests isolated: fake-host unit tests in the required matrix,

@@ -1,6 +1,6 @@
 """Print live text and collect the RPC events through settlement."""
 
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 from pi_agent.types import Event
 
 

@@ -17,8 +17,8 @@
 This unofficial community SDK drives two [Pi](https://github.com/earendil-works/pi)
 runtimes from Python, with typed synchronous and async APIs:
 
-- **Pi coding agent** (`pi --mode rpc`): `pi_agent.coding`, with the unchanged
-  top-level `pi_agent` imports — run prompts, stream events, and keep sessions going.
+- **Pi coding agent** (`pi --mode rpc`): `pi_agent.coding` — run prompts,
+  stream events, and keep sessions going.
 - **Pi Durable (experimental)**: `pi_agent.durable` — crash-safe resume and
   idempotent submissions on the real upstream Harness. Linux/macOS only;
   bring your own host. This is not a release or packaged-host announcement.
@@ -30,7 +30,7 @@ https://github.com/user-attachments/assets/c64dde3a-e812-42d4-a005-aa60df861e92
 **Pi coding agent** — uses your installed, configured Pi CLI:
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     print(pi.run("Explain the current project without changing files.").text)
@@ -40,7 +40,7 @@ with PiClient() as pi:
 [host setup](#pi-durable-experimental), including the answer text:
 
 ```python
-from pi_agent.durable import DurableClient, entry_text
+from pi_agent.durable import DurableClient
 
 with DurableClient(
     "state.db",
@@ -50,12 +50,13 @@ with DurableClient(
     cid = durable.root(model={"provider": "faux", "modelId": "faux-1"})
     sid = durable.submit(cid, "Hello", request_id="job-1")
     settled = durable.wait(sid)
-    answer = next(e for e in durable.entries(cid) if e["id"] == settled.answer_id)
-    print(entry_text(answer))
+    print(durable.answer_text(settled))
 ```
 
 See [prerequisites](#prerequisites) and the [full Durable guide](#pi-durable-experimental).
-Existing top-level coding-agent imports remain supported and are not deprecated.
+The top-level import remains supported and silent; it refers to the same clients.
+Use `python -m pip install -e .` for the unreleased namespace additions in this
+source checkout rather than assuming an older PyPI version includes them.
 
 [Prerequisites](#prerequisites) · [Quick start](#quick-start) ·
 [Durable (experimental)](#pi-durable-experimental) ·
@@ -83,7 +84,7 @@ Existing top-level coding-agent imports remain supported and are not deprecated.
 The source checkout adds a second backend for the real upstream Durable Harness:
 crash-safe resume, idempotent submissions, and bounded conversation watches.
 It is experimental, Linux/macOS only (Windows unsupported), and not a release
-announcement. Existing top-level coding-agent imports above remain unchanged.
+announcement. Both backends expose synchronous and async clients.
 
 ```python
 from pi_agent.coding import PiClient, AsyncPiClient  # Existing coding-agent clients
@@ -99,11 +100,13 @@ npm ci --prefix durable-host --ignore-scripts --no-audit --no-fund
 ```
 
 The wheel does not bundle or download a host. Pass an explicit `host_command`,
-as in the quick start above. `SettledSubmission.answer_id` identifies the answer
-entry; `entry_text(entry)` reads its text without modifying raw data and ignores
-thinking, tool calls and images. `entries()` returns the newest 50 entries by
-default; increase its `limit` when retrieving an older answer rather than assuming
-the last assistant entry belongs to your submission.
+as in the quick start above. `answer_text(settled)` reads the answer without
+exposing entry internals. It expands beyond the default 50-entry window when
+necessary, returning `None` when no answer entry is available. Very large history
+reads can exceed the configured record-size budget and raise `too_large` rather
+than silently choosing the wrong answer. For entries you already fetched,
+`entry_text(entry)` remains a pure helper; `settled.answer_id` exposes the opaque
+answer entry ID.
 
 A missing or unknown model does **not** raise: upstream settles as
 `status="unanswered", reason="no_model"`. Check `settled.status` and
@@ -117,7 +120,7 @@ For example, configure `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY
 and `AWS_SESSION_TOKEN` when using temporary AWS credentials, then use Bedrock:
 
 ```python
-from pi_agent.durable import DurableClient, entry_text
+from pi_agent.durable import DurableClient
 
 with DurableClient(
     "bedrock.db",
@@ -132,8 +135,7 @@ with DurableClient(
     sid = durable.submit(cid, "Say hello", request_id="bedrock-1")
     settled = durable.wait(sid)
     if settled.status == "done":
-        answer = next(e for e in durable.entries(cid) if e["id"] == settled.answer_id)
-        print(entry_text(answer))
+        print(durable.answer_text(settled))
     else:
         print(settled.status, settled.reason)
 ```
@@ -179,7 +181,7 @@ The distribution is named `pi-agent-python-sdk`; import it as
 `pi_agent`.
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     result = pi.run("Explain the current project without changing files.")
@@ -193,7 +195,7 @@ and observed assistant usage.
 Continue the conversation with another call on the same client:
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     print(pi.run("Explain this project's entry points without editing files.").text)
@@ -206,7 +208,7 @@ answer from that call; a call with no assistant output has empty text.
 ## Streaming
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     with pi.stream("Explain this project's entry points without editing files.") as stream:
@@ -235,7 +237,7 @@ arguments and results match the synchronous client.
 ```python
 import asyncio
 
-from pi_agent import AsyncPiClient
+from pi_agent.coding import AsyncPiClient
 
 
 async def main() -> None:
@@ -261,7 +263,7 @@ Use `async with pi.stream(...)`, `async for event in stream`, and
 Choose the project directory and whether to save the conversation:
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient(cwd=".", no_session=True) as pi:
     print(pi.run("Describe this project without changing files.").text)
@@ -293,7 +295,7 @@ Set the model and thinking level **before** `run()` or `stream()`.
 Select a model at construction:
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient(provider="openai", model="gpt-5") as pi:
     print(pi.run("Summarise this repo without changing files.").text)
@@ -303,7 +305,7 @@ Thinking levels depend on the current model. Query them, set one, then confirm
 what Pi actually applied:
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     levels = pi.get_available_thinking_levels()
@@ -321,7 +323,7 @@ Replace the example provider/model ids with ones from your Pi install
 <summary>List models and switch after start</summary>
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     for model in pi.get_available_models():
@@ -347,7 +349,7 @@ Your Python application
 Inspect session state without starting a model run:
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     state = pi.get_state()

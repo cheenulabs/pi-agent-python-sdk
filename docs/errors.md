@@ -72,7 +72,8 @@ See [the helper contract](api.md#listeners-and-settlement-helpers).
 ## Partial results and stop reasons
 
 ```python
-from pi_agent import PiClient, PiRunError
+from pi_agent import PiRunError
+from pi_agent.coding import PiClient
 
 
 def main() -> None:

@@ -14,7 +14,7 @@ import signal
 import tempfile
 from pathlib import Path
 
-from pi_agent.durable import AsyncDurableClient, entry_text
+from pi_agent.durable import AsyncDurableClient
 
 
 def host_command() -> list[str]:
@@ -75,11 +75,10 @@ async def main() -> None:
             entries = await reopened.entries(cid)
             users = sum(entry["kind"] == "pi.user" for entry in entries)
             assert settled.status == "done" and users == 1
-            answer_entry = next(e for e in entries if e["id"] == settled.answer_id)
-            text = entry_text(answer_entry)
-            assert text == answer
+            reply_text = await reopened.answer_text(settled)
+            assert reply_text == answer
             print(f"Recovered submission {recovered}: {settled.status}; user entries: {users}")
-            print(text)
+            print(reply_text)
 
 
 if __name__ == "__main__":

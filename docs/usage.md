@@ -11,8 +11,7 @@ The coding-agent namespace is `pi_agent.coding`:
 from pi_agent.coding import AsyncPiClient, PiClient
 ```
 
-These re-export the existing classes. `from pi_agent import PiClient,
-AsyncPiClient` remains supported, unchanged, and is not deprecated.
+These re-export the existing client classes rather than another implementation.
 
 ## Choose sync or async
 
@@ -29,7 +28,7 @@ Use direct commands and `events()` when your application manages completion.
 Prefer a context manager so exceptions also close the process:
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 
 def main() -> None:
@@ -53,7 +52,8 @@ Both constructors accept the same keyword-only options. Omitted model, provider,
 session, and discovery settings remain omitted from Pi's command line.
 
 ```python
-from pi_agent import Limits, PiClient
+from pi_agent import Limits
+from pi_agent.coding import PiClient
 
 
 def main() -> None:
@@ -103,7 +103,7 @@ clients work without extensions or any Cheenulabs code.
 For an extension you have already placed at the following example path:
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 
 def main() -> None:
@@ -238,7 +238,8 @@ The same `images=` argument is accepted by `run`, `stream`, `prompt`, `steer`, a
 import base64
 from pathlib import Path
 
-from pi_agent import ImageContent, PiClient
+from pi_agent import ImageContent
+from pi_agent.coding import PiClient
 
 
 def main() -> None:
@@ -419,7 +420,8 @@ prompts or session changes; process observation ends at process cleanup, not run
 settlement.
 
 ```python
-from pi_agent import PiClient, ProcessOutput
+from pi_agent import ProcessOutput
+from pi_agent.coding import PiClient
 
 pi = PiClient()
 records: list[ProcessOutput] = []  # Caller-owned retention, suitable for small runs.
@@ -447,7 +449,8 @@ Use a concurrent consumer for potentially large output:
 
 ```python
 import asyncio
-from pi_agent import AsyncPiClient, ProcessOutput
+from pi_agent import ProcessOutput
+from pi_agent.coding import AsyncPiClient
 
 
 async def capture_run(pi: AsyncPiClient, prompt: str) -> list[ProcessOutput]:

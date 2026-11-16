@@ -8,7 +8,7 @@ defaults unless the caller explicitly overrides them.
 `pi_agent.coding` and `pi_agent.durable` are the two backend namespaces;
 top-level `from pi_agent import PiClient, AsyncPiClient` stays supported and
 is not deprecated. The experimental `pi_agent.durable` backend may drive the real
-upstream Harness through a thin Node host, never a Python port. It reuses core
+upstream Harness through the thin Node host in `durable-host/`, never a Python port. It reuses core
 private transport, limits, subscription, error, and sync-bridge modules. Follow the
 [Durable design decisions](docs/durable.md#design-decisions): dependencies flow
 from durable to core only, Python runtime dependencies stay zero, and the host

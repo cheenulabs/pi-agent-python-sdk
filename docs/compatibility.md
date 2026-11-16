@@ -148,7 +148,7 @@ CLI file without using a shell. If your package manager uses another layout,
 provide the actual paths explicitly:
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 
 def main() -> None:

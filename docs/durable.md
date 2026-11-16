@@ -96,32 +96,32 @@ upstream fidelity rather than reimplementing the engine.
 ## Read the answer text
 
 `wait()` returns the upstream settlement record, not an assistant message.
-`settled.answer_id` is the opaque answer entry ID from `settled.raw["answer"]`,
-or `None` when no answer is present. Match that ID in `entries()` and use the
-read-only `entry_text(entry)` helper:
+Use the read-only `answer_text(settled)` method on the started client:
 
 ```python
-from pi_agent.durable import entry_text
-
 # Inside an AsyncDurableClient context, after submit() returned sid:
 settled = await client.wait(sid)
-if settled.status == "done":
-    entries = await client.entries(cid)
-    answer = next((e for e in entries if e["id"] == settled.answer_id), None)
-    if answer is None:
-        raise LookupError("Answer is outside this entries window; increase limit")
-    print(entry_text(answer))
+text = await client.answer_text(settled)
+if text is not None:
+    print(text)
 else:
     print(settled.status, settled.reason)
 ```
 
-The synchronous client uses the same pattern without `await`. `entries()`
-returns the newest 50 entries by default: request a larger `limit` within your
-record-size budget for an older answer. Do not assume the last assistant entry
-belongs to the submission you waited for. `entry_text()` joins string content
-and text blocks in model-message order, ignores thinking/images/tool calls and
-unknown or malformed parts, and returns `""` if there is no text. Neither helper
-modifies entries or the preserved raw record.
+The synchronous client uses the same pattern without `await`. This method
+matches `settled.answer_id` rather than assuming the latest assistant entry is
+its answer. It starts with the newest 50 entries and doubles the history window
+as needed, so an older answer is not silently missed at the default window.
+It returns `None` if the settlement has no answer or the entry is unavailable.
+Each read uses the normal command deadline and record-size budget. A very large
+history read can raise `PiCommandError` with `code="too_large"`; that error propagates
+rather than being treated as no answer. No new host command or work is submitted.
+
+For entries you already fetched, `entry_text(entry)` is a pure helper, and
+`settled.answer_id` exposes the opaque ID from `settled.raw["answer"]`, or `None`.
+`entry_text()` joins string content and text blocks in model-message order,
+ignores thinking/images/tool calls and unknown or malformed parts, and returns
+`""` if the entry has no text. The helpers never modify entries or the raw record.
 
 A missing or unknown model settles as **`status="unanswered", reason="no_model"`**
 rather than raising. Check both fields before looking up an answer.
@@ -134,7 +134,7 @@ variables. For example, configure standard AWS credentials (`AWS_ACCESS_KEY_ID`,
 `AWS_REGION` and access to the chosen Bedrock model, then run:
 
 ```python
-from pi_agent.durable import DurableClient, entry_text
+from pi_agent.durable import DurableClient
 
 with DurableClient(
     "bedrock.db",
@@ -149,8 +149,7 @@ with DurableClient(
     sid = client.submit(cid, "Say hello", request_id="bedrock-1")
     settled = client.wait(sid)
     if settled.status == "done":
-        answer = next(e for e in client.entries(cid) if e["id"] == settled.answer_id)
-        print(entry_text(answer))
+        print(client.answer_text(settled))
     else:
         print(settled.status, settled.reason)
 ```
@@ -433,6 +432,7 @@ class AsyncDurableClient:
         limit: int = 50,
         timeout: Timeout = DEFAULT_TIMEOUT,
     ) -> list[dict[str, Any]]: ...
+    async def answer_text(self, settled: SettledSubmission) -> str | None: ...
     async def abort(
         self, conversation_id: ConversationId, *, timeout: Timeout = DEFAULT_TIMEOUT
     ) -> None: ...

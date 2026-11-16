@@ -4,7 +4,7 @@ import argparse
 import asyncio
 from contextlib import suppress
 
-from pi_agent import AsyncPiClient
+from pi_agent.coding import AsyncPiClient
 
 
 async def main() -> None:

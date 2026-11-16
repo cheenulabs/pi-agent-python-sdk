@@ -4,9 +4,8 @@
 Pi owns the agent loop, provider calls, tools, extensions, and session storage.
 Python owns the child process and exposes command methods, event subscriptions,
 and completed run results. This document describes those coding-agent clients.
-They are also importable from `pi_agent.coding` as re-exports of the
-same classes; existing top-level `pi_agent` imports remain supported and are
-not deprecated.
+Import them from `pi_agent.coding`, which re-exports the same implementations;
+see the [API reference](api.md) for compatibility imports.
 
 The experimental [`pi_agent.durable` backend](durable.md) instead drives
 the real upstream Harness through a thin Node host, reusing core private modules.
@@ -164,7 +163,7 @@ The Python implementation keeps process I/O separate from conversation behavior:
 | [`types.py`](../src/pi_agent/types.py), [`errors.py`](../src/pi_agent/errors.py) | Typed wire dictionaries, Python results, and explicit failures |
 
 Underscored modules are private implementation details. Applications import
-`PiClient` and `AsyncPiClient` from `pi_agent`.
+`PiClient` and `AsyncPiClient` from `pi_agent.coding`.
 
 Keep protocol compatibility at the wire and command-method level. Copying Pi's
 TypeScript directory structure would not simplify the Python interface. The
