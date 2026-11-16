@@ -140,10 +140,12 @@ with DurableClient(
     "bedrock.db",
     host_command=["node", "/absolute/path/to/checkout/host/src/host.ts"],
 ) as client:
-    cid = client.root(model={
-        "provider": "amazon-bedrock",
-        "modelId": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
-    })
+    cid = client.root(
+        model={
+            "provider": "amazon-bedrock",
+            "modelId": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+        }
+    )
     sid = client.submit(cid, "Say hello", request_id="bedrock-1")
     settled = client.wait(sid)
     if settled.status == "done":
