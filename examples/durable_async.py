@@ -1,12 +1,14 @@
 """Async Durable submit/wait/answer flow with a faux model and temporary SQLite.
 
 Run npm ci --prefix durable-host first. No provider credentials are needed.
+PI_DURABLE_HOST may override the file-relative host with a JSON argv array.
 """
 
 from __future__ import annotations
 
 import asyncio
-import shutil
+import json
+import os
 import tempfile
 from pathlib import Path
 
@@ -14,10 +16,13 @@ from pi_agent.durable import AsyncDurableClient
 
 
 def host_command() -> list[str]:
-    return [
-        shutil.which("node") or "node",
-        str(Path(__file__).resolve().parents[1] / "durable-host/src/host.ts"),
-    ]
+    configured = os.environ.get("PI_DURABLE_HOST")
+    if configured is None:
+        return ["node", str(Path(__file__).resolve().parents[1] / "durable-host/src/host.ts")]
+    value = json.loads(configured)
+    if not isinstance(value, list) or not value or any(not isinstance(arg, str) for arg in value):
+        raise ValueError("PI_DURABLE_HOST must be a non-empty JSON argv array")
+    return value
 
 
 async def main() -> None:
@@ -27,6 +32,7 @@ async def main() -> None:
             host_command=host_command(),
             cwd=temporary,
             inherit_env=False,
+            env={"PATH": os.environ.get("PATH", os.defpath)},
             faux=["Hello from async Durable."],
         ) as durable:
             cid = await durable.root(model={"provider": "faux", "modelId": "faux-1"})

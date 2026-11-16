@@ -139,8 +139,10 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-The [complete async example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/durable_async.py)
-uses temporary SQLite storage and needs no provider credentials.
+The complete [sync example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/durable_sync.py)
+and [async example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/durable_async.py)
+use temporary SQLite storage and need no provider credentials. Both accept
+`PI_DURABLE_HOST` as a JSON argv array to override the file-relative host.
 
 ### Use a real model
 

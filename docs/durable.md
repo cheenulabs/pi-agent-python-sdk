@@ -38,20 +38,22 @@ Pass `host_command=["node", "/absolute/path/to/checkout/durable-host/src/host.ts
 directly, without a build step. Linux and macOS are supported targets; Windows
 Durable v0 is unsupported.
 
-Run the credential-free [async example](../examples/durable_async.py) or
+Run the credential-free [sync example](../examples/durable_sync.py),
+[async example](../examples/durable_async.py) or
 [recovery example](../examples/durable_recovery.py):
 
 ```sh
+uv run python examples/durable_sync.py
 uv run python examples/durable_async.py
 uv run python examples/durable_recovery.py
 uv run python scripts/check_examples.py --durable
 ```
 
-Both use a faux model and temporary SQLite storage, without Pi coding-agent
-CLI or provider credentials. The basic async example mirrors the sync
+All three use a faux model and temporary SQLite storage, without Pi coding-agent
+CLI or provider credentials. The basic sync and async examples mirror the same
 submit/wait/answer flow. The recovery example also kills the host and reopens
 the same submission key. Each defaults to the host path relative to its file.
-The recovery example also accepts `PI_DURABLE_HOST` as a JSON argv array, for example
+All three accept `PI_DURABLE_HOST` as a JSON argv array, for example
 `["node", "/absolute/path/to/host.ts"]`. The checker always overrides that with
 the checkout's isolated host. The default example-check mode still runs only
 coding-agent examples; `--durable` runs only Durable examples.

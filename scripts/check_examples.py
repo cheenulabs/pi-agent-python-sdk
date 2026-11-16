@@ -42,7 +42,7 @@ EXAMPLES = (
     "sync.py",
     "ui.py",
 )
-DURABLE_EXAMPLES = ("durable_async.py", "durable_recovery.py")
+DURABLE_EXAMPLES = ("durable_async.py", "durable_recovery.py", "durable_sync.py")
 ANSWER = "Synthetic example answer."
 PIXEL = (
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII="
@@ -197,9 +197,10 @@ def check_example(path: Path, fixture: ModuleType) -> str:
 
 
 def check_durable_example(path: Path, command: list[str]) -> None:
-    from pi_agent.durable import AsyncDurableClient
+    from pi_agent.durable import AsyncDurableClient, DurableClient
 
     clients: list[AsyncDurableClient] = []
+    sync_clients: list[DurableClient] = []
 
     class CheckedClient(AsyncDurableClient):
         def __init__(self, storage_path: str | Path | None, **kwargs: Any) -> None:
@@ -208,9 +209,17 @@ def check_durable_example(path: Path, command: list[str]) -> None:
             )
             clients.append(self)
 
+    class CheckedSyncClient(DurableClient):
+        def __init__(self, storage_path: str | Path | None, **kwargs: Any) -> None:
+            super().__init__(
+                storage_path, **{**kwargs, "host_command": command, "inherit_env": False}
+            )
+            sync_clients.append(self)
+
     module = load(path, f"pi_checked_durable_example_{path.stem}")
     for name, replacement in (
         ("AsyncDurableClient", CheckedClient),
+        ("DurableClient", CheckedSyncClient),
         ("host_command", lambda: command),
     ):
         setattr(module, name, replacement)
@@ -223,21 +232,32 @@ def check_durable_example(path: Path, command: list[str]) -> None:
         finally:
             for client in clients:
                 await client.aclose()
-        assert clients, "Durable example created no clients"
-        for client in clients:
-            assert not client.running
-            if client._transport is not None and client._transport._process is not None:
-                assert client._transport._process.returncode is not None, (
-                    "Example left a host alive"
-                )
 
     with contextlib.redirect_stdout(output):
-        asyncio.run(run())
+        if inspect.iscoroutinefunction(module.main):
+            asyncio.run(run())
+        else:
+            try:
+                module.main()
+            finally:
+                for sync_client in sync_clients:
+                    sync_client.close()
+    assert clients or sync_clients, "Durable example created no clients"
+    for sync_client in sync_clients:
+        assert sync_client._thread is None or not sync_client._thread.is_alive(), (
+            "Example left its sync bridge thread alive"
+        )
+    for client in clients + [sync_client._client for sync_client in sync_clients]:
+        assert not client.running
+        if client._transport is not None and client._transport._process is not None:
+            assert client._transport._process.returncode is not None, "Example left a host alive"
     text = output.getvalue()
     if path.stem == "durable_recovery":
         assert "Recovered submission" in text
         assert "done; user entries: 1" in text
         assert "Synthetic recovery answer." in text
+    elif path.stem == "durable_sync":
+        assert "Hello from sync Durable." in text
     else:
         assert "Hello from async Durable." in text
 
