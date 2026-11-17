@@ -1,7 +1,8 @@
 # Pi Agent Python SDK
 
 <p align="center">
-  <strong>Run Pi from Python.</strong>
+  <strong>Run Pi from Python.</strong><br>
+  Two Pi runtimes. Your Python API.
 </p>
 
 <p align="center">
