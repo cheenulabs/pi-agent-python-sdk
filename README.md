@@ -40,10 +40,10 @@ The [experimental Pi Durable backend](#pi-durable-experimental) is documented
 separately after the coding-agent/RPC guide below.
 
 <!-- Inline player: GitHub auto-embeds bare user-attachments URLs. -->
-https://github.com/user-attachments/assets/c64dde3a-e812-42d4-a005-aa60df861e92
+https://github.com/user-attachments/assets/6c40bbc9-d322-473e-affa-b63b7f4362be
 
-The player above is the previous demo. [Watch the updated 33.5-second demo](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.1/docs/brag.mp4)
-for coding-agent streaming and experimental Durable crash recovery.
+**Watch the 33.5-second demo:** coding-agent streaming and experimental Durable
+crash recovery.
 
 ```python
 from pi_agent.coding import PiClient
