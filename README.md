@@ -1,7 +1,7 @@
 # Pi Agent Python SDK
 
 <p align="center">
-  <strong>Stream the coding agent. Resume with Durable. All from Python.</strong>
+  <strong>Run Pi from Python.</strong>
 </p>
 
 <p align="center">
@@ -17,10 +17,12 @@
 Two ways to run [Pi](https://github.com/earendil-works/pi) from Python, with typed
 synchronous and async APIs:
 
-- **Coding agent:** prompt, stream text and tool events, and keep sessions going
-  through your installed Pi CLI over `pi --mode rpc`.
-- **Durable (experimental):** submit work with an idempotency key and resume
-  after a crash through a caller-supplied Node host.
+- **Coding agent — Run Pi from scripts, apps and bots.** Prompt, stream text and
+  tool events, and keep sessions going through your installed Pi CLI over
+  `pi --mode rpc`.
+- **Pi Durable (experimental) — Agent jobs that survive crashes.** Submit work
+  with an idempotency key and resume after a crash through a caller-supplied
+  Node host.
 
 This unofficial community SDK reuses your Pi configuration for models and
 credentials. The coding agent also uses your CLI tools, extensions and sessions.
