@@ -1,7 +1,8 @@
 # Pi Agent Python SDK
 
 <p align="center">
-  <strong>Two Pi runtimes. Your Python API.</strong>
+  <strong>Run Pi from Python.</strong><br>
+  Your two Pi runtimes. Your Python API.
 </p>
 
 <p align="center">
@@ -14,9 +15,18 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square)][metadata]
 [![MIT license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)][license]
 
-This unofficial community SDK drives the [Pi](https://github.com/earendil-works/pi)
-coding agent over `pi --mode rpc`, with typed synchronous and async APIs. It uses
-your installed, configured Pi CLI for models, tools, extensions and sessions.
+Two ways to run [Pi](https://github.com/earendil-works/pi) from Python, with typed
+synchronous and async APIs:
+
+- **Coding agent — Run Pi from scripts, apps and bots.** Prompt, stream text and
+  tool events, and keep sessions going through your installed Pi CLI over
+  `pi --mode rpc`.
+- **Pi Durable (experimental) — Agent jobs that survive crashes.** Submit work
+  with an idempotency key and resume after a crash through a caller-supplied
+  Node host.
+
+This unofficial community SDK reuses your Pi configuration for models and
+credentials. The coding agent also uses your CLI tools, extensions and sessions.
 
 Both backends run upstream Pi's original TypeScript/Node.js code. This package
 adds Python APIs around it; it is **not a Python port** of Pi's agent or Durable
@@ -29,9 +39,11 @@ engine.
 The [experimental Pi Durable backend](#pi-durable-experimental) is documented
 separately after the coding-agent/RPC guide below.
 
-<!-- Inline player: GitHub only auto-embeds bare user-attachments URLs
-     (repo-relative / raw / release URLs are stripped or become download links). -->
-https://github.com/user-attachments/assets/c64dde3a-e812-42d4-a005-aa60df861e92
+<!-- Inline player: GitHub auto-embeds bare user-attachments URLs. -->
+https://github.com/user-attachments/assets/6c40bbc9-d322-473e-affa-b63b7f4362be
+
+**Watch the 33.5-second demo:** coding-agent streaming and experimental Durable
+crash recovery.
 
 ```python
 from pi_agent.coding import PiClient
@@ -57,6 +69,9 @@ with PiClient() as pi:
   compact context.
 - **Reuse your coding-agent Pi setup** — same configuration, tools, and extensions
   as the CLI, with sync or async clients.
+- **Recover interrupted work with experimental Durable** — resume from persisted
+  state and retry submissions with the same request key; requires a
+  caller-supplied Node host.
 
 ## Prerequisites
 
@@ -306,8 +321,8 @@ the [command reference][commands] for every method.
 The source checkout adds Python APIs for the original upstream Durable Harness,
 not a Python reimplementation: crash-safe resume, idempotent submissions, and
 bounded conversation watches.
-It is experimental, Linux/macOS only (Windows unsupported), and not a release
-announcement. Both backends expose synchronous and async clients.
+It is experimental and Linux/macOS only (Windows unsupported). Both backends
+expose synchronous and async clients.
 
 ### Durable quick start
 
