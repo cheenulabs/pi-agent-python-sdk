@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/cheenulabs/pi-agent-python-sdk">
-    <img alt="Pi Agent Python SDK" src="https://raw.githubusercontent.com/cheenulabs/pi-agent-python-sdk/v0.2.7/docs/logo.svg" width="160">
+    <img alt="Pi Agent Python SDK" src="https://raw.githubusercontent.com/cheenulabs/pi-agent-python-sdk/v0.3.0/docs/logo.svg" width="160">
   </a>
 </p>
 
@@ -22,10 +22,9 @@ Both backends run upstream Pi's original TypeScript/Node.js code. This package
 adds Python APIs around it; it is **not a Python port** of Pi's agent or Durable
 engine.
 
-> **Version note:** `pi_agent.coding` and `pi_agent.durable` are available from
-> the release after 0.2.7 and in this source checkout. On 0.2.7, use
-> `from pi_agent import PiClient, AsyncPiClient`: the same classes, still supported
-> and silent.
+> **Imports:** Since 0.3.0, use `pi_agent.coding` for coding-agent clients and
+> `pi_agent.durable` for the experimental Durable backend. Existing top-level
+> imports remain supported and silent.
 
 The [experimental Pi Durable backend](#pi-durable-experimental) is documented
 separately after the coding-agent/RPC guide below.
@@ -35,7 +34,7 @@ separately after the coding-agent/RPC guide below.
 https://github.com/user-attachments/assets/c64dde3a-e812-42d4-a005-aa60df861e92
 
 ```python
-from pi_agent import PiClient
+from pi_agent.coding import PiClient
 
 with PiClient() as pi:
     print(pi.run("Explain the current project without changing files.").text)
@@ -81,11 +80,6 @@ Run `pi` once to configure your provider and model. The SDK uses that
 configuration when it starts Pi.
 
 Install the Python package from [PyPI][pypi]:
-
-> **Version note:** `pi_agent.coding` and `pi_agent.durable` are available from
-> the release after 0.2.7 and in this source checkout. On 0.2.7, use
-> `from pi_agent import PiClient, AsyncPiClient`: the same classes, still supported
-> and silent.
 
 ```sh
 python -m pip install pi-agent-python-sdk
@@ -156,7 +150,7 @@ arguments and results match the synchronous client.
 ```python
 import asyncio
 
-from pi_agent import AsyncPiClient
+from pi_agent.coding import AsyncPiClient
 
 
 async def main() -> None:
@@ -342,8 +336,8 @@ with DurableClient(
     print(durable.answer_text(settled))
 ```
 
-The complete [sync example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/durable_sync.py)
-and [async example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/durable_async.py)
+The complete [sync example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/examples/durable_sync.py)
+and [async example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/examples/durable_async.py)
 use temporary SQLite storage and need no provider credentials. Both accept
 `PI_DURABLE_HOST` as a JSON argv array to override the file-relative host.
 
@@ -465,8 +459,8 @@ CI uses only faux models and a local HTTP stub, never live providers.
 
 Use one writer per storage path and retry uncertain submissions only with the
 same conversation-scoped request key. See the
-[Durable API, failure semantics and host setup](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/docs/durable.md)
-and [credential-free crash recovery example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/main/examples/durable_recovery.py).
+[Durable API, failure semantics and host setup](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/durable.md)
+and [credential-free crash recovery example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/examples/durable_recovery.py).
 
 ## Documentation
 
@@ -478,7 +472,7 @@ and [credential-free crash recovery example](https://github.com/cheenulabs/pi-ag
 | [RPC structure][rpc] | How the Python client maps to Pi's protocol |
 | [Compatibility][compatibility] | Runtime versions and platform validation |
 | [Examples][examples] | Runnable sync, async, streaming, sessions, steering, and UI examples |
-| [Release notes][release] | Changes included in 0.2.7 |
+| [Release notes][release] | Changes included in 0.3.0 |
 
 Coding-agent examples use your configured Pi and may make provider calls.
 Development checks use an isolated local test provider; see
@@ -509,20 +503,20 @@ Development checks use an isolated local test provider; see
 [MIT][license]
 
 [pypi]: https://pypi.org/project/pi-agent-python-sdk/
-[release]: https://github.com/cheenulabs/pi-agent-python-sdk/releases/tag/v0.2.7
-[metadata]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.7/pyproject.toml
-[license]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.7/LICENSE
-[compatibility]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.7/docs/compatibility.md
-[errors]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.7/docs/errors.md
-[stream-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.7/examples/stream.py
-[constructor-options]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.7/docs/api.md#constructor-options
-[extensions]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.7/docs/usage.md#using-your-own-extensions
-[ui-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.7/examples/ui.py
-[rpc]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.7/docs/rpc.md
-[commands]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.7/docs/api.md#all-33-rpc-commands
-[usage]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.7/docs/usage.md
-[api]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.7/docs/api.md
-[examples]: https://github.com/cheenulabs/pi-agent-python-sdk/tree/v0.2.7/examples
-[contributing]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.2.7/CONTRIBUTING.md
+[release]: https://github.com/cheenulabs/pi-agent-python-sdk/releases/tag/v0.3.0
+[metadata]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/pyproject.toml
+[license]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/LICENSE
+[compatibility]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/compatibility.md
+[errors]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/errors.md
+[stream-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/examples/stream.py
+[constructor-options]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/api.md#constructor-options
+[extensions]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/usage.md#using-your-own-extensions
+[ui-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/examples/ui.py
+[rpc]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/rpc.md
+[commands]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/api.md#all-33-rpc-commands
+[usage]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/usage.md
+[api]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/api.md
+[examples]: https://github.com/cheenulabs/pi-agent-python-sdk/tree/v0.3.0/examples
+[contributing]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/CONTRIBUTING.md
 [issues]: https://github.com/cheenulabs/pi-agent-python-sdk/issues
 [security]: https://github.com/cheenulabs/pi-agent-python-sdk/security/advisories/new

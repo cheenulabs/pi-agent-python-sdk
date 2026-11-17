@@ -4,6 +4,17 @@ Local build validation is separate from a TestPyPI rehearsal, GitHub CI, and a
 public PyPI release. For each release, validate the reviewed commit and built artifacts before
 publication, then verify the copies downloaded from both indexes.
 
+## 0.3.0 release verification
+
+The 0.3.0 metadata and [release notes](releases/0.3.0.md) prepare the coding
+namespace and experimental Durable backend for publication. Existing top-level
+client imports remain supported. Preparing or merging this PR does not authorize
+publication: obtain explicit approval for the reviewed candidate, then confirm
+the `v0.3.0` GitHub release and successful TestPyPI/PyPI verification jobs before
+recording it as released. Strict-version coding-agent users must install Pi
+1.5.2 separately. Durable requires a caller-supplied host from the tagged checkout;
+the wheel and sdist do not bundle it.
+
 ## 0.2.7 release verification
 
 The 0.2.7 metadata and [release notes](releases/0.2.7.md) describe the patch

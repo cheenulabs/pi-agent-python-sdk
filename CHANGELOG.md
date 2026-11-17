@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 ### Added
 
@@ -8,9 +8,15 @@
   Durable Harness: idempotent submissions, watches and crash recovery through a
   caller-supplied Node host. Python runtime dependencies remain zero.
 - `pi_agent.coding` as the primary namespace for the existing coding-agent
-  clients, available in this checkout and the release after 0.2.7. Top-level
-  imports remain supported and silent.
+  clients. Top-level imports remain supported and silent.
 - Optional `PiCommandError.code` passthrough for upstream command error codes.
+
+### Changed
+
+- Advance the tested coding-agent baseline from 1.5.0 to 1.5.2, retaining the
+  0.85.1 minimum. Strict-version users must install Pi 1.5.2 separately.
+- Update README examples to the released `pi_agent.coding` namespace and pin
+  documentation links to v0.3.0.
 
 ## 0.2.7
 
