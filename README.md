@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>Run Pi from Python.</strong><br>
-  Two Pi runtimes. Your Python API.
+  Your two Pi runtimes. Your Python API.
 </p>
 
 <p align="center">
@@ -39,11 +39,11 @@ engine.
 The [experimental Pi Durable backend](#pi-durable-experimental) is documented
 separately after the coding-agent/RPC guide below.
 
-<!-- Poster links to the updated repository video; this is not an inline player. -->
-[![Watch the demo: coding-agent streaming and experimental Durable crash recovery](https://raw.githubusercontent.com/cheenulabs/pi-agent-python-sdk/v0.3.1/docs/brag.jpg)](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.1/docs/brag.mp4)
+<!-- Inline player: GitHub auto-embeds bare user-attachments URLs. -->
+https://github.com/user-attachments/assets/c64dde3a-e812-42d4-a005-aa60df861e92
 
-**Watch the 33.5-second demo:** real streamed output, then a SIGKILL and Durable
-recovery. Click the poster to open the video on GitHub.
+The player above is the previous demo. [Watch the updated 33.5-second demo](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.1/docs/brag.mp4)
+for coding-agent streaming and experimental Durable crash recovery.
 
 ```python
 from pi_agent.coding import PiClient
