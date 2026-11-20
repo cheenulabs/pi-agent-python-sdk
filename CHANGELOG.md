@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
 ### Added
 
@@ -16,6 +16,24 @@
 - `pi_agent.AgentConfig` writes models, settings, and credentials supplied in
   code to a private temporary agent directory and returns the matching client
   environment.
+
+### Changed
+
+- Advance the tested coding-agent baseline from 1.5.2 to 1.6.0, retaining the
+  0.85.1 minimum. Strict-version users must install Pi 1.6.0 separately. The
+  experimental Durable baseline remains 1.5.2.
+- The outbound `max_record_bytes` error names `Limits.max_record_bytes` and
+  explains that the limit also covers Pi's echoed prompt; the docs describe the
+  headroom needed for large prompts. Behaviour is unchanged.
+- Update README examples for the new helpers and pin documentation links to
+  v0.4.0.
+
+### Fixed
+
+- Accept an inbound record exactly at `max_record_bytes` when its CRLF ending
+  arrives in separate chunks, instead of closing the client.
+- Extension UI dialogs with a zero, negative, non-finite, or boolean `timeout`
+  no longer get an immediate local deadline; zero means no timer, as in Pi.
 
 ## 0.3.0
 

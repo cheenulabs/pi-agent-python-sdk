@@ -4,6 +4,18 @@ Local build validation is separate from a TestPyPI rehearsal, GitHub CI, and a
 public PyPI release. For each release, validate the reviewed commit and built artifacts before
 publication, then verify the copies downloaded from both indexes.
 
+## 0.4.0 release verification
+
+The 0.4.0 metadata and [release notes](releases/0.4.0.md) prepare the opt-in
+`headless_args()`, `RunResult.raise_for_incomplete()`, `AgentConfig`, and
+`pi_agent.testing.FakePi` helpers, plus three transport and UI fixes, for
+publication. Client defaults and the RPC protocol are unchanged. Preparing or
+merging this PR does not authorize publication: obtain explicit approval for the
+reviewed candidate, then confirm the `v0.4.0` GitHub release and successful
+TestPyPI/PyPI verification jobs before recording it as released. Check the
+tag-pinned README and release-note links against the actual tag after
+publication. Strict-version coding-agent users must install Pi 1.6.0 separately.
+
 ## 0.3.0 release verification
 
 The 0.3.0 metadata and [release notes](releases/0.3.0.md) prepare the coding
