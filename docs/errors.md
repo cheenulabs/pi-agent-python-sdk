@@ -21,6 +21,7 @@ All library exceptions derive from `PiError` and are exported from the package.
 | `PiRunOwnershipError` | Prior low-level conversation submission prevents owned-run attribution; derives from `PiBusyError`, requires a fresh client |
 | `PiUIHandlerError` | UI handler failure or outstanding-handler budget exceeded; callback failures retain their cause |
 | `PiRunError` | Final assistant stopped with `error` or `aborted`; `.result` contains partial work |
+| `PiIncompleteRunError` | Raised only by `RunResult.raise_for_incomplete()` for a final stop other than `stop` or blank text; derives from `PiRunError`; `.result` and `.reason` (`"stop_reason"` or `"empty_text"`) |
 | `PiVersionError` | Unsupported or unrecognized Pi version under the selected compatibility policy |
 
 Invalid constructor flags, invalid deadlines, or an outbound record above the

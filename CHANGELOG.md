@@ -7,6 +7,12 @@
 - `pi_agent.testing.FakePi` and `FakeReply`: a scripted fake Pi executable for
   testing code that uses the real clients without a model, credentials, or
   Node.js. Python runtime dependencies remain zero.
+- `pi_agent.headless_args()` builds opt-in `extra_args` for unattended runs:
+  Pi discovery, `SYSTEM.md`/`APPEND_SYSTEM.md` prompt files (unless
+  `prompt_files=True`), MCP, and startup network work are disabled, and only
+  named tools, extensions, and skills load. Client defaults are unchanged.
+- `RunResult.raise_for_incomplete()` and `PiIncompleteRunError` reject a final
+  stop other than `stop`, or blank text, while preserving partial work.
 
 ## 0.3.0
 

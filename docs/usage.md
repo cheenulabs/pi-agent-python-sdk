@@ -128,6 +128,54 @@ command without starting a run, so acknowledgement does not imply a result.
 For interactive extensions, configure the client's generic extension UI handler
 as described below; application-specific responses remain the caller's choice.
 
+## Unattended (headless) runs
+
+Pi's defaults suit an interactive coding agent: it discovers extensions, skills,
+prompt templates, themes, `AGENTS.md`/`CLAUDE.md` context files, MCP servers,
+and project-local resources. For batch jobs, services, and evaluations, opt in
+to a command line that loads only what you name:
+
+```python
+from pi_agent import headless_args
+from pi_agent.coding import PiClient
+
+
+def main() -> None:
+    with PiClient(
+        cwd="./workspace",
+        no_session=True,
+        extra_args=headless_args(tools=["read", "ls", "grep"], thinking="high"),
+    ) as pi:
+        print(pi.run("Summarise data.csv.").raise_for_incomplete().text)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+`headless_args()` returns ordinary `extra_args`; it does not change client
+defaults or read Pi files. It always disables discovery of extensions, skills,
+prompt templates, themes, context files, and project-local resources. By default
+it also stops Pi from loading `SYSTEM.md` and `APPEND_SYSTEM.md`, so prompt
+files added for interactive use cannot change unattended runs. Named
+`extensions=` and `skills=` still load; filesystem paths are resolved against the
+Python process's current directory, and `builtin:<name>` extensions pass through.
+
+| Option | Default | Effect |
+|---|---|---|
+| `tools` | `()` | Allowlist for `--tools`. Empty disables all tools, or only built-in tools when extensions are named |
+| `system_prompt` | `None` | Replaces Pi's built-in prompt; `None` or `""` keeps the built-in prompt |
+| `append_system_prompt` | `()` | One `--append-system-prompt` per entry |
+| `prompt_files` | `False` | `True` loads `SYSTEM.md` and `APPEND_SYSTEM.md` from Pi's agent directory; explicit prompts still take precedence |
+| `thinking` | `None` | Optional `--thinking` level |
+| `mcp` | `False` | `False` passes `--no-mcp`; Pi before 1.3.0 rejects that option, so pass `True` there |
+| `offline` | `True` | Passes `--offline`, skipping startup network work such as catalog refresh |
+
+Pi reads a prompt value that names an existing file as that file's contents.
+Models, credentials, and settings still come from Pi's agent directory. For full
+isolation, also pass `env={"PI_CODING_AGENT_DIR": ...}` and consider
+`inherit_env=False` with an explicit `PATH`.
+
 ## Acceptance, settlement, and results
 
 `prompt(message, ...)` returns `None` after checked acknowledgement. Use
@@ -175,6 +223,13 @@ compaction or provider-side work may be absent. Missing measurements stay
 amount to add. Final `error` and `aborted` stop reasons raise `PiRunError`, whose
 `.result` retains partial work. `length`, `pending`, `deferred`, `toolUse`, and
 `stop` remain distinguishable. See [errors](errors.md).
+
+When an application needs a usable answer, call
+`result.raise_for_incomplete()`. It returns the same result when the final stop
+reason is `stop` with non-blank text, and otherwise raises
+`PiIncompleteRunError` (a `PiRunError`) with `.result` and `.reason`
+(`"stop_reason"` or `"empty_text"`). Pass `allow_empty=True` to accept a normal
+stop without text.
 
 ## Stream or subscribe to events
 

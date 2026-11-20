@@ -90,5 +90,17 @@ class PiRunError(PiError):
         super().__init__(message)
 
 
+class PiIncompleteRunError(PiRunError):
+    """A settled run produced no usable final answer; .result preserves its work.
+
+    ``reason`` is ``"stop_reason"`` when the final assistant stopped for another
+    reason than ``stop``, or ``"empty_text"`` when it stopped without text.
+    """
+
+    def __init__(self, message: str, result: RunResult, reason: str) -> None:
+        self.reason = reason
+        super().__init__(message, result)
+
+
 class PiVersionError(PiError):
     """The selected Pi version does not meet the requested compatibility policy."""
