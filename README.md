@@ -481,7 +481,7 @@ and [credential-free crash recovery example](https://github.com/cheenulabs/pi-ag
 
 | Guide | Contents |
 | --- | --- |
-| [Usage][usage] | Sessions, images, concurrency, events, and extension UI |
+| [Usage][usage] | Sessions, images, concurrency, events, extension UI, and testing without a model |
 | [API reference][api] | Constructors, commands, types, and results |
 | [Errors and cancellation][errors] | Deadlines, partial results, cleanup, and recovery |
 | [RPC structure][rpc] | How the Python client maps to Pi's protocol |

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `pi_agent.testing.FakePi` and `FakeReply`: a scripted fake Pi executable for
+  testing code that uses the real clients without a model, credentials, or
+  Node.js. Python runtime dependencies remain zero.
+
 ## 0.3.0
 
 ### Added
