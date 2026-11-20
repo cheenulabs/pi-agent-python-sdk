@@ -113,7 +113,9 @@ the current run.
 ## Deadlines
 
 All configured deadlines use seconds. The UI protocol's optional handler timeout
-is supplied by Pi in milliseconds and converted internally.
+is supplied by Pi in milliseconds and converted internally. Zero means no UI
+deadline; only positive finite UI timeouts create a local deadline. Negative and
+non-finite UI timeouts are ignored.
 
 Caller-supplied numeric deadlines must be positive and finite. Invalid types,
 booleans, and integers too large for the timer raise `ValueError`. Where allowed,

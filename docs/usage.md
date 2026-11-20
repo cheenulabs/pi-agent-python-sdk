@@ -400,9 +400,10 @@ It can be async or synchronous; synchronous handlers run outside the event loop.
 With no handler, dialogs are cancelled and display requests remain visible to
 event subscribers. Handler failures attempt a dialog cancellation and surface
 `PiUIHandlerError`. The original exception is available through `__cause__`.
-Pi may provide a dialog timeout in milliseconds; the client applies that deadline
-to the handler. Ordinary deadline expiry cancels that dialog without failing the
-conversation or event subscribers. Late handler answers are discarded. An
+Pi may provide a dialog timeout in milliseconds; zero means no deadline. The
+client applies only positive finite timeouts to the handler; negative and
+non-finite values are ignored. Ordinary deadline expiry cancels that dialog
+without failing the conversation or event subscribers. Late handler answers are discarded. An
 independently raised callback exception, including `TimeoutError` before the
 deadline, remains a handler failure. UI replies do not wait for an RPC acknowledgement.
 
