@@ -76,9 +76,11 @@ prompts, and startup attachments. Arguments are passed without a shell.
 ## Headless launch arguments
 
 `pi_agent.headless_args(*, tools=(), extensions=(), skills=(), system_prompt=None,
-append_system_prompt=(), thinking=None, mcp=False, offline=True)` returns a
-`list[str]` for `extra_args`. It disables Pi discovery and enables only the named
-tools, extensions, and skills. Invalid tool names, empty paths, or unknown
+append_system_prompt=(), thinking=None, mcp=False, offline=True,
+prompt_files=False)` returns a `list[str]` for `extra_args`. It disables Pi
+discovery, including `SYSTEM.md` and `APPEND_SYSTEM.md` unless
+`prompt_files=True`, and enables only the named tools, extensions, and skills.
+Bare strings for sequence options, invalid tool names, empty paths, or unknown
 thinking levels raise `ValueError`. See
 [unattended runs](usage.md#unattended-headless-runs).
 

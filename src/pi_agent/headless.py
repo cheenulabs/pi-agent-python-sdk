@@ -42,6 +42,7 @@ def headless_args(
     thinking: ThinkingLevel | None = None,
     mcp: bool = False,
     offline: bool = True,
+    prompt_files: bool = False,
 ) -> list[str]:
     """Return ``extra_args`` that load only what the caller names.
 
@@ -55,8 +56,18 @@ def headless_args(
     With no tools, every tool is disabled; when extensions are named, only
     built-in tools are disabled so extension tools remain available.
 
-    ``system_prompt=None`` keeps Pi's default prompt, while ``""`` removes it.
-    Each ``append_system_prompt`` entry adds one ``--append-system-prompt``.
+    ``system_prompt`` replaces Pi's built-in system prompt; ``None`` or ``""``
+    keeps the built-in prompt. Each ``append_system_prompt`` entry adds one
+    ``--append-system-prompt``. Pi reads a prompt value that names an existing
+    file as that file's contents.
+
+    ``prompt_files=False`` stops Pi from loading ``SYSTEM.md`` (which replaces
+    the built-in prompt) and ``APPEND_SYSTEM.md`` (which extends it) from its
+    agent directory, so a file added for interactive use cannot change
+    unattended runs. Set it to true to load them; an explicit ``system_prompt``
+    or ``append_system_prompt`` still takes precedence over the matching file.
+    Project ``.pi/`` copies stay ignored because project-local files are not
+    trusted.
     ``mcp=False`` passes ``--no-mcp``. Pi 1.3.0 added built-in MCP and that
     option; older Pi exits on it at startup, so pass ``mcp=True`` there.
     ``offline=True`` passes ``--offline`` and skips startup network operations
@@ -65,9 +76,19 @@ def headless_args(
     Pi still reads models, credentials and settings from its agent directory;
     choose it with ``env={"PI_CODING_AGENT_DIR": ...}`` for full isolation.
 
-    Raises ValueError for an empty tool name, a tool name containing a comma,
-    an empty path, or an unknown thinking level.
+    Raises ValueError for a bare string where a sequence is expected, an empty
+    tool name, a tool name containing a comma, an empty path, or an unknown
+    thinking level.
     """
+    for name, value in (
+        ("tools", tools),
+        ("extensions", extensions),
+        ("skills", skills),
+        ("append_system_prompt", append_system_prompt),
+    ):
+        # A bare string is a Sequence[str] and would silently split into characters.
+        if isinstance(value, str):
+            raise ValueError(f"{name} must be a sequence of strings, not a string")
     enabled: list[str] = []
     for tool in tools:
         if not isinstance(tool, str) or not tool.strip() or "," in tool:
@@ -82,10 +103,16 @@ def headless_args(
         arguments.append("--no-mcp")
     if offline:
         arguments.append("--offline")
+    # Pi treats an empty prompt value as unset, keeping its built-in prompt, but
+    # any supplied value skips SYSTEM.md / APPEND_SYSTEM.md discovery.
     if system_prompt is not None:
         arguments.extend(("--system-prompt", system_prompt))
+    elif not prompt_files:
+        arguments.extend(("--system-prompt", ""))
     for text in append_system_prompt:
         arguments.extend(("--append-system-prompt", text))
+    if not append_system_prompt and not prompt_files:
+        arguments.extend(("--append-system-prompt", ""))
     if thinking is not None:
         arguments.extend(("--thinking", thinking))
     for extension in extensions:

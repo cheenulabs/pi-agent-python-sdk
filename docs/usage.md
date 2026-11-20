@@ -155,19 +155,23 @@ if __name__ == "__main__":
 
 `headless_args()` returns ordinary `extra_args`; it does not change client
 defaults or read Pi files. It always disables discovery of extensions, skills,
-prompt templates, themes, context files, and project-local resources. Named
+prompt templates, themes, context files, and project-local resources. By default
+it also stops Pi from loading `SYSTEM.md` and `APPEND_SYSTEM.md`, so prompt
+files added for interactive use cannot change unattended runs. Named
 `extensions=` and `skills=` still load; filesystem paths are resolved against the
 Python process's current directory, and `builtin:<name>` extensions pass through.
 
 | Option | Default | Effect |
 |---|---|---|
 | `tools` | `()` | Allowlist for `--tools`. Empty disables all tools, or only built-in tools when extensions are named |
-| `system_prompt` | `None` | `None` keeps Pi's prompt; `""` removes it |
+| `system_prompt` | `None` | Replaces Pi's built-in prompt; `None` or `""` keeps the built-in prompt |
 | `append_system_prompt` | `()` | One `--append-system-prompt` per entry |
+| `prompt_files` | `False` | `True` loads `SYSTEM.md` and `APPEND_SYSTEM.md` from Pi's agent directory; explicit prompts still take precedence |
 | `thinking` | `None` | Optional `--thinking` level |
 | `mcp` | `False` | `False` passes `--no-mcp`; Pi before 1.3.0 rejects that option, so pass `True` there |
 | `offline` | `True` | Passes `--offline`, skipping startup network work such as catalog refresh |
 
+Pi reads a prompt value that names an existing file as that file's contents.
 Models, credentials, and settings still come from Pi's agent directory. For full
 isolation, also pass `env={"PI_CODING_AGENT_DIR": ...}` and consider
 `inherit_env=False` with an explicit `PATH`.

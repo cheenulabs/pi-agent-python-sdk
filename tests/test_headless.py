@@ -22,8 +22,29 @@ DISCOVERY_OFF = [
 
 def test_default_disables_discovery_tools_mcp_and_startup_network() -> None:
     arguments = headless_args()
-    assert arguments == [*DISCOVERY_OFF, "--no-mcp", "--offline", "--no-tools"]
+    assert arguments == [
+        *DISCOVERY_OFF,
+        "--no-mcp",
+        "--offline",
+        "--system-prompt",
+        "",
+        "--append-system-prompt",
+        "",
+        "--no-tools",
+    ]
     validate_extra_args(arguments)
+
+
+def test_prompt_files_opt_in_omits_empty_prompt_values() -> None:
+    arguments = headless_args(prompt_files=True)
+    assert "--system-prompt" not in arguments
+    assert "--append-system-prompt" not in arguments
+    explicit = headless_args(prompt_files=True, system_prompt="Base.")
+    assert explicit[explicit.index("--system-prompt") + 1] == "Base."
+    assert "--append-system-prompt" not in explicit
+    appended = headless_args(append_system_prompt=["Extra."])
+    assert appended.count("--append-system-prompt") == 1
+    assert appended[appended.index("--system-prompt") + 1] == ""
 
 
 def test_named_resources_load_in_caller_order(
@@ -77,6 +98,10 @@ def test_extensions_without_tools_keep_only_extension_tools() -> None:
         {"thinking": "extreme"},
         {"skills": [""]},
         {"extensions": [""]},
+        {"tools": "read"},
+        {"skills": "skills/review"},
+        {"extensions": "ext.ts"},
+        {"append_system_prompt": "Be brief."},
     ],
 )
 def test_invalid_options_raise_before_launch(options: dict[str, object]) -> None:
