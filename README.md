@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="https://github.com/cheenulabs/pi-agent-python-sdk">
-    <img alt="Pi Agent Python SDK" src="https://raw.githubusercontent.com/cheenulabs/pi-agent-python-sdk/v0.3.0/docs/logo.svg" width="160">
+    <img alt="Pi Agent Python SDK" src="https://raw.githubusercontent.com/cheenulabs/pi-agent-python-sdk/v0.4.0/docs/logo.svg" width="160">
   </a>
 </p>
 
@@ -221,8 +221,7 @@ either client. See [using your own extensions][extensions] for details and
 ## Run unattended
 
 For scripts, services, and CI, choose exactly what Pi loads instead of inheriting
-your `~/.pi/agent` setup. These helpers are unreleased: install from a checkout
-(`python -m pip install -e .`).
+your `~/.pi/agent` setup. Requires 0.4.0 or newer.
 
 ```python
 from pi_agent import AgentConfig, headless_args
@@ -284,8 +283,8 @@ still load. With no `tools`, all tools are off. Pi before 1.3.0 rejects
 
 </details>
 
-See [unattended runs](docs/usage.md#unattended-headless-runs) and
-[configure Pi from code](docs/usage.md#configure-pi-from-code) for every option.
+See [unattended runs](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/docs/usage.md#unattended-headless-runs) and
+[configure Pi from code](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/docs/usage.md#configure-pi-from-code) for every option.
 
 ## Models and thinking
 
@@ -393,8 +392,7 @@ the [command reference][commands] for every method.
 
 `pi_agent.testing.FakePi` lets your tests use the real `PiClient` or
 `AsyncPiClient` with scripted replies, without a model, credentials, Node.js,
-or network access. This helper is unreleased: install from a checkout containing
-this change (`python -m pip install -e .`), rather than the published 0.3.0 package.
+or network access. Requires 0.4.0 or newer.
 
 ```python
 from pi_agent.coding import PiClient
@@ -410,7 +408,7 @@ with FakePi(["Hello!", FakeReply("cut off", stop_reason="length")]) as fake:
 Each prompt consumes the next reply; an exhausted script or unsupported command
 raises `PiCommandError`. Each client starts again from the first reply. The fake
 does not simulate tool calls, extension UI, compaction, or session branching.
-See the [testing guide](docs/usage.md#test-without-a-model) for reply options,
+See the [testing guide](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/docs/usage.md#test-without-a-model) for reply options,
 request recording, and supported commands.
 
 ## Pi Durable (experimental)
@@ -448,8 +446,8 @@ with DurableClient(
     print(durable.answer_text(settled))
 ```
 
-The complete [sync example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/examples/durable_sync.py)
-and [async example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/examples/durable_async.py)
+The complete [sync example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/examples/durable_sync.py)
+and [async example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/examples/durable_async.py)
 use temporary SQLite storage and need no provider credentials. Both accept
 `PI_DURABLE_HOST` as a JSON argv array to override the file-relative host.
 
@@ -571,20 +569,20 @@ CI uses only faux models and a local HTTP stub, never live providers.
 
 Use one writer per storage path and retry uncertain submissions only with the
 same conversation-scoped request key. See the
-[Durable API, failure semantics and host setup](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/durable.md)
-and [credential-free crash recovery example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/examples/durable_recovery.py).
+[Durable API, failure semantics and host setup](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/docs/durable.md)
+and [credential-free crash recovery example](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/examples/durable_recovery.py).
 
 ## Documentation
 
 | Guide | Contents |
 | --- | --- |
-| [Usage](docs/usage.md) | Sessions, images, concurrency, events, extension UI, and testing without a model |
+| [Usage](https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/docs/usage.md) | Sessions, images, concurrency, events, extension UI, and testing without a model |
 | [API reference][api] | Constructors, commands, types, and results |
 | [Errors and cancellation][errors] | Deadlines, partial results, cleanup, and recovery |
 | [RPC structure][rpc] | How the Python client maps to Pi's protocol |
 | [Compatibility][compatibility] | Runtime versions and platform validation |
 | [Examples][examples] | Runnable sync, async, streaming, sessions, steering, and UI examples |
-| [Release notes][release] | Changes included in 0.3.0 |
+| [Release notes][release] | Changes included in 0.4.0 |
 
 Coding-agent examples use your configured Pi and may make provider calls.
 Development checks use an isolated local test provider; see
@@ -615,20 +613,20 @@ Development checks use an isolated local test provider; see
 [MIT][license]
 
 [pypi]: https://pypi.org/project/pi-agent-python-sdk/
-[release]: https://github.com/cheenulabs/pi-agent-python-sdk/releases/tag/v0.3.0
-[metadata]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/pyproject.toml
-[license]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/LICENSE
-[compatibility]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/compatibility.md
-[errors]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/errors.md
-[stream-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/examples/stream.py
-[constructor-options]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/api.md#constructor-options
-[extensions]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/usage.md#using-your-own-extensions
-[ui-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/examples/ui.py
-[rpc]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/rpc.md
-[commands]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/api.md#all-33-rpc-commands
-[usage]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/usage.md
-[api]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/docs/api.md
-[examples]: https://github.com/cheenulabs/pi-agent-python-sdk/tree/v0.3.0/examples
-[contributing]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.3.0/CONTRIBUTING.md
+[release]: https://github.com/cheenulabs/pi-agent-python-sdk/releases/tag/v0.4.0
+[metadata]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/pyproject.toml
+[license]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/LICENSE
+[compatibility]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/docs/compatibility.md
+[errors]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/docs/errors.md
+[stream-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/examples/stream.py
+[constructor-options]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/docs/api.md#constructor-options
+[extensions]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/docs/usage.md#using-your-own-extensions
+[ui-example]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/examples/ui.py
+[rpc]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/docs/rpc.md
+[commands]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/docs/api.md#all-33-rpc-commands
+[usage]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/docs/usage.md
+[api]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/docs/api.md
+[examples]: https://github.com/cheenulabs/pi-agent-python-sdk/tree/v0.4.0/examples
+[contributing]: https://github.com/cheenulabs/pi-agent-python-sdk/blob/v0.4.0/CONTRIBUTING.md
 [issues]: https://github.com/cheenulabs/pi-agent-python-sdk/issues
 [security]: https://github.com/cheenulabs/pi-agent-python-sdk/security/advisories/new
