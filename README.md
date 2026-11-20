@@ -228,11 +228,15 @@ your `~/.pi/agent` setup. These helpers are unreleased: install from a checkout
 from pi_agent import AgentConfig, headless_args
 from pi_agent.coding import PiClient
 
-models = {"providers": {"local": {
-    "baseUrl": "http://127.0.0.1:8000/v1",
-    "api": "openai-completions",
-    "models": [{"id": "my-model"}],
-}}}
+models = {
+    "providers": {
+        "local": {
+            "baseUrl": "http://127.0.0.1:8000/v1",
+            "api": "openai-completions",
+            "models": [{"id": "my-model"}],
+        }
+    }
+}
 auth = {"local": {"type": "api_key", "key": "local"}}
 
 with AgentConfig(models=models, auth=auth) as config:
@@ -262,8 +266,8 @@ with AgentConfig(models=models, auth=auth) as config:
   `apiKey` in `models`, or as an environment variable.
 - The folder is private and `auth.json` is owner-only. Values never appear in
   `repr` or errors.
-- Everything Pi writes there is deleted on exit, including default session
-  files. Use `no_session=True` or `session_dir=` to keep sessions.
+- Everything Pi writes there is deleted on exit, including session files. Pass
+  `session_dir=` to keep sessions elsewhere, or `no_session=True` to write none.
 - Packages and logins from your own `~/.pi/agent` are not available inside it.
 - Combine with other overrides as `env={**config.env, "PATH": path}`.
 

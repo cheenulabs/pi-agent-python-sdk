@@ -228,8 +228,8 @@ values never appear in `repr` or errors.
 
 `config.env` is `{"PI_CODING_AGENT_DIR": ...}`; merge it with other overrides,
 for example `env={**config.env, "PATH": path}`. On exit the directory is removed
-with everything Pi wrote there, including default session files, so use
-`no_session=True` or `session_dir=` for sessions you want to keep. Installed Pi
+with everything Pi wrote there, including default session files. Pass
+`session_dir=` to keep sessions outside it, or `no_session=True` to write none. Installed Pi
 packages and logins in your own agent directory are not available inside it.
 
 ## Acceptance, settlement, and results
