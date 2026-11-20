@@ -6,6 +6,8 @@ import json
 import os
 import stat
 import sys
+from collections import ChainMap, UserDict
+from types import MappingProxyType
 
 import pytest
 
@@ -24,6 +26,24 @@ def test_writes_only_supplied_files_and_cleans_up() -> None:
         assert json.loads((root / "models.json").read_text(encoding="utf-8")) == models
         (root / "sessions").mkdir()  # Pi may write its own state here.
     assert not root.exists()
+
+
+def test_accepts_any_mapping_at_any_depth() -> None:
+    settings = MappingProxyType(
+        {"compaction": MappingProxyType({"enabled": False}), "retry": UserDict(enabled=True)}
+    )
+    with AgentConfig(
+        settings=settings,
+        models=UserDict(providers={}),
+        auth=ChainMap({"local": {"type": "api_key", "key": SECRET}}),
+    ) as config:
+        written = json.loads((config.path / "settings.json").read_text(encoding="utf-8"))
+        assert written == {"compaction": {"enabled": False}, "retry": {"enabled": True}}
+        assert json.loads((config.path / "models.json").read_text(encoding="utf-8")) == {
+            "providers": {}
+        }
+        auth = json.loads((config.path / "auth.json").read_text(encoding="utf-8"))
+        assert auth["local"]["key"] == SECRET
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX permission bits")

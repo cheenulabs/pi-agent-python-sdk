@@ -19,6 +19,13 @@ from typing import Any, Self
 __all__ = ["AgentConfig"]
 
 
+def _mapping(value: object) -> dict[Any, Any]:
+    # json encodes only dict; accept any Mapping (MappingProxyType, ChainMap, ...) at any depth.
+    if isinstance(value, Mapping):
+        return dict(value)
+    raise TypeError("not JSON serializable")
+
+
 class AgentConfig:
     """Write ``models.json``, ``settings.json`` and ``auth.json`` for one use.
 
@@ -54,7 +61,7 @@ class AgentConfig:
             if not isinstance(value, Mapping):
                 raise ValueError(f"{name} must be a mapping")
             try:
-                text = json.dumps(value, indent=2, allow_nan=False)
+                text = json.dumps(dict(value), indent=2, allow_nan=False, default=_mapping)
             except (TypeError, ValueError):
                 # The underlying message can quote configuration values.
                 raise ValueError(f"{name} must contain only JSON-compatible values") from None
