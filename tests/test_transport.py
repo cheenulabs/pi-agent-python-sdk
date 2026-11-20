@@ -200,6 +200,83 @@ async def test_oversized_record_is_fatal(newline: bool) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("ending", [b"\n", b"\r\n"])
+@pytest.mark.parametrize("split", [False, True])
+@pytest.mark.parametrize("route", [False, True])
+async def test_record_at_byte_limit_accepts_fragmented_endings(
+    ending: bytes, split: bool, route: bool
+) -> None:
+    record = b'{"type":"future"}'
+    events: list[dict[str, Any]] = []
+    observed: list[Any] = []
+    client = Transport(
+        limits=Limits(max_record_bytes=len(record)),
+        on_event=events.append,
+        on_failure=lambda _: None,
+        on_output=lambda source, data: observed.append(data) if source == "rpc" else None,
+    )
+    wire = record + ending
+    chunks = [wire[:-1], wire[-1:]] if split else [wire]
+    for chunk in chunks:
+        await client._feed_stdout(chunk, route=route)
+    assert events == ([{"type": "future"}] if route else [])
+    assert observed == [{"type": "future"}]
+    assert client._rpc_complete
+    assert not client._stdout_buffer
+    assert not client._discarding_record
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("ending", [b"\n", b"\r\n"])
+@pytest.mark.parametrize("split", [False, True])
+async def test_record_over_byte_limit_rejects_fragmented_endings(
+    ending: bytes, split: bool
+) -> None:
+    record = b'{"type":"future"} '
+    client = Transport(
+        limits=Limits(max_record_bytes=len(record) - 1),
+        on_event=lambda _: None,
+        on_failure=lambda _: None,
+    )
+    wire = record + ending
+    chunks = [wire[:-1], wire[-1:]] if split else [wire]
+    with pytest.raises(PiProtocolError, match="exceeds max_record_bytes"):
+        for chunk in chunks:
+            await client._feed_stdout(chunk, route=True)
+    assert not client._rpc_complete
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("suffix", [b"", b"\r"])
+@pytest.mark.parametrize("route", [False, True])
+async def test_unterminated_oversized_buffer_rejects_or_discards(
+    suffix: bytes, route: bool
+) -> None:
+    record = b'{"type":"future"}'
+    observed: list[Any] = []
+    client = Transport(
+        limits=Limits(max_record_bytes=len(record)),
+        on_event=lambda _: None,
+        on_failure=lambda _: None,
+        on_output=lambda source, data: observed.append(data) if source == "rpc" else None,
+    )
+    chunk = record + b" " + suffix
+    if route:
+        with pytest.raises(PiProtocolError, match="exceeds max_record_bytes"):
+            await client._feed_stdout(chunk, route=True)
+    else:
+        await client._feed_stdout(chunk, route=False)
+        assert not client._stdout_buffer
+        assert client._discarding_record
+        # Discard the rest of this record, then resume parsing the next one.
+        await client._feed_stdout(b"ignored\r\n" + record + b"\n", route=False)
+        assert observed == [{"type": "future"}]
+        assert not client._stdout_buffer
+        assert not client._discarding_record
+    assert not client._rpc_complete
+
+
+@pytest.mark.asyncio
 async def test_blocked_write_tears_down_uncertain_child() -> None:
     client = Transport(
         limits=Limits(command_timeout=0.1, cleanup_timeout=0.1),
