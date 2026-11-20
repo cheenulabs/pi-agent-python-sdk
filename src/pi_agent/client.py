@@ -6,6 +6,7 @@ import asyncio
 import contextvars
 import inspect
 import json
+import math
 import os
 import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
@@ -572,7 +573,16 @@ class AsyncPiClient:
             answer: UIValue = None
             if self._ui_handler is not None:
                 timeout_ms = raw.get("timeout")
-                deadline = timeout_ms / 1000 if isinstance(timeout_ms, (int, float)) else None
+                # Zero disables Pi's timer; ignore booleans and invalid
+                # negative/non-finite deadlines (bool is a subclass of int).
+                deadline = (
+                    timeout_ms / 1000
+                    if isinstance(timeout_ms, (int, float))
+                    and not isinstance(timeout_ms, bool)
+                    and timeout_ms > 0
+                    and math.isfinite(timeout_ms)
+                    else None
+                )
                 timer = asyncio.timeout(deadline)
                 try:
                     async with timer:

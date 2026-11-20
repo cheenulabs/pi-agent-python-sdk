@@ -262,7 +262,8 @@ class Transport:
             # Remove the failing line too; cleanup must never observe it twice.
             if offset:
                 del buffer[:offset]
-        if len(buffer) > self._limits.max_record_bytes:
+        # Match _record(): a trailing CR may be half of a fragmented CRLF.
+        if len(buffer) - buffer.endswith(b"\r") > self._limits.max_record_bytes:
             self._rpc_complete = False
             if route:
                 raise PiProtocolError("Pi JSON record exceeds max_record_bytes")
