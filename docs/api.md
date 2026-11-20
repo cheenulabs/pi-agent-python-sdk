@@ -400,7 +400,7 @@ capacities are positive integers except `stderr_tail_bytes`, which may be zero.
 | `command_timeout` | `30.0` | Default short-response deadline; also bounds each write including waiting for the write lock |
 | `run_start_timeout` | `30.0` | Wait for an observed agent start after prompt acceptance |
 | `cleanup_timeout` | `5.0` | Run cancellation cleanup and subprocess shutdown escalation stages |
-| `max_record_bytes` | `16 * 1024 * 1024` | Each inbound or outbound JSON record |
+| `max_record_bytes` | `16 * 1024 * 1024` | Shared byte limit for each outbound command and inbound JSON record, including Pi's prompt echoes |
 | `event_queue_size` | `256` | Records per subscription; also outstanding UI-handler count |
 | `event_queue_bytes` | `16 * 1024 * 1024` | Bytes per subscription; also outstanding UI-handler payload bytes |
 | `stderr_tail_bytes` | `0` | Retained diagnostic stderr tail; zero disables retention |
@@ -408,6 +408,16 @@ capacities are positive integers except `stderr_tail_bytes`, which may be zero.
 | `collection_event_bytes` | `64 * 1024 * 1024` | UTF-8 serialized event bytes retained by one settlement collection |
 | `result_message_count` | `4096` | Finalized messages retained by one owned run |
 | `result_message_bytes` | `64 * 1024 * 1024` | Serialized finalized-message event bytes retained by one owned run |
+
+To send larger prompts, raise `Limits(max_record_bytes=...)` with headroom for
+JSON encoding, event envelopes, and other messages: Pi echoes prompts in
+`message_start`, `message_end`, and `agent_end`, whose records can be larger than
+the command. The shared limit counts encoded record bytes, not characters;
+exceeding it outbound raises `ValueError` before sending, while exceeding it
+inbound raises `PiProtocolError` and closes the client. Subscription and result
+budgets remain independent and may also need adjustment for large echoes.
+Successful transport delivery does not imply acceptance by Pi, a provider, or a
+model's context window. See [errors](errors.md).
 
 `bash`, `compact`, `new_session`, `switch_session`, `fork`, `clone`, and
 `export_html` have no default command execution deadline. A numeric `timeout=`

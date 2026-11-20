@@ -181,7 +181,10 @@ class Transport:
             record, ensure_ascii=False, allow_nan=False, separators=(",", ":")
         ).encode("utf-8", errors="backslashreplace")
         if len(data) > self._limits.max_record_bytes:
-            raise ValueError("Outbound JSON record exceeds max_record_bytes")
+            raise ValueError(
+                "Outbound JSON record exceeds Limits.max_record_bytes; raise "
+                "Limits.max_record_bytes to send larger prompts and allow Pi's echoed messages"
+            )
         # Local validation cannot submit work. Notify ownership before the first
         # suspension so another run cannot race a validated, queued write.
         if before_write is not None:
