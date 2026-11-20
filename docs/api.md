@@ -84,6 +84,16 @@ Bare strings for sequence options, invalid tool names, empty paths, or unknown
 thinking levels raise `ValueError`. See
 [unattended runs](usage.md#unattended-headless-runs).
 
+## Agent configuration
+
+`pi_agent.AgentConfig(*, models=None, settings=None, auth=None)` is a context
+manager that writes each supplied mapping as `models.json`, `settings.json`, or
+`auth.json` in a private temporary agent directory. Inside the context, `path`
+is that directory and `env` is `{"PI_CODING_AGENT_DIR": ...}` for the clients'
+`env=` option. Non-mapping or non-JSON values raise `ValueError` without
+echoing them; reading `path` or `env` outside the context raises `RuntimeError`.
+See [configure Pi from code](usage.md#configure-pi-from-code).
+
 ## Lifecycle and convenience methods
 
 | API | Result and behavior |
