@@ -31,8 +31,8 @@ the coding-agent platform policy below.
 | Component | Policy |
 |---|---|
 | Python | Package requires 3.11 or newer; Linux CI targets 3.11, 3.12, 3.13, and 3.14 |
-| Pi | Minimum **0.85.1**; recorded tested protocol version **1.5.2** |
-| Node.js | Pi 1.5.2 requires **22.19.0 or newer** |
+| Pi | Minimum **0.85.1**; recorded tested protocol version **1.6.0** |
+| Node.js | Pi 1.6.0 requires **22.19.0 or newer** |
 | Python runtime dependencies | None beyond the standard library |
 | Platforms | CI targets Linux with Python 3.11–3.14; macOS and Windows with Python 3.14 |
 
@@ -41,7 +41,7 @@ version has passed tests. Similarly, successfully launching an untested Pi
 version is not a compatibility certification.
 
 The pinned Pi source is commit
-[`b4afdddf44e059c67ccf5097e5317d913521b470`](https://github.com/earendil-works/pi/tree/b4afdddf44e059c67ccf5097e5317d913521b470).
+[`faac585884ae2c013a6b1400f3e9e77f10b34bac`](https://github.com/earendil-works/pi/tree/faac585884ae2c013a6b1400f3e9e77f10b34bac).
 The [discovery document](discovery.md) records the upstream types, serializer,
 implementation, and observed runtime behavior used to build the client. The
 package wraps Pi's RPC protocol and is not an official upstream Python SDK.
@@ -105,6 +105,13 @@ copies and adds interactive recovery choices for sessions whose working director
 is gone. These remain Pi-owned behavior; Python adds no session-recovery UI or
 provider authentication policy. See the [source review](discovery.md#pi-152-update).
 
+Pi 1.6.0 keeps the RPC wire vocabulary unchanged. Session replacement now binds
+extensions once and delivers their startup events; diagnostics use stderr, not
+protocol stdout. Last-assistant-text selection skips textless failed, aborted,
+and tool-call replies. Provider compatibility metadata remains opaque JSON. The
+upstream extension component `render()` change to readonly arrays affects TUI
+extensions, not this Python RPC client. See the [source review](discovery.md#pi-160-update).
+
 ## Startup version policy
 
 Startup invokes the selected executable with `--version`; it does not contact npm,
@@ -113,7 +120,7 @@ PyPI, GitHub, or another version service. After startup:
 | Selected executable | Behavior |
 |---|---|
 | Recognized version below 0.85.1 | Reject with `PiVersionError` |
-| Exactly 1.5.2 | `pi_version="1.5.2"`, `compatibility="tested"` |
+| Exactly 1.6.0 | `pi_version="1.6.0"`, `compatibility="tested"` |
 | Other recognized version at or above the minimum | Allow by default, with `compatibility="untested"` |
 | Recognized untested version and `strict_version=True` | Reject with `PiVersionError` |
 | Unparseable/custom version output | Reject unless `allow_unknown_version=True` |
