@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +27,16 @@ def headless_options(pi_options: dict[str, Any]) -> dict[str, Any]:
         (root / "prompts").mkdir(parents=True)
         (root / "prompts/discovered.md").write_text("Discovered template", encoding="utf-8")
     (project / "AGENTS.md").write_text("Discovered context", encoding="utf-8")
-    return {**pi_options, "extra_args": headless_args(extensions=[FIXTURE])}
+    version = subprocess.run(
+        [*pi_options["executable"], "--version"],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    ).stdout.strip()
+    # Pi before 1.3.0 has no --no-mcp option (and no built-in MCP to disable).
+    mcp = tuple(map(int, version.split("."))) < (1, 3, 0)
+    return {**pi_options, "extra_args": headless_args(extensions=[FIXTURE], mcp=mcp)}
 
 
 async def test_headless_client_loads_only_named_extension(headless_options):

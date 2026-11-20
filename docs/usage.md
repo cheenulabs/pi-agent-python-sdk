@@ -165,7 +165,7 @@ Python process's current directory, and `builtin:<name>` extensions pass through
 | `system_prompt` | `None` | `None` keeps Pi's prompt; `""` removes it |
 | `append_system_prompt` | `()` | One `--append-system-prompt` per entry |
 | `thinking` | `None` | Optional `--thinking` level |
-| `mcp` | `False` | `False` passes `--no-mcp` (Pi 1.3.0+) |
+| `mcp` | `False` | `False` passes `--no-mcp`; Pi before 1.3.0 rejects that option, so pass `True` there |
 | `offline` | `True` | Passes `--offline`, skipping startup network work such as catalog refresh |
 
 Models, credentials, and settings still come from Pi's agent directory. For full

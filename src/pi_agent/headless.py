@@ -57,7 +57,8 @@ def headless_args(
 
     ``system_prompt=None`` keeps Pi's default prompt, while ``""`` removes it.
     Each ``append_system_prompt`` entry adds one ``--append-system-prompt``.
-    ``mcp=False`` passes ``--no-mcp`` (honoured by Pi 1.3.0 and newer).
+    ``mcp=False`` passes ``--no-mcp``. Pi 1.3.0 added built-in MCP and that
+    option; older Pi exits on it at startup, so pass ``mcp=True`` there.
     ``offline=True`` passes ``--offline`` and skips startup network operations
     such as Pi's model-catalog refresh.
 
