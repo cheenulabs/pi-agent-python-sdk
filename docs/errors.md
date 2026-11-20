@@ -36,6 +36,16 @@ Correct the input and retry. This does not undo any earlier real submission:
 the existing ownership restriction still applies after low-level conversation
 work may have reached Pi.
 
+`Limits.max_record_bytes` is a shared limit (default 16 MiB) on each encoded
+outbound command and inbound JSON record. An oversized outbound command raises
+`ValueError` before sending; an oversized inbound record raises `PiProtocolError`
+and closes the client. To send larger prompts, raise
+`Limits(max_record_bytes=...)` with headroom for JSON encoding and Pi's echoed
+`message_start`, `message_end`, and `agent_end` records, which can include other
+messages too. Independent subscription and result budgets still apply. Successful
+transport delivery does not imply acceptance by Pi, a provider, or a model's
+context window; increasing this limit does not increase those systems' limits.
+
 Exception messages avoid automatically dumping wire payloads. Pi's command error
 text is explicitly available as `.error`, while a handler's original exception
 is in `__cause__`. Those fields can contain application data. Transport failure
