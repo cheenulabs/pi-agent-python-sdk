@@ -533,3 +533,44 @@ context before draining discards unread output. The blocking equivalent is
 `output.stop()` followed by iteration; a concurrent worker may continue draining
 while stop is called. See the runnable [scoped-output example](../examples/scoped_output.py)
 and [observation status reference](api.md#process-observation).
+
+## Test without a model
+
+`pi_agent.testing.FakePi` is a scripted stand-in for Pi. The real clients launch
+it as a subprocess and speak the normal RPC protocol, so your tests exercise the
+SDK's actual run, streaming, result, and error handling with no model,
+credentials, Node.js, or network access.
+
+```python
+from pi_agent.coding import PiClient
+from pi_agent.testing import FakePi, FakeReply
+
+
+def test_summary() -> None:
+    replies = ["Hello!", FakeReply("cut off", stop_reason="length")]
+    with FakePi(replies) as fake:
+        with PiClient(executable=fake.executable) as pi:
+            assert pi.run("Hi").text == "Hello!"
+            assert pi.run("Again").stop_reason == "length"
+        assert fake.prompts() == ["Hi", "Again"]
+```
+
+Pass `fake.executable` anywhere your code accepts the client's `executable=`
+option. Each prompt consumes the next reply:
+
+| `FakeReply` field | Effect |
+|---|---|
+| `text` | Final answer, streamed as one `text_delta` |
+| `stop_reason` | Final stop reason; `error` and `aborted` make `run()` raise `PiRunError` |
+| `thinking` | Optional thinking block before the text |
+| `error_message` | `errorMessage` on the assistant message, for error replies |
+| `usage` | Overrides Pi's wire usage fields, such as `{"input": 10, "output": 5}` |
+
+A prompt after the last reply raises `PiCommandError`. `get_state`, `abort`,
+`clear_queue`, `get_messages`, and `get_last_assistant_text` are supported;
+other commands raise `PiCommandError` naming the command, rather than returning
+invented data. `fake.requests()` returns every received RPC request, and
+`fake.prompts()` returns the prompt messages. Each client launched from the
+same `FakePi` starts again from the first reply. `FakePi` does not simulate
+tool calls, extension UI, compaction, or session branching; use the real Pi
+runtime for those.

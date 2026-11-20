@@ -378,6 +378,17 @@ assistant usage, not total billing; a missing measurement in any contributing
 assistant message keeps that summary field unknown. Reasoning is not added to
 output tokens a second time.
 
+## Testing
+
+`pi_agent.testing.FakePi(replies=(), *, version=TESTED_PI_VERSION,
+session_id="fake-session", provider="fake", model="fake-model")` is a context
+manager that provides a scripted fake Pi. Its `executable` property returns an
+argument list for the clients' `executable=` option; `requests()` and `prompts()`
+return what it received. Replies are strings or
+`FakeReply(text="", stop_reason="stop", thinking=None, error_message=None,
+usage=None)`. Accessing `executable` or the recorded requests outside the context
+raises `RuntimeError`. See [test without a model](usage.md#test-without-a-model).
+
 ## Limits
 
 Pass `limits=Limits(...)` to either client. Timeouts are positive finite seconds;
