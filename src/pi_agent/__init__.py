@@ -9,6 +9,7 @@ from .errors import (
     PiBusyError,
     PiCommandError,
     PiError,
+    PiIncompleteRunError,
     PiProcessError,
     PiProtocolError,
     PiResultOverflow,
@@ -20,6 +21,7 @@ from .errors import (
     PiUIHandlerError,
     PiVersionError,
 )
+from .headless import headless_args
 from .sync import PiClient
 from .types import Event, ImageContent, Limits, RunResult, SessionInfo, UsageSummary
 
@@ -34,6 +36,7 @@ __all__ = [
     "PiCommandError",
     "PiClient",
     "PiError",
+    "PiIncompleteRunError",
     "PiProcessError",
     "PiProtocolError",
     "PiResultOverflow",
@@ -47,4 +50,5 @@ __all__ = [
     "RunResult",
     "SessionInfo",
     "UsageSummary",
+    "headless_args",
 ]

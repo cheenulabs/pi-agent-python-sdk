@@ -73,6 +73,17 @@ Do not repeat constructor-owned flags in `extra_args`. The client also rejects
 RPC mode overrides, print/help/version/export/list-models modes, positional
 prompts, and startup attachments. Arguments are passed without a shell.
 
+## Headless launch arguments
+
+`pi_agent.headless_args(*, tools=(), extensions=(), skills=(), system_prompt=None,
+append_system_prompt=(), thinking=None, mcp=False, offline=True,
+prompt_files=False)` returns a `list[str]` for `extra_args`. It disables Pi
+discovery, including `SYSTEM.md` and `APPEND_SYSTEM.md` unless
+`prompt_files=True`, and enables only the named tools, extensions, and skills.
+Bare strings for sequence options, invalid tool names, empty paths, or unknown
+thinking levels raise `ValueError`. See
+[unattended runs](usage.md#unattended-headless-runs).
+
 ## Lifecycle and convenience methods
 
 | API | Result and behavior |
@@ -356,7 +367,7 @@ objects; frozen fields do not imply a deep immutable copy.
 
 | Type | Fields |
 |---|---|
-| `RunResult` | `text`, `messages`, `stop_reason`, `session`, `elapsed_seconds`, optional `usage` |
+| `RunResult` | `text`, `messages`, `stop_reason`, `session`, `elapsed_seconds`, optional `usage`; `raise_for_incomplete(*, allow_empty=False)` returns itself or raises `PiIncompleteRunError` |
 | `SessionInfo` | Optional `session_id`, `session_file`, `session_name` |
 | `UsageSummary` | Optional `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_write_tokens`, `cache_write_1h_tokens`, `reasoning_tokens`, `total_tokens`, `cost`; `assistant_messages` count |
 | `Event` | `raw`, with `type` and `text_delta` properties |

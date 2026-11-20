@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field, fields
-from typing import Any, Literal, NotRequired, TypeAlias, TypedDict
+from typing import Any, Literal, NotRequired, Self, TypeAlias, TypedDict
 
-from .errors import PiProtocolError
+from .errors import PiIncompleteRunError, PiProtocolError
 
 JSONValue: TypeAlias = None | bool | int | float | str | list["JSONValue"] | dict[str, "JSONValue"]
 JSONObject: TypeAlias = dict[str, JSONValue]
@@ -1039,6 +1039,24 @@ class RunResult:
     session: SessionInfo
     elapsed_seconds: float
     usage: UsageSummary | None = None
+
+    def raise_for_incomplete(self, *, allow_empty: bool = False) -> Self:
+        """Return this result if the final assistant stopped normally with text.
+
+        ``run()`` already raises ``PiRunError`` for ``error`` and ``aborted``.
+        This also rejects a final stop reason other than ``stop`` (for example
+        ``length``, ``toolUse`` or ``deferred``), a run without an assistant
+        message, and, unless ``allow_empty`` is true, whitespace-only text.
+        Raises ``PiIncompleteRunError`` whose ``.result`` is this result; the
+        message never includes conversation content.
+        """
+        if self.stop_reason != "stop":
+            raise PiIncompleteRunError(
+                f"Pi run ended with stop reason {self.stop_reason!r}", self, "stop_reason"
+            )
+        if not allow_empty and not self.text.strip():
+            raise PiIncompleteRunError("Pi run stopped without final text", self, "empty_text")
+        return self
 
 
 def _validate_timeout(value: object, name: str = "timeout") -> None:
