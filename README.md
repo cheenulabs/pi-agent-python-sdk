@@ -55,7 +55,8 @@ with PiClient() as pi:
 [Prerequisites](#prerequisites) · [Quick start](#quick-start) ·
 [Streaming](#streaming) · [Async](#async-usage) ·
 [Configuration](#configuration) · [Thinking](#models-and-thinking) ·
-[RPC](#rpc-access) · [Durable (experimental)](#pi-durable-experimental) ·
+[RPC](#rpc-access) · [Testing](#test-without-a-model) ·
+[Durable (experimental)](#pi-durable-experimental) ·
 [Documentation](#documentation) · [Further reading](#further-reading) ·
 [Troubleshooting](#troubleshooting) · [Support](#support)
 
@@ -74,6 +75,9 @@ with PiClient() as pi:
   caller-supplied Node host.
 
 ## Prerequisites
+
+These requirements apply to running the real coding agent. For scripted tests
+with only Python, see [Test without a model](#test-without-a-model).
 
 | Requirement | Notes |
 | --- | --- |
@@ -316,6 +320,30 @@ the [command reference][commands] for every method.
 
 </details>
 
+## Test without a model
+
+`pi_agent.testing.FakePi` lets your tests use the real `PiClient` or
+`AsyncPiClient` with scripted replies, without a model, credentials, Node.js,
+or network access. This helper is unreleased: install from a checkout containing
+this change (`python -m pip install -e .`), rather than the published 0.3.0 package.
+
+```python
+from pi_agent.coding import PiClient
+from pi_agent.testing import FakePi, FakeReply
+
+with FakePi(["Hello!", FakeReply("cut off", stop_reason="length")]) as fake:
+    with PiClient(executable=fake.executable) as pi:
+        assert pi.run("Hi").text == "Hello!"
+        assert pi.run("Again").stop_reason == "length"
+    assert fake.prompts() == ["Hi", "Again"]
+```
+
+Each prompt consumes the next reply; an exhausted script or unsupported command
+raises `PiCommandError`. Each client starts again from the first reply. The fake
+does not simulate tool calls, extension UI, compaction, or session branching.
+See the [testing guide](docs/usage.md#test-without-a-model) for reply options,
+request recording, and supported commands.
+
 ## Pi Durable (experimental)
 
 The source checkout adds Python APIs for the original upstream Durable Harness,
@@ -481,7 +509,7 @@ and [credential-free crash recovery example](https://github.com/cheenulabs/pi-ag
 
 | Guide | Contents |
 | --- | --- |
-| [Usage][usage] | Sessions, images, concurrency, events, extension UI, and testing without a model |
+| [Usage](docs/usage.md) | Sessions, images, concurrency, events, extension UI, and testing without a model |
 | [API reference][api] | Constructors, commands, types, and results |
 | [Errors and cancellation][errors] | Deadlines, partial results, cleanup, and recovery |
 | [RPC structure][rpc] | How the Python client maps to Pi's protocol |
