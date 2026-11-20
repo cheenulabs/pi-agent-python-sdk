@@ -88,8 +88,9 @@ def test_explicit_command_argv():
         ("1.4.0", False, False, ("1.4.0", "untested")),
         ("1.5.0", False, False, ("1.5.0", "untested")),
         ("1.5.1", False, False, ("1.5.1", "untested")),
-        ("1.5.2", False, False, ("1.5.2", "tested")),
-        ("1.5.2", True, False, ("1.5.2", "tested")),
+        ("1.5.2", False, False, ("1.5.2", "untested")),
+        ("1.6.0", False, False, ("1.6.0", "tested")),
+        ("1.6.0", True, False, ("1.6.0", "tested")),
         ("custom", False, True, (None, "unknown")),
     ],
 )
@@ -116,6 +117,7 @@ async def test_version_status(version, strict, allow_unknown, expected):
         ("1.4.0", True),
         ("1.5.0", True),
         ("1.5.1", True),
+        ("1.5.2", True),
         ("custom", False),
     ],
 )

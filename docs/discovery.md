@@ -5,8 +5,46 @@ Pi 0.86.0. Reviewed patch: 2026-09-22, Pi 0.86.1. Reviewed update: 2026-09-23,
 Pi 0.87.0. Reviewed patch: 2026-09-24, Pi 0.87.1. Reviewed update: 2026-10-02,
 Pi 1.0.0. Reviewed update: 2026-10-17, Pi 1.3.0. Reviewed update: 2026-10-23,
 Pi 1.4.0. Reviewed update: 2026-11-09, Pi 1.5.0. Reviewed patch: 2026-11-11,
-Pi 1.5.1. Reviewed patch: 2026-11-12, Pi 1.5.2. Historical observations below
+Pi 1.5.1. Reviewed patch: 2026-11-12, Pi 1.5.2. Reviewed update: 2026-11-20,
+Pi 1.6.0. Historical observations below
 retain their original version/source; the coverage inventory includes the additions described here.
+
+## Pi 1.6.0 update
+
+Reviewed source is commit
+[`faac585884ae2c013a6b1400f3e9e77f10b34bac`](https://github.com/earendil-works/pi/tree/faac585884ae2c013a6b1400f3e9e77f10b34bac).
+Ten of 22 fingerprinted files changed. RPC declarations, TypeScript client, JSONL
+framing, serializer, message/session shapes and model declarations are unchanged:
+33 commands, 25 event discriminators, 11 session-entry variants, 44 shared command
+cases and 43 event records. No Python wire fields or parity fixtures need changes.
+
+Reviewed changes and ownership:
+
+- `rpc-mode.ts`: session replacement subscribes before extension binding, so startup
+  events reach clients; removes duplicate binding after new/switch/fork/clone.
+  Runtime diagnostics go to stderr rather than protocol stdout.
+- `agent-session.ts`: restores pending MCP tools when extensions deactivate only
+  their own tools; tracks explicit extension binding for reload. Last-assistant-text
+  selection skips textless replies unless they ended normally. Python delegates
+  these operations to Pi and does not recreate transcript or extension state.
+- `session-manager.ts`: closes session streams on early exit and handles cancellation
+  without unhandled abort errors; no session wire shape changes.
+- `extensions/types.ts` and `agent-session-runtime.ts`: internal event-bus error
+  reporting and deduplicated diagnostics; no new RPC event discriminator.
+- `agent-loop.ts`: aborted tool batches still record a result for every call,
+  skipping hooks for calls already aborted. Cancellation execution stays Pi-owned.
+- `compat-schema.ts`: Mistral conversations adds optional `supportsStrictMode`;
+  existing compatibility descriptions clarify developer-role, message-thread and
+  mid-conversation effort behavior. Python preserves `compat` as opaque JSON.
+- CLI help, package metadata and changelog: Qwen key names, 1.6.0 pins and undici
+  security fixes. Provider defaults, auth and tool behavior remain Pi-owned.
+  The readonly `render()` breaking change affects upstream TUI extensions, not
+  Python RPC methods or the synthetic integration extension.
+
+Advance the reviewed fingerprints, offline tested version and version-policy tests
+while keeping minimum 0.85.1 and the independent Durable 1.5.2 record. Pi 1.5.2
+remains allowed as untested unless strict checking is requested. Credential-free
+validation does not certify live providers or publish an SDK release.
 
 ## Pi 1.5.2 update
 
@@ -589,7 +627,7 @@ The complete provider compatibility object should remain accessible as a typed J
 - OpenAI responses boolean fields: supportsDeveloperRole, supportsLongCacheRetention, supportsStrictMode, supportsOpenAIGrammarTools, supportsAdditionalTools, supportsToolSearch, supportsExplicitPromptCacheMode, supportsMidConvoSystemMessages, supportsMidConvoEffort, supportsMaxOutputTokens; plus sessionAffinityFormat as above.
 - Anthropic boolean fields: supportsEagerToolInputStreaming, supportsLongCacheRetention, sendSessionAffinityHeaders, supportsCacheControlOnTools, supportsTemperature, forceAdaptiveThinking, allowEmptySignature, supportsStrictTools, supportsMidConvoEffort, supportsMidConvoSystemMessages, supportsMidConvoToolChanges; sessionAffinityFormat?:"openrouter"; allowedFallbackModels?:[{provider:string,model:string,cost:ModelCost}] (retain raw JSON; no Python provider logic).
 - Bedrock: supportsStrictMode?:boolean.
-- Mistral conversations: supportsMidConvoSystemMessages?:boolean.
+- Mistral conversations: supportsMidConvoSystemMessages?,supportsStrictMode?:boolean.
 - OpenRouterRouting: allow_fallbacks?,require_parameters?,zdr?,enforce_distillable_text?:boolean; data_collection?:`deny|allow`; order?,only?,ignore?,quantizations?:string[]; sort?:string or {by?:string,partition?:string|null}; max_price?:{prompt?,completion?,image?,audio?,request?:number|string}; preferred_min_throughput?,preferred_max_latency?:number or {p50?,p75?,p90?,p99?:number}.
 - VercelGatewayRouting: only?:string[]; order?:string[].
 

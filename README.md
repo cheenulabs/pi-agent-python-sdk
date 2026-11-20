@@ -78,8 +78,8 @@ with PiClient() as pi:
 | Requirement | Notes |
 | --- | --- |
 | Python **3.11+** | Package metadata requires 3.11 or newer |
-| Node.js **22.19.0+** | Required by the coding-agent baseline **1.5.2** |
-| Pi CLI **0.85.1+** | **1.5.2** is the tested baseline |
+| Node.js **22.19.0+** | Required by the coding-agent baseline **1.6.0** |
+| Pi CLI **0.85.1+** | **1.6.0** is the tested baseline |
 | Model provider | Configure your provider and model with the Pi CLI |
 
 ## Quick start
@@ -87,7 +87,7 @@ with PiClient() as pi:
 Install Pi with Node.js **22.19.0 or newer** (pin matches the tested baseline):
 
 ```sh
-npm install -g @earendil-works/pi-coding-agent@1.5.2
+npm install -g @earendil-works/pi-coding-agent@1.6.0
 pi --version
 ```
 
@@ -503,7 +503,7 @@ Development checks use an isolated local test provider; see
 | Symptom | What to check |
 | --- | --- |
 | `pi` not found / launch fails | Ensure the Pi CLI is on `PATH`, or pass `executable=` to the client |
-| Version rejected | Upgrade to Pi **0.85.1+**; prefer the tested baseline **1.5.2** |
+| Version rejected | Upgrade to Pi **0.85.1+**; prefer the tested baseline **1.6.0** |
 | No model / auth errors | Run `pi` once and complete provider setup |
 | Unexpected file or command changes | Review Pi tool/extension settings before automation |
 
