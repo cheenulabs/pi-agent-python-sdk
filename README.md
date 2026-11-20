@@ -54,8 +54,8 @@ with PiClient() as pi:
 
 [Prerequisites](#prerequisites) · [Quick start](#quick-start) ·
 [Streaming](#streaming) · [Async](#async-usage) ·
-[Configuration](#configuration) · [Thinking](#models-and-thinking) ·
-[RPC](#rpc-access) · [Testing](#test-without-a-model) ·
+[Configuration](#configuration) · [Unattended](#run-unattended) ·
+[Thinking](#models-and-thinking) · [RPC](#rpc-access) · [Testing](#test-without-a-model) ·
 [Durable (experimental)](#pi-durable-experimental) ·
 [Documentation](#documentation) · [Further reading](#further-reading) ·
 [Troubleshooting](#troubleshooting) · [Support](#support)
@@ -217,6 +217,75 @@ either client. See [using your own extensions][extensions] for details and
 [extension UI][ui-example] for an interactive example.
 
 </details>
+
+## Run unattended
+
+For scripts, services, and CI, choose exactly what Pi loads instead of inheriting
+your `~/.pi/agent` setup. These helpers are unreleased: install from a checkout
+(`python -m pip install -e .`).
+
+```python
+from pi_agent import AgentConfig, headless_args
+from pi_agent.coding import PiClient
+
+models = {
+    "providers": {
+        "local": {
+            "baseUrl": "http://127.0.0.1:8000/v1",
+            "api": "openai-completions",
+            "models": [{"id": "my-model"}],
+        }
+    }
+}
+auth = {"local": {"type": "api_key", "key": "local"}}
+
+with AgentConfig(models=models, auth=auth) as config:
+    with PiClient(
+        env=config.env,
+        provider="local",
+        model="my-model",
+        no_session=True,
+        extra_args=headless_args(tools=["read", "grep"]),
+    ) as pi:
+        print(pi.run("Summarise data.csv.").raise_for_incomplete().text)
+```
+
+- `AgentConfig` writes your configuration to a private temporary folder. **Pass
+  `env=config.env`**, or the client still uses `~/.pi/agent`. The folder is
+  deleted when the `with` block ends.
+- `headless_args()` loads only the tools, extensions, and skills you name.
+- `raise_for_incomplete()` raises if the run ended without a complete answer.
+
+<details>
+<summary>What AgentConfig writes and removes</summary>
+
+- Each mapping is written unchanged as `models.json`, `settings.json`, or
+  `auth.json`; Pi owns their format. Omitted files are not written, so Pi uses
+  its built-in defaults.
+- A provider's models appear only once it has a credential: in `auth`, as an
+  `apiKey` in `models`, or as an environment variable.
+- The folder is private and `auth.json` is owner-only. Values never appear in
+  `repr` or errors.
+- Everything Pi writes there is deleted on exit, including session files. Pass
+  `session_dir=` to keep sessions elsewhere, or `no_session=True` to write none.
+- Packages and logins from your own `~/.pi/agent` are not available inside it.
+- Combine with other overrides as `env={**config.env, "PATH": path}`.
+
+</details>
+
+<details>
+<summary>What headless_args disables</summary>
+
+Discovery of extensions, skills, prompt templates, themes, `AGENTS.md`/`CLAUDE.md`
+and project-local files; `SYSTEM.md`/`APPEND_SYSTEM.md` (unless
+`prompt_files=True`); MCP; and startup network work. Named extensions and skills
+still load. With no `tools`, all tools are off. Pi before 1.3.0 rejects
+`--no-mcp`; pass `mcp=True` there.
+
+</details>
+
+See [unattended runs](docs/usage.md#unattended-headless-runs) and
+[configure Pi from code](docs/usage.md#configure-pi-from-code) for every option.
 
 ## Models and thinking
 

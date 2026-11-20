@@ -173,8 +173,64 @@ Python process's current directory, and `builtin:<name>` extensions pass through
 
 Pi reads a prompt value that names an existing file as that file's contents.
 Models, credentials, and settings still come from Pi's agent directory. For full
-isolation, also pass `env={"PI_CODING_AGENT_DIR": ...}` and consider
+isolation, supply them with [`AgentConfig`](#configure-pi-from-code) and consider
 `inherit_env=False` with an explicit `PATH`.
+
+## Configure Pi from code
+
+Pi reads models, credentials, and settings from files in its agent directory.
+`AgentConfig` writes your configuration to a private temporary directory and
+gives you the environment that points a client at it, so a run does not depend
+on whatever is configured in `~/.pi/agent`:
+
+```python
+from pi_agent import AgentConfig, headless_args
+from pi_agent.coding import PiClient
+
+models = {
+    "providers": {
+        "local": {
+            "baseUrl": "http://127.0.0.1:8000/v1",
+            "api": "openai-completions",
+            "models": [{"id": "my-model"}],
+        }
+    }
+}
+
+
+def main() -> None:
+    with AgentConfig(
+        models=models,
+        auth={"local": {"type": "api_key", "key": "local"}},
+        settings={"compaction": {"enabled": False}},
+    ) as config:
+        with PiClient(
+            env=config.env,
+            provider="local",
+            model="my-model",
+            no_session=True,
+            extra_args=headless_args(),
+        ) as pi:
+            print(pi.run("Hello").text)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+`models`, `settings`, and `auth` are written unchanged as `models.json`,
+`settings.json`, and `auth.json`; see Pi's documentation for their contents.
+A provider needs a credential, from `auth.json`, an `apiKey` in `models.json`,
+or an environment variable, before Pi lists its models. Omitted files are not
+written, so Pi uses its built-in defaults. The directory is private, `auth.json`
+is readable only by its owner where the platform supports it, and configuration
+values never appear in `repr` or errors.
+
+`config.env` is `{"PI_CODING_AGENT_DIR": ...}`; merge it with other overrides,
+for example `env={**config.env, "PATH": path}`. On exit the directory is removed
+with everything Pi wrote there, including default session files. Pass
+`session_dir=` to keep sessions outside it, or `no_session=True` to write none. Installed Pi
+packages and logins in your own agent directory are not available inside it.
 
 ## Acceptance, settlement, and results
 

@@ -13,6 +13,9 @@
   named tools, extensions, and skills load. Client defaults are unchanged.
 - `RunResult.raise_for_incomplete()` and `PiIncompleteRunError` reject a final
   stop other than `stop`, or blank text, while preserving partial work.
+- `pi_agent.AgentConfig` writes models, settings, and credentials supplied in
+  code to a private temporary agent directory and returns the matching client
+  environment.
 
 ## 0.3.0
 
