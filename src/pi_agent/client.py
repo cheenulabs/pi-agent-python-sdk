@@ -573,10 +573,12 @@ class AsyncPiClient:
             answer: UIValue = None
             if self._ui_handler is not None:
                 timeout_ms = raw.get("timeout")
-                # Zero disables Pi's timer; ignore invalid negative/non-finite deadlines.
+                # Zero disables Pi's timer; ignore booleans and invalid
+                # negative/non-finite deadlines (bool is a subclass of int).
                 deadline = (
                     timeout_ms / 1000
                     if isinstance(timeout_ms, (int, float))
+                    and not isinstance(timeout_ms, bool)
                     and timeout_ms > 0
                     and math.isfinite(timeout_ms)
                     else None

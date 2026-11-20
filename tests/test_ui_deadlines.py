@@ -23,10 +23,11 @@ def dialog(request_id, timeout=25):
     }
 
 
-@pytest.mark.parametrize("timeout", [0, -1])
+@pytest.mark.parametrize("timeout", [0, -1, True])
 async def test_no_deadline_allows_async_handler_to_await(timeout):
     async def handler(request):
-        await asyncio.sleep(0)
+        # Outlast any short deadline, such as the 1 ms a boolean True would imply.
+        await asyncio.sleep(0.05)
         return True
 
     async with AsyncPiClient(executable=[sys.executable, str(FAKE)], ui_handler=handler) as pi:
