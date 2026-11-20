@@ -4,6 +4,7 @@ Importing this package never launches Pi or changes its configuration.
 """
 
 from ._observation import ObservationStatus, ProcessOutput
+from .agent_config import AgentConfig
 from .client import AsyncPiClient
 from .errors import (
     PiBusyError,
@@ -26,6 +27,7 @@ from .sync import PiClient
 from .types import Event, ImageContent, Limits, RunResult, SessionInfo, UsageSummary
 
 __all__ = [
+    "AgentConfig",
     "AsyncPiClient",
     "Event",
     "ImageContent",
