@@ -84,9 +84,22 @@ def alive(pid: int) -> bool:
     try:
         if stat.is_file() and stat.read_text().split(")", 1)[1].split()[0] == "Z":
             return False
-    except FileNotFoundError:
+    except (FileNotFoundError, ProcessLookupError):
         return False
     return True
+
+
+def test_alive_process_reaped_during_stat_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    pid = os.getpid()
+
+    def reaped_stat(path: Path) -> str:
+        assert path == Path(f"/proc/{pid}/stat")
+        raise ProcessLookupError
+
+    monkeypatch.setattr(Path, "is_file", lambda path: True)
+    monkeypatch.setattr(Path, "read_text", reaped_stat)
+
+    assert alive(pid) is False
 
 
 _CHILD = """
