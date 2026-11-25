@@ -82,9 +82,10 @@ def test_record_disagreement_fails(pins):
     assert durable.main() == 1
 
 
-@pytest.mark.parametrize("latest,expected", [("1.5.2", 0), ("1.5.3", 1)])
-def test_latest_report_does_not_change_pins(pins, monkeypatch, latest, expected):
+@pytest.mark.parametrize("expected", [0, 1])
+def test_latest_report_does_not_change_pins(pins, monkeypatch, expected):
     baseline = (pins / "compatibility.json").read_bytes()
+    latest = "9.9.9" if expected else json.loads(baseline)["durable"]["testedVersion"]
     monkeypatch.setattr(sys, "argv", ["check_durable.py", "--latest", latest])
     assert durable.main() == expected
     assert latest in (pins / "durable-drift-report.md").read_text()
@@ -92,6 +93,7 @@ def test_latest_report_does_not_change_pins(pins, monkeypatch, latest, expected)
 
 
 def test_coding_agent_baseline_can_advance_independently(pins):
+    version = json.loads((pins / "compatibility.json").read_text())["durable"]["testedVersion"]
     mutate(pins / "compatibility.json", lambda data: data.update(testedVersion="9.9.9"))
     assert durable.main() == 0
-    assert durable.check_pins(pins) == "1.5.2"
+    assert durable.check_pins(pins) == version

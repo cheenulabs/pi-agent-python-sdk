@@ -11,6 +11,8 @@ from typing import Any
 
 import pytest
 
+from pi_agent.durable import TESTED_PI_DURABLE_VERSION
+
 pytestmark = pytest.mark.integration
 
 
@@ -123,7 +125,11 @@ def storage(kind: str, tmp_path: Path) -> dict[str, str]:
 async def test_core_flow(durable_host_command: list[str], tmp_path: Path, kind: str) -> None:
     async with running_host(durable_host_command, tmp_path) as host:
         hello = await host.ok("hello")
-        assert hello == {"protocol": 0, "piDurable": "1.5.2", "pid": host.process.pid}
+        assert hello == {
+            "protocol": 0,
+            "piDurable": TESTED_PI_DURABLE_VERSION,
+            "pid": host.process.pid,
+        }
         assert (
             await host.ok("open", storage=storage(kind, tmp_path), faux=["Synthetic 雪 answer"])
             == {}
