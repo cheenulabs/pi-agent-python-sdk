@@ -63,11 +63,11 @@ node durable-host/src/host.ts
 
 The host accepts JSONL on stdin and shuts down on EOF. It supports `hello`,
 `open`, `root`, `submit`, `wait`, `entries`, `abort`, `watch` and `unwatch`, with
-memory or SQLite storage and pinned upstream 1.5.2. The host is not bundled in
+memory or SQLite storage and pinned upstream 1.6.0. The host is not bundled in
 the Python wheel or sdist. The separate `durable` CI matrix covers Linux/macOS
 and Python 3.11/3.14 on Node 22, and is not a required merge gate. The owner
 explicitly chose to leave it out of `required.needs` (Q4); Windows Durable v0 is
-unsupported. `TESTED_PI_DURABLE_VERSION` and `compatibility.json` record 1.5.2.
+unsupported. `TESTED_PI_DURABLE_VERSION` and `compatibility.json` record 1.6.0.
 `scripts/check_durable.py` checks all four manifest/lock pins and that
 constant; coding-agent `--record` preserves the independent Durable record.
 The Latest Pi workflow uploads a non-blocking npm-latest drift report, and
@@ -83,8 +83,17 @@ must not implement agent, storage, or recovery logic. Existing `PiClient` and
 No existing module or class is moved or renamed.
 
 Pin `@earendil-works/pi-durable`, `@earendil-works/pi-ai`,
-`@earendil-works/pi-coding-agent`, and `@earendil-works/chord` to published **1.5.2**, matching upstream commit
-`b4afdddf44e059c67ccf5097e5317d913521b470`. Do not use unreleased main APIs.
+`@earendil-works/pi-coding-agent`, and `@earendil-works/chord` to published **1.6.0**, matching upstream commit
+`faac585884ae2c013a6b1400f3e9e77f10b34bac`. Do not use unreleased main APIs.
+
+Before upgrading an existing SQLite database, stop its host and back it up.
+Upstream 1.6.0 writes `pi.tool` v4 and `pi.generation` v3 tasks; do not reopen
+that database with an older host. To roll back, restore the pre-upgrade backup
+with its matching pinned checkout. The SDK adds no storage migration or downgrade
+logic. Upstream tool-result `durationMs` now measures the whole task lifetime,
+including hooks, parks, crash downtime and reruns, rather than the last execution
+attempt; records written before `startedAt` existed retain the old measure.
+
 Signals, TS extension loading, Python-defined tools, custom tasks, code mode,
 compaction controls, forks, multi-client attach, remote transports, and a
 `run()` convenience call are out of scope. This differs from Python ports such
@@ -628,4 +637,4 @@ not provided (bring your own host). No live providers are used or certified by
 these tests.
 
 [#116]: https://github.com/cheenulabs/pi-agent-python-sdk/issues/116
-[upstream]: https://github.com/earendil-works/pi/tree/v1.5.2/packages/durable
+[upstream]: https://github.com/earendil-works/pi/tree/v1.6.0/packages/durable

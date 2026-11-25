@@ -5,7 +5,7 @@ from .sync import DurableClient
 from .types import ConversationId, SettledSubmission, SubmissionId, WatchUpdate, entry_text
 from .watch import WatchSubscription
 
-TESTED_PI_DURABLE_VERSION = "1.5.2"
+TESTED_PI_DURABLE_VERSION = "1.6.0"
 
 __all__ = [
     "TESTED_PI_DURABLE_VERSION",
